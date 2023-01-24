@@ -115,8 +115,7 @@ python idrac_ctl.py get_virtual_media
 We see image attached
 
 ```json
-{
-"Members": [
+[
         {
             "@odata.context": "/redfish/v1/$metadata#VirtualMedia.VirtualMedia",
             "@odata.id": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/1",
@@ -147,8 +146,8 @@ We see image attached
             "TransferProtocolType": "HTTP",
             "UserName": null,
             "WriteProtected": true
-        }, 
-  }
+        }
+]
 ```
 
 Now reboot.
