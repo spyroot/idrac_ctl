@@ -1,6 +1,6 @@
 """iDRAC list of jobs.
-
-Command provides the option to retrieve boot source from iDRAC and serialize
+ source from iDRAC
+Command provides the option to retrieve list of jobs and serialize
 back as caller as JSON, YAML, and XML. In addition, it automatically
 registers to the command line ctl tool. Similarly to the rest command
 caller can save to a file and consume asynchronously or synchronously.
@@ -15,7 +15,7 @@ Author Mus spyroot@gmail.com
 """
 import argparse
 from abc import abstractmethod
-from typing import Optional, Dict
+from typing import Optional
 from datetime import datetime
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
@@ -23,10 +23,8 @@ from base import Singleton, ApiRequestType, IDracManager, CommandResult
 class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
               name='jobs_sources_query',
               metaclass=Singleton):
+    """Command handler for list of jobs
     """
-    Command enable boot option
-    """
-
     def __init__(self, *args, **kwargs):
         super(JobList, self).__init__(*args, **kwargs)
 

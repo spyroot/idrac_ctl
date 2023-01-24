@@ -1,14 +1,7 @@
-"""iDRAC enable boot options.
+"""iDRAC fetch job from iDRAC
 
-This cmd return Dell Boot Sources Configuration and the related
-resources.
-
-Command provides the option to retrieve boot source from iDRAC and serialize
-back as caller as JSON, YAML, and XML. In addition, it automatically
-registers to the command line ctl tool. Similarly to the rest command
-caller can save to a file and consume asynchronously or synchronously.
-
-
+Command provides the option to retrieve job information  from iDRAC
+and serialize back as caller as JSON, YAML, and XML.
 
 Author Mus spyroot@gmail.com
 """

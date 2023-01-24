@@ -27,6 +27,7 @@ class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
     """Raid service query Command, fetch raid  service data, caller can save to a file
     or output to a file or pass downstream.
     """
+
     def __init__(self, *args, **kwargs):
         super(RaidServiceQuery, self).__init__(*args, **kwargs)
 
@@ -37,13 +38,9 @@ class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--bios-sub_arg', action='store_true',
-                                required=False, dest='module2',
-
-                                help="fetch bios compute system view.")
         cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                             default="",
-                             help="filename if we need to save a respond to a file.")
+                                default="",
+                                help="filename if we need to save a respond to a file.")
 
         help_text = "fetch the bios information"
         return cmd_parser, "raid", help_text
@@ -51,7 +48,6 @@ class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
     def execute(self,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
-                do_deep: Optional[bool] = False,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
@@ -59,7 +55,6 @@ class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
         of Command Result. The discovered named tuple store action
         and respected rest APIs.
 
-        :param do_deep:
         :param do_async:
         :param verbose:
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -72,6 +67,7 @@ class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
 
         r = f"https://{self.idrac_ip}/redfish/v1/Dell/Systems/" \
             f"System.Embedded.1/DellRaidService"
+
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
         data = response.json()

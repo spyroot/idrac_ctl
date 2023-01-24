@@ -16,7 +16,8 @@ from tqdm import tqdm
 from base import Singleton, ApiRequestType, IDracManager, save_if_needed, CommandResult
 
 
-class PciDeviceQuery(IDracManager, scm_type=ApiRequestType.PciDeviceQuery,
+class PciDeviceQuery(IDracManager,
+                     scm_type=ApiRequestType.PciDeviceQuery,
                      name='pci_device_query',
                      metaclass=Singleton):
     """
