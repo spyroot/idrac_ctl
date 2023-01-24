@@ -87,8 +87,8 @@ trimmed output
         "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Bios"
     },
 ```
-If you pass for a same command --deep flag it will recursively walk 
-for each action and collect unified view.
+If you pass for the same command --deep flag, it will recursively walk for each action 
+and collect a unified view.
 
 ## More advanced example. 
 
@@ -197,6 +197,38 @@ if you need to boot from UEFI.
 Note 
 ```bash
 idrac_ctl.py boot_one_shot --uefi_target
+```
+
+## Export config
+
+The export config will default to create a job and wait for completion. So will see the status bar.
+
+```bash
+python idrac_ctl.py export --filename system.json
+```
+
+If we don't want wait we can pass --async it will create a job but it will not wait for job to complete.
+```bash
+python idrac_ctl.py export --filename system.json
+```
+
+```bash
+python idrac_ctl.py export --filename system.json --async
+```
+
+This command will output job_id that we can use with job --job_id to get a job status
+
+```json 
+{
+    "job_id": "JID_745386566338"
+}
+```
+
+You can later fetch a result of job.
+
+```bash
+python idrac_ctl.py  job --job_id JID_745386566338
+
 ```
 
 More example TBD.
