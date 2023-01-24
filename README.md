@@ -162,36 +162,36 @@ python idrac_ctl.py boot_one_shot --device Cd
 # --uefi_target if we need indicate UEFI device id.
 ```
 
-Now reboot.
+Now reboot a host.
 
 ```reboot
 python idrac_ctl.py reboot --reset_type PowerCycle
 python idrac_ctl.py reboot --reset_type GracefulRestart
 ```
 
-Note in my example, we didn't use UEFI.   If you need use UEFI.
-First get UEFI ids
+Note in my example, we didn't use UEFI.   If you need to use UEFI.
+First, get UEFI ids
 
 ```bash
 python idrac_ctl.py boot_source
 ```
 
-Each device has a UefiDevicePath key. This is basically a 
-key you can pass to insert media action.
+Each device has a UefiDevicePath key. You can pass this key to insert media action 
+if you need to boot from UEFI.
 
 ```json
 {
-            "@odata.context": "/redfish/v1/$metadata#BootOption.BootOption",
-            "@odata.id": "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
-            "@odata.type": "#BootOption.v1_0_4.BootOption",
-            "BootOptionEnabled": true,
-            "BootOptionReference": "NIC.Slot.8-1",
-            "Description": "Current settings of the Legacy Boot option",
-            "DisplayName": "NIC in Slot 8 Port 1: IBA ICE Slot D800 v2500",
-            "Id": "NIC.Slot.8-1",
-            "Name": "Legacy Boot option",
-            "UefiDevicePath": "BBS(0x80,IBA ICE Slot D800 v2500)"
-        },
+  "@odata.context": "/redfish/v1/$metadata#BootOption.BootOption",
+  "@odata.id": "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
+  "@odata.type": "#BootOption.v1_0_4.BootOption",
+  "BootOptionEnabled": true,
+  "BootOptionReference": "NIC.Slot.8-1",
+  "Description": "Current settings of the Legacy Boot option",
+  "DisplayName": "NIC in Slot 8 Port 1: IBA ICE Slot D800 v2500",
+  "Id": "NIC.Slot.8-1",
+  "Name": "Legacy Boot option",
+  "UefiDevicePath": "BBS(0x80,IBA ICE Slot D800 v2500)"
+}
 ```
 
 Note 
