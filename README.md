@@ -90,29 +90,33 @@ trimmed output
 If you pass for a same command --deep flag it will recursively walk 
 for each action and collect unified view.
 
-More advanced example,  if we need boot one shot from ISO file from HTTP link.
+## More advanced example. 
 
-First check what is attached and device id.
+Let say we need boot one shot from ISO file from HTTP link and start
+unattended kickstart installation.
+
+First, check if any virtual media is already attached and check the device id.
 ```bash
 python idrac_ctl.py get_virtual_media
 ```
 
-If you need eject
+If you need to eject virtual media
 ```bash
-python idrac_ctl.py get_virtual_media
+python idrac_ctl.py eject_virtual_media --device_id 1
 ```
 
-If you need inject virtual media
+Now insert virtual media. If you fancy you can start local HTTP listener 
+and pass your IP.
 ```bash
 python idrac_ctl.py insert_virtual_media --uri_path http://10.241.7.99/ubuntu-22.04.1-desktop-amd64.iso --device_id 1
 ```
 
-Confirm that virtiual media inserted
+Confirm that virtual media inserted
 ```bash
 python idrac_ctl.py get_virtual_media
 ```
 
-We see image attached
+We see image attached from get_virtual_media
 
 ```json
 [
@@ -149,12 +153,50 @@ We see image attached
         }
 ]
 ```
+Set BIOS boot in one shot. In this setting on reboot, we will boot from CDROM when installation is complete. 
+BIOS will boot OS from the default location. i.e., whatever is first on the list.
+
+```bash
+python idrac_ctl.py boot_one_shot --device Cd
+# note Cd is default anyway
+# --uefi_target if we need indicate UEFI device id.
+```
 
 Now reboot.
 
 ```reboot
 python idrac_ctl.py reboot --reset_type PowerCycle
 python idrac_ctl.py reboot --reset_type GracefulRestart
+```
+
+Note in my example, we didn't use UEFI.   If you need use UEFI.
+First get UEFI ids
+
+```bash
+python idrac_ctl.py boot_source
+```
+
+Each device has a UefiDevicePath key. This is basically a 
+key you can pass to insert media action.
+
+```json
+{
+            "@odata.context": "/redfish/v1/$metadata#BootOption.BootOption",
+            "@odata.id": "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
+            "@odata.type": "#BootOption.v1_0_4.BootOption",
+            "BootOptionEnabled": true,
+            "BootOptionReference": "NIC.Slot.8-1",
+            "Description": "Current settings of the Legacy Boot option",
+            "DisplayName": "NIC in Slot 8 Port 1: IBA ICE Slot D800 v2500",
+            "Id": "NIC.Slot.8-1",
+            "Name": "Legacy Boot option",
+            "UefiDevicePath": "BBS(0x80,IBA ICE Slot D800 v2500)"
+        },
+```
+
+Note 
+```bash
+idrac_ctl.py boot_one_shot --uefi_target
 ```
 
 More example TBD.
