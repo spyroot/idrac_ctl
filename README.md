@@ -19,6 +19,11 @@ export IDRAC_PASSWORD=MY_USERNAME
 export IDRAC_USERNAME=root
 ```
 
+Make sure you are using python >= 3.9
+```bash
+pip install -r requirements.txt
+```
+
 Now I'm still trying to optimize the root menu for easy consumption. For now, all subcommands are in root, 
 hence format idract_ctl command optional_args
 
