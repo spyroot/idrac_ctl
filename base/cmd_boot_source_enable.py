@@ -23,7 +23,7 @@ from typing import Optional
 
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 from base.cmd_utils import str2bool
-from base.idrac_manager import PatchFailed
+from base.idrac_manager import PatchRequestFailed
 
 
 class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
@@ -63,12 +63,14 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
         help_text = "Fetch the boot source"
         return cmd_parser, "set_boot_source", help_text
 
-    def execute(self, boot_source: str,
+    def execute(self,
+                boot_source: str,
                 is_enabled: bool,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
-                do_async: Optional[bool] = False, **kwargs) -> CommandResult:
+                do_async: Optional[bool] = False,
+                **kwargs) -> CommandResult:
         """Query boot source from idrac
         :param is_enabled:  Enable or disable target boot device.
         :param boot_source: A device  Example, HardDisk.List.1-1 , NIC.Slot.8-1 etc
@@ -116,7 +118,7 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
             self.default_json_printer(self, resp.json())
             self.default_patch_success(self, resp)
             cmd_result.data = CommandResult(resp.json(), None, None)
-        except PatchFailed as patch_err:
+        except PatchRequestFailed as patch_err:
             print("Error:", patch_err)
             pass
         except Exception as err:

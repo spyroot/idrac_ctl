@@ -8,6 +8,7 @@ caller can save to a file and consume asynchronously or synchronously.
 Author Mus spyroot@gmail.com
 """
 import argparse
+import asyncio
 from abc import abstractmethod
 from typing import Optional
 from base import Singleton, ApiRequestType
@@ -21,7 +22,6 @@ class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
     """
     Command return boot source
     """
-
     def __init__(self, *args, **kwargs):
         super(BootQuery, self).__init__(*args, **kwargs)
 
@@ -36,7 +36,7 @@ class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
         cmd_arg.add_argument('--async', action='store_true',
                              required=False, dest="do_async",
                              default=False,
-                             help="wll create a task and will not wait.")
+                             help="Will use asyncio.")
 
         cmd_arg.add_argument('-f', '--filename', required=False, type=str,
                              default="",
@@ -44,18 +44,20 @@ class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
 
         cmd_arg.add_argument('--deep', action='store_true', required=False, dest="do_deep",
                              default=False, help="deep walk. will make a separate "
-                                                 "REST call for each rest api.")
+                                                 "rest call for each discovered api.")
 
         help_text = "fetch the boot source"
         return cmd_arg, "boot", help_text
 
-    def execute(self, filename: str,
+    def execute(self,
+                filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 do_deep: Optional[bool] = False,
                 verbose: Optional[bool] = False,
-                do_async: Optional[bool] = False, **kwargs) -> CommandResult:
+                do_async: Optional[bool] = False,
+                **kwargs) -> CommandResult:
         """Query boot source from idrac
-        :param do_async:
+        :param do_async: will use asyncio
         :param verbose:
         :param do_deep:
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -65,15 +67,22 @@ class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
+
         r = f"https://{self.idrac_ip}/redfish/v1/Systems" \
             f"/System.Embedded.1/BootSources"
-        response = self.api_get_call(r, headers)
-        self.default_error_handler(response)
+
+        if not do_async:
+            response = self.api_get_call(r, headers)
+            self.default_error_handler(response)
+        else:
+            loop = asyncio.get_event_loop()
+            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+
         data = response.json()
         save_if_needed(filename, data)
 
+        # extra data
         extra_actions = find_ids(data, "@odata.id")
-
         extra_data = None
         if do_deep:
             extra_data = [self.api_get_call(f"https://{self.idrac_ip}{a}", headers).json()

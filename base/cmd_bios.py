@@ -25,6 +25,7 @@ On time boot
 Author Mus spyroot@gmail.com
 """
 import argparse
+import asyncio
 from abc import abstractmethod
 from typing import Optional
 from base import IDracManager, Singleton
@@ -50,26 +51,26 @@ class BiosQuery(IDracManager, scm_type=ApiRequestType.BiosQuery,
         """
         cmd_arg = argparse.ArgumentParser(add_help=False)
 
-        cmd_arg.add_argument('--async', action='store_true', required=False, dest="do_async",
-                             default=False, help="Will create a task and will not wait.")
+        cmd_arg.add_argument('--async', required=False, default=False,
+                             action='store_true', dest="do_async",
+                             help="Will use asyncio.")
 
-        cmd_arg.add_argument('--attr_only', action='store_true', default=False,
-                             required=False, dest='attr_only',
-                             help="will show only attributes.")
+        cmd_arg.add_argument('--attr_only', required=False, default=False,
+                             action='store_true', dest='attr_only',
+                             help="Will only show attributes.")
 
         cmd_arg.add_argument('--filter', required=False, type=str, dest="attr_filter",
-                             help="Filter on bios attribute information. "
+                             help="will filter on bios attribute information. "
                                   "Example --filter ProcCStates , "
                                   "will filter and and show C-State.")
 
-        cmd_arg.add_argument('-f', '--filename', required=False, type=str,
-                             default="",
+        cmd_arg.add_argument('-f', '--filename', required=False, default="",
+                             type=str,
                              help="filename if we need to save a respond to a file.")
 
         help_text = "fetch the bios information"
         return cmd_arg, "bios", help_text
 
-    # ProcCStates
     def execute(self,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
@@ -79,20 +80,21 @@ class BiosQuery(IDracManager, scm_type=ApiRequestType.BiosQuery,
                 attr_only: Optional[bool] = False,
                 attr_filter: Optional[str] = "",
                 **kwargs) -> CommandResult:
-        """Query bios from idrac
+        """Query bios from iDRAC
 
-        :param attr_filter: Filters by attributes,
+        :param attr_filter: filters by BIOS attributes.
         :param attr_only: Will only output attribute i.e. current bios settings.
-        :param do_deep:
-        :param do_async:
-        :param verbose:
+        :param do_deep: deep walk
+        :param do_async: will use asyncio
+        :param verbose: verbose output, mainly for debug.
         :param filename: if filename indicate call will save a bios setting to a file.
         :param data_type:
         :return:
         """
         if verbose:
             print(f"cmd args data_type: {data_type} "
-                  f"do_deep:{do_deep} do_async:{do_async} attr_filter:{attr_filter}")
+                  f"do_deep:{do_deep} do_async:{do_async} "
+                  f"attr_filter:{attr_filter}")
             print(f"the rest of args: {kwargs}")
 
         headers = {}
@@ -100,8 +102,14 @@ class BiosQuery(IDracManager, scm_type=ApiRequestType.BiosQuery,
             headers.update(self.json_content_type)
         r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
             f"System.Embedded.1/Bios"
-        response = self.api_get_call(r, headers)
-        self.default_error_handler(response)
+
+        if not do_async:
+            response = self.api_get_call(r, headers)
+            self.default_error_handler(response)
+        else:
+            loop = asyncio.get_event_loop()
+            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+
         data = response.json()
 
         # list of action for bios

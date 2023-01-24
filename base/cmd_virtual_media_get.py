@@ -46,7 +46,7 @@ class VirtualMediaGet(IDracManager, scm_type=ApiRequestType.VirtualMediaGet,
                              help="filename if we need to save a respond to a file.")
 
         help_text = "fetch the virtual media"
-        return cmd_arg, "get_virtual_media", help_text
+        return cmd_arg, "get_vm", help_text
 
     def execute(self,
                 filename: Optional[str] = None,

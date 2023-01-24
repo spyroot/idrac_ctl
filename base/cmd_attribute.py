@@ -93,6 +93,7 @@ class AttributesQuery(IDracManager, scm_type=ApiRequestType.AttributesQuery,
         else:
             loop = asyncio.get_event_loop()
             response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+
         data = response.json()
 
         # filter

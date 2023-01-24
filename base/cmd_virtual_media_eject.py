@@ -41,7 +41,7 @@ class VirtualMediaEject(IDracManager,
                              help="virtual media device id. Example 1 or 2")
 
         help_text = "eject the virtual media"
-        return cmd_arg, "eject_virtual_media", help_text
+        return cmd_arg, "eject_vm", help_text
 
     def execute(self,
                 device_id: Optional[str] = None,

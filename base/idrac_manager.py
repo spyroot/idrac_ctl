@@ -1,18 +1,19 @@
 """iDRAC IDracManager
 
-idract_ctl interacts with iDRACT via REST API interface.
+idrac_ctl interacts with iDRAC via REST API interface.
 
-Main class command line tools utilizes.  Each command must inherit from this class.
-The class itself provides a register pattern where each sub-command is registered automatically.
-During the module phase, each sub-command is discovered and loaded, allowing anyone to extend
-and add their own set of subcommands easily.
+Main class command line tools utilizes. Each command must inherit
+from this class. The class itself provides a register pattern where
+each sub-command is registered automatically.
+During the module phase, each sub-command is discovered and loaded,
+allowing anyone to extend and add their own set of subcommands easily.
 
 - The interaction with iDRAC done via REST API.
 - Each command must provide option invoke command synchronously
   or asynchronously
 
-Each command return CommandResult named tuple where data is actually data returned
-from rest API response.
+Each command return CommandResult named tuple where data
+is actually data returned from rest API response.
 
 CommandResult.discovered hold all rest endpoint.
 
@@ -52,11 +53,11 @@ class UnexpectedResponse(Exception):
     pass
 
 
-class PatchFailed(Exception):
+class PatchRequestFailed(Exception):
     pass
 
 
-class PostFailed(Exception):
+class PostRequestFailed(Exception):
     pass
 
 
@@ -316,7 +317,8 @@ class IDracManager:
         if response.status_code == 401:
             raise AuthenticationFailed("Authentication failed.")
         if response.status_code != 200:
-            raise UnexpectedResponse(f"Failed acquire result. Status code {response.status_code}")
+            raise UnexpectedResponse(f"Failed acquire result. "
+                                     f"Status code {response.status_code}")
 
     @staticmethod
     def default_error_handler(response):
@@ -333,7 +335,7 @@ class IDracManager:
             raise UnexpectedResponse(f"Failed acquire result. Status code {response.status_code}")
 
     def check_api_version(self):
-        """Check Dell LLC server API set
+        """Check Dell LLC Service API set
         :return:
         """
         headers = {}
@@ -365,15 +367,22 @@ class IDracManager:
         :return:
         """
         if isinstance(json_data, str):
-            json_raw = json.dumps(json.loads(json_data), sort_keys=sort, indent=indents)
+            json_raw = json.dumps(json.loads(json_data),
+                                  sort_keys=sort, indent=indents)
         else:
-            json_raw = json.dumps(json_data, sort_keys=sort, indent=indents)
+            json_raw = json.dumps(json_data,
+                                  sort_keys=sort, indent=indents)
 
         print(json_raw)
 
     @staticmethod
     def _get_actions(cls, json_data):
-
+        """Parse json iDRAC Manager for all supported action
+        and action method arg.
+        :param cls:
+        :param json_data:
+        :return:
+        """
         unfiltered_actions = {}
         full_redfish_names = {}
         if 'Actions' not in json_data:
@@ -402,7 +411,7 @@ class IDracManager:
 
     @staticmethod
     def discover_redfish_actions(cls, json_data):
-        """Discover all redfish action, args and args choices.
+        """Discovers all redfish action, args and args choices.
         :param json_data:
         :return:
         """
@@ -515,13 +524,15 @@ class IDracManager:
                                                           verify=self._is_verify_cert,
                                                           auth=(self._username, self._password)))
 
-    async def api_async_post_until_complete(self, r: str, payload: str, hdr: Dict, loop=None):
+    async def api_async_post_until_complete(self, r: str,
+                                            payload: str, hdr: Dict, loop=None):
         """Make async post api request until completion , it issues post with x-auth
-        authentication header or base.
-        :param payload:
-        :param r:
-        :param hdr:
-        :param loop:
+        authentication header or base. Caller can use this in asyncio routine.
+
+        :param r: request.
+        :param hdr: http header.
+        :param loop: asyncio loop
+        :param payload: json payload
         :return:
         """
         if loop is None:
@@ -556,7 +567,9 @@ class IDracManager:
                                   auth=(self._username, self._password))
 
     async def api_async_patch_call(self, loop, req, payload: str, hdr: Dict):
-        """Make post api request either with x-auth authentication header or base.
+        """Make async post api request either with
+        x-auth authentication header or base.
+
         :param loop:  asyncio event loop
         :param req:  request
         :param payload:  json payload
@@ -586,7 +599,8 @@ class IDracManager:
 
     @staticmethod
     def parse_error(cls, error_response):
-        """Parse error msg from JSON error response
+        """Default Parser for error msg from
+        JSON error response based on iDRAC.
         :param cls:
         :param error_response:
         :return:
@@ -605,53 +619,65 @@ class IDracManager:
         return err_msg
 
     @staticmethod
-    def default_patch_success(cls, response) -> bool:
-        """Default patch success handler
+    def default_patch_success(cls, response,
+                              expected: Optional[int] = 200) -> bool:
+        """Default HTTP patch success handler
         Default handler to check patch request respond.
 
         :param cls:
-        :param response:
-        :return: True if patch msg succeed
-        :raise PatchFailed if patch failed
-        """
-        if response.status_code == 200 or response.status_code == 202:
-            return True
-        else:
-            err_msg = IDracManager.parse_error(IDracManager, response)
-            raise PatchFailed(f"{err_msg}\nHTTP Status code: {response.status_code}")
-
-    @staticmethod
-    def default_post_success(cls, response, expected=204) -> bool:
-        """Default post success handler
-
-        Default handler to check post request respond.
-
-        :param expected:
-        :param cls:
-        :param response:
+        :param response: HTTP response
+        :param expected:  Option status code that we caller consider success.
         :return: True if patch msg succeed
         :raise PatchFailed if patch failed
         """
         if response.status_code == expected:
             return True
-        if response.status_code == 200 or response.status_code == 202 or response.status_code == 204:
+
+        if response.status_code == 200 or response.status_code == 202:
             return True
         else:
             err_msg = IDracManager.parse_error(IDracManager, response)
-            raise PostFailed(f"{err_msg}\nHTTP Status code: {response.status_code}")
+            raise PatchRequestFailed(f"{err_msg}\nHTTP Status code: "
+                                     f"{response.status_code}")
+
+    @staticmethod
+    def default_post_success(cls, response,
+                             expected: Optional[int] = 204) -> bool:
+        """Default post success handler,  Check for status code.
+        and raise exception.  Default handler to check post
+        request respond.
+
+        :param cls:
+        :param response: HTTP response
+        :param expected:  Option status code that we caller consider success.
+        :return: True if patch msg succeed
+        :raise PostRequestFailed if POST Method failed
+        """
+        if response.status_code == expected:
+            return True
+
+        if response.status_code == 200 \
+                or response.status_code == 202 \
+                or response.status_code == 204:
+            return True
+        else:
+            err_msg = IDracManager.parse_error(IDracManager, response)
+            raise PostRequestFailed(f"{err_msg}\nHTTP Status code: "
+                                    f"{response.status_code}")
 
     @staticmethod
     async def async_default_post_success(response):
-        """Default error handler.
-        :param response:
-        :return:
+        """Default error handler, for post
+        :param response: response HTTP response.
+        :return: True or False and if failed raise exception
+        :raise  PostRequestFailed
         """
         return IDracManager.default_post_success(IDracManager, response)
 
     @staticmethod
     async def async_default_patch_success(response):
-        """Default error handler.
-        :param response:
-        :return:
+        """Default error handler for patch http method.
+        :param response: response HTTP response.
+        :return: True or False and if failed raise exception
         """
         return IDracManager.default_patch_success(IDracManager, response)

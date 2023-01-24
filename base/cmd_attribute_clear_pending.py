@@ -4,19 +4,21 @@ Command provides the option to clear all the pending values.
 Author Mus spyroot@gmail.com
 """
 import argparse
+import asyncio
 import json
 from abc import abstractmethod
 from typing import Optional
 
 from base import IDracManager, ApiRequestType, Singleton, CommandResult
-from base.idrac_manager import UnsupportedAction, PostFailed
+from base.idrac_manager import UnsupportedAction, PostRequestFailed
 
 
 class ClearPending(IDracManager, scm_type=ApiRequestType.ClearPending,
                    name='clear_pending',
                    metaclass=Singleton):
     """
-    This cmd action is used to clear all the pending values.
+    This cmd action is used to clear all the pending
+    values currently in iDRAC.
     """
 
     def __init__(self, *args, **kwargs):
@@ -25,24 +27,27 @@ class ClearPending(IDracManager, scm_type=ApiRequestType.ClearPending,
     @staticmethod
     @abstractmethod
     def register_subcommand(cls):
-        """
+        """Register command
         :param cls:
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true', required=False,
-                                default="", help="Will reset and will not block. "
-                                                 "By default wait task to complete")
-        help_text = "reboots the system"
+
+        cmd_parser.add_argument('--async', default=False, required=False,
+                                action='store_true', dest="do_async",
+                                help="Will use asyncio.")
+
+        help_text = "clear pending values."
         return cmd_parser, "clear_pending", help_text
 
     def execute(self,
                 filename: Optional[str] = None,
+                do_async: Optional[bool] = False,
                 data_type: Optional[str] = "json",
                 **kwargs
                 ) -> CommandResult:
-        """Execute attribute clear pending.
-
+        """Execute clear pending command.
+        :param do_async:
         :param filename:
         :param data_type:
         :param kwargs:
@@ -62,15 +67,24 @@ class ClearPending(IDracManager, scm_type=ApiRequestType.ClearPending,
                     if '#DellManager.ClearPending' in actions:
                         target = actions['#DellManager.ClearPending']['target']
 
+        api_req_result = {}
         if target is not None:
             try:
+                pd = {}
                 r = f"https://{self.idrac_ip}{target}"
-                response = self.api_post_call(r, json.dumps({}), headers)
-                self.default_post_success(self, response, expected=200)
-            except PostFailed as pf:
+                if not do_async:
+                    response = self.api_post_call(r, json.dumps(pd), headers)
+                    ok = self.default_post_success(self, response, expected=200)
+                    api_req_result = {"Status": ok}
+                else:
+                    loop = asyncio.get_event_loop()
+                    ok = loop.run_until_complete(self.api_async_post_until_complete(r, json.dumps(pd), headers))
+                    api_req_result = {"Status": ok}
+
+            except PostRequestFailed as pf:
                 print("Error:", pf)
                 pass
         else:
             raise UnsupportedAction("Clear pending unsupported.")
 
-        return CommandResult({}, None, None)
+        return CommandResult(api_req_result, None, None)
