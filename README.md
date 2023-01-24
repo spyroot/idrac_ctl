@@ -1,9 +1,12 @@
 # idrac_ctl
-Dell iDRAC command line tool
+Standalone command line tool provide option to interact with Dell iDRAC 
+via Redfish REST API.  It supports both asynchronous and synchronous options 
+to interact with iDRAC.
+
 
 # Overview
 This tool provides an option to interact with Dell iDRAC via the command line and execute almost 
-every workflow you can do via Web UI. The idract_ctl, by default, outputs everything in JSON, 
+every workflow you can do via Web UI. The idrac_ctl, by default, outputs everything in JSON, 
 so you can easily pass it to any other tools to filter. Some commands provide an option to 
 filter on action or specific fields, and s is still ongoing work. The tool developed in extendability 
 mind. Each command registered dynamically. It sufficiently indicates the import statement 
