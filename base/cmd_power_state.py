@@ -1,0 +1,124 @@
+"""iDRAC reset a power state for compute system command
+
+This action is used to reset the system.
+Command provides the option to reboot, and change power state.
+
+Author Mus spyroot@gmail.com
+"""
+import argparse
+import json
+from abc import abstractmethod
+from typing import Optional
+
+from base import IDracManager, ApiRequestType, Singleton, CommandResult
+from base.cmd_exceptions import InvalidArgument
+
+
+class RebootHost(IDracManager,
+                 scm_type=ApiRequestType.RebootHost,
+                 name='reboot',
+                 metaclass=Singleton):
+    """
+    "Actions": {
+        "#ComputerSystem.Reset": {
+            "ResetType@Redfish.AllowableValues": [
+                "On",
+                "ForceOff",
+                "ForceRestart",
+                "GracefulRestart",
+                "GracefulShutdown",
+                "PushPowerButton",
+                "Nmi",
+                "PowerCycle"
+            ],
+            "target": "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset"
+        }
+    },
+    """
+    def __init__(self, *args, **kwargs):
+        super(RebootHost, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    @abstractmethod
+    def register_subcommand(cls):
+        """Register command
+        :param cls:
+        :return:
+        """
+        cmd_parser = argparse.ArgumentParser(add_help=False)
+        cmd_parser.add_argument('--reset_type',
+                                required=False, dest='reset_type',
+                                default="GracefulRestart", type=str,
+                                help="Reset On, ForceOff, "
+                                     "ForceRestart, GracefulRestart, "
+                                     "GracefulShutdown, "
+                                     "PushPowerButton, Nmi, PowerCycle.")
+
+        cmd_parser.add_argument('--async', action='store_true', required=False,
+                                default="", help="Will reset and will not block. "
+                                                 "By default wait task to complete")
+        help_text = "reboots the system"
+        return cmd_parser, "reboot", help_text
+
+    def execute(self, filename,
+                data_type: Optional[str] = "json",
+                reset_type: Optional[str] = "On",
+                power_state: Optional[str] = "On",
+                boot_source_override: Optional[str] = "",
+                boot_source_override_enabled: Optional[str] = "",
+                boot_source_override_mode: Optional[str] = "",
+                interface_type: Optional[str] = "",
+                **kwargs
+                ) -> CommandResult:
+        """
+        :param filename:
+        :param data_type:
+        :param reset_type: "On, ForceOff, ForceRestart, GracefulShutdown, PushPowerButton, Nmi"
+        :param power_state: On, null
+        :param boot_source_override: "None, Pxe, Floppy,
+                                      Cd, Hdd, BiosSetup, Utilities,
+                                      UefiTarget, SDCard, UefiHttp"
+        :param boot_source_override_enabled: "Once, Continuous, Disabled"
+        :param boot_source_override_mode: UEFI, Legacy
+        :param interface_type: TCM1_0, TPM2_0, TPM1_
+        :param kwargs:
+        :return:
+        """
+        headers = {}
+        if data_type == "json":
+            headers.update(self.json_content_type)
+
+        system_state = self.sync_invoke(ApiRequestType.SystemQuery, "system_query")
+        system_actions = system_state.data['Actions']
+        allowed_reset_types = []
+        if '#ComputerSystem.Reset' in system_actions:
+            ra = system_actions['#ComputerSystem.Reset']
+            allowed_reset_types = ra['ResetType@Redfish.AllowableValues']
+
+        if reset_type not in allowed_reset_types:
+            raise InvalidArgument(f"Invalid reset type {reset_type}, "
+                                  f"supported reset types {allowed_reset_types}")
+
+        r = f"https://{self.idrac_ip}/redfish/v1/Systems/System.Embedded.1/" \
+            f"Actions/ComputerSystem.Reset"
+
+        payload = {'ResetType': reset_type}
+        api_result = {}
+        response = self.api_post_call(r, json.dumps(payload), headers)
+        if self.default_post_success(self, response, expected=204):
+            api_result = {"Status": "succeed"}
+
+        jobs = self.sync_invoke(ApiRequestType.Jobs, "jobs_sources_query",
+                                reboot_pending=True, sort_by_time=True)
+        
+        self.default_json_printer(self, jobs.data)
+        resp_hdr = response.headers
+        data = {"job_id": None}
+
+        if resp_hdr is not None:
+            if 'Location' in resp_hdr:
+                location = resp_hdr.headers['Location']
+                job_id = location.split("/")[-1]
+                print("JOB_ID", job_id)
+                data = self.fetch_job(job_id)
+        return CommandResult(api_result, None, None)
