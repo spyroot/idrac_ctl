@@ -150,6 +150,7 @@ class VirtualMediaInsert(IDracManager,
                                          "virtual_disk_query")
         if self.version_api():
             new_api = True
+            # this for a future issue if old API doesn't work
 
         members = virtual_media.data['Members']
         actions = [self.discover_redfish_actions(self, m) for m

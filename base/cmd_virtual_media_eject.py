@@ -38,7 +38,7 @@ class VirtualMediaEject(IDracManager,
         cmd_arg = argparse.ArgumentParser(add_help=False)
         cmd_arg.add_argument('--device_id', required=False, type=str,
                              default="1",
-                             help="Default device id. Example 1 or 2")
+                             help="virtual media device id. Example 1 or 2")
 
         help_text = "eject the virtual media"
         return cmd_arg, "eject_virtual_media", help_text

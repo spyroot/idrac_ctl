@@ -27,3 +27,6 @@ from .cmd_virtual_media_insert import *
 from .cmd_virtual_media_eject import *
 from .cmd_current_boot import *
 from .cmd_boot_one_shot import *
+from .cmd_virtual_disk import *
+from .cmd_storage_list import *
+from .cmd_storage_get import *

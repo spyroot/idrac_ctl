@@ -18,16 +18,16 @@ import argparse
 from abc import abstractmethod
 from typing import Optional
 
-from base import CommandResult
+from base import CommandResult, save_if_needed, InvalidArgument
 from base import IDracManager, ApiRequestType, Singleton
-from cmd_utils import save_if_needed
+from base.idrac_manager import ResourceNotFound
 
 
 class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
                        name='virtual_disk_query',
                        metaclass=Singleton):
     """iDRACs REST API Virtual Disk Query Command, fetch virtual disk, caller can save
-    result to a file or output stdout or pass downstream to jq etc tools.
+    result to a file or output stdout or pass downstream to jq etc. tools.
     """
 
     def __init__(self, *args, **kwargs):
@@ -41,32 +41,27 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
         :return:
         """
         cmd_arg = argparse.ArgumentParser(add_help=False)
-
-        cmd_arg.add_argument('--deep', action='store_true', required=False,
-                             default=False,
-                             help="deep walk. will make separate rest call "
-                                  "for rest action discovered during initial call.")
-
-        cmd_arg.add_argument('-s', '--save_all', required=False, type=str, dest="do_save",
-                             default=bool, help="for deep walk by default we don't "
-                                                "save result to a file. save_all "
-                                                "will save to a separate file.")
+        cmd_arg.add_argument('--device_id', required=False, type=str,
+                             default="",
+                             help="storage device id. Example NonRAID.Slot.6-1.")
 
         cmd_arg.add_argument('-f', '--filename', required=False, type=str,
                              default="",
                              help="filename if we need to save a respond to a file.")
 
         help_text = "fetch the virtual disk data"
-        return cmd_arg, "attribute", help_text
+        return cmd_arg, "volumes", help_text
 
-    def execute(self, filename: str, virtual_disks,
+    def execute(self,
+                filename: Optional[str] = None,
+                device_id: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 do_deep: Optional[bool] = False,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Queries virtual disk from iDRAC.
-        :param virtual_disks:
+        """Queries volumes from given controlled from iDRAC.
+        :param device_id: a storage controller id, NonRAID.Slot.6-1
         :param verbose: enables verbose output
         :param do_deep: do deep recursive fetch
         :param do_async: will not block and return result as future.
@@ -78,25 +73,41 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
+
+        storage_id = self.sync_invoke(ApiRequestType.StorageListQuery,
+                                      "storage_list")
+        storage_members = storage_id.data['Members']
+        storage_ids = [k['@odata.id'].split("/")[-1]
+                       for k in storage_members if '@odata.id' in k]
+
+        if device_id not in storage_ids:
+            raise InvalidArgument(f"Storage device_id {device_id} "
+                                  "not found, available {storage_ids}")
+
         r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
-            f"System.Embedded.1/Storage/{virtual_disks}/Volumes"
+            f"System.Embedded.1/Storage/{device_id}/Volumes"
+        #
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
         data = response.json()
 
-        virtual_disk_list = []
+        vd_list = []
         if not data['Members']:
             return CommandResult(None, None, None)
         else:
-            virtual_disk_list = [i['@odata.id'].split("/")[-1] for i in data['Members']]
+            vd_list = [i['@odata.id'].split("/")[-1] for i in data['Members']]
 
-        for ii in virtual_disk_list:
-            r = f"https://{self.idrac_ip}/redfish/v1/Systems/System.Embedded.1/Storage/Volumes/{ii}"
-            response = self.api_get_call(r, headers)
+        for vol_id in vd_list:
+            r = f"https://{self.idrac_ip}/redfish/v1/Systems" \
+                f"/System.Embedded.1/Storage/Volumes/{vol_id}"
+            try:
+                response = self.api_get_call(r, headers)
+                self.default_error_handler(response)
+            except ResourceNotFound as exp:
+                continue
+                pass
             resp_data = response.json()
-            for i in resp_data.items():
-                if i[0] == "VolumeType":
-                    print("%s, Volume type: %s" % (ii, i[1]))
+            vd_list.append(resp_data)
 
         save_if_needed(filename, data)
-        return CommandResult()
+        return CommandResult(vd_list, None, None)

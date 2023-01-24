@@ -36,6 +36,8 @@ class ApiRequestType(Enum):
     VirtualMediaEject = auto()
     CurrentBoot = auto()
     BootOneShot = auto()
+    StorageViewQuery = auto()
+    StorageListQuery = auto()
 
 
 class RedfishAction:
