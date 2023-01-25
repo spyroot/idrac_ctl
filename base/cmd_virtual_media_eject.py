@@ -40,7 +40,7 @@ class VirtualMediaEject(IDracManager,
                              default="1",
                              help="virtual media device id. Example 1 or 2")
 
-        help_text = "eject the virtual media"
+        help_text = "command eject the virtual media"
         return cmd_arg, "eject_vm", help_text
 
     def execute(self,
@@ -91,6 +91,6 @@ class VirtualMediaEject(IDracManager,
         payload = {}
         response = self.api_post_call(r, json.dumps(payload), headers)
         if self.default_post_success(self, response):
-            api_result = {"Status": "succeed"}
+            api_result = self.api_success_msg(True)
 
         return CommandResult(api_result, None, None)

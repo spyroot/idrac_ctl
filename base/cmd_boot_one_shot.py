@@ -11,17 +11,17 @@ caller can save to a file and consume asynchronously or synchronously.
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 import json
 
 from abc import abstractmethod
 from typing import Optional
 
-from base import Singleton, ApiRequestType, IDracManager, CommandResult
+from base import Singleton, ApiRequestType, IDracManager, CommandResult, UnexpectedResponse
 from base.cmd_exceptions import InvalidArgument
 
 
-class BootOneShot(IDracManager, scm_type=ApiRequestType.BootOneShot,
+class BootOneShot(IDracManager,
+                  scm_type=ApiRequestType.BootOneShot,
                   name='boot_one_shot',
                   metaclass=Singleton):
     """
@@ -38,13 +38,7 @@ class BootOneShot(IDracManager, scm_type=ApiRequestType.BootOneShot,
         :param cls:
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
-                                default=False, help="Will create a task and will not wait.")
-
-        cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                                default="",
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser = cls.base_parser(is_reboot=True, is_expanded=False)
 
         cmd_parser.add_argument('--device', required=False, type=str,
                                 default="Cd",
@@ -54,8 +48,8 @@ class BootOneShot(IDracManager, scm_type=ApiRequestType.BootOneShot,
                                 default=None,
                                 help="uefi_target")
 
-        help_text = "fetch the boot source for device/devices"
-        return cmd_parser, "boot_one_shot", help_text
+        help_text = "command change one shoot boot"
+        return cmd_parser, "boot-one-shot", help_text
 
     def execute(self,
                 device: Optional[str] = None,
@@ -65,12 +59,14 @@ class BootOneShot(IDracManager, scm_type=ApiRequestType.BootOneShot,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
+                do_reboot: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Query information for particular boot source device from idrac.
         Example python idrac_ctl.py get_boot_source --dev "HardDisk.List.1-1"
 
         VenHw(986D1755-B9D0-4F8D-A0DA-D1DB18672045)
 
+        :param do_reboot:  will reboot host
         :param uefi_target:
         :param device:  get the list of supported device.
                         For example None, Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard,UefiHttp
@@ -115,6 +111,21 @@ class BootOneShot(IDracManager, scm_type=ApiRequestType.BootOneShot,
         response = self.api_patch_call(r, json.dumps(payload), headers)
         api_result = {}
         if self.default_patch_success(self, response):
-            api_result = {"Status": "succeed"}
+            api_result = self.api_success_msg(True)
+
+        try:
+            json_data = response.json()
+            if verbose:
+                self.default_json_printer(json_data)
+            job_id = self.job_id_from_header(response)
+            if job_id is not None:
+                data = self.fetch_job(job_id)
+                api_result.update(data)
+        except UnexpectedResponse as ur:
+            pass
+
+        if do_reboot:
+            reboot_result = self.reboot()
+            api_result.update(reboot_result)
 
         return CommandResult(api_result, None, None)

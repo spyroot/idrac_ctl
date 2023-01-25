@@ -118,7 +118,7 @@ class VirtualMediaInsert(IDracManager,
                              default="1",
                              help="Default device id. Example 1 or 2")
 
-        help_text = "insert virtual media"
+        help_text = "command insert virtual media"
         return cmd_arg, "insert_vm", help_text
 
     def execute(self,
