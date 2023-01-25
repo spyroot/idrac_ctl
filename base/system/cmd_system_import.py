@@ -8,9 +8,10 @@ Author Mus spyroot@gmail.com
 import argparse
 import json
 from abc import abstractmethod
+from pathlib import Path
 from typing import Optional
 
-from base import CommandResult, UnexpectedResponse
+from base import CommandResult, UnexpectedResponse, InvalidArgument
 from base import IDracManager, ApiRequestType, Singleton
 
 
@@ -40,23 +41,48 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         cmd_arg.add_argument('--async', action='store_true', required=False, dest="do_async",
                              default=False, help="Will do async request.")
 
-        cmd_arg.add_argument('--deep', action='store_true', required=False, dest="do_deep",
-                             default=False, help="deep view to each pci.")
-
         cmd_arg.add_argument('-f', '--filename',
                              required=False, type=str, default="",
                              help="filename, if we need save to a file.")
 
+        cmd_arg.add_argument('-f', '--shutdown_type',
+                             required=False, type=str, default="",
+                             help="Graceful, Forced, NoReboot.")
+
+        cmd_arg.add_argument('-f', '--host_power_state',
+                             required=False, type=str, default="",
+                             help="Graceful, Forced, NoReboot.")
+
+        cmd_arg.add_argument('-f', '--time_to_wait',
+                             required=False, type=int, default=300,
+                             help="The time to wait for the host to shut down. "
+                                  "Default and minimum value is 300 seconds. Maximum value is 3600 seconds..")
+
         help_text = "command import system configuration"
         return cmd_arg, "system-import", help_text
+
+    @staticmethod
+    def job_id_from_header(response):
+        """
+        :param response:
+        :return:
+        """
+        resp_hdr = response.headers
+        if 'Location' not in resp_hdr:
+            raise UnexpectedResponse("rest api failed.")
+
+        location = response.headers['Location']
+        job_id = location.split("/")[-1]
+
+        return job_id
 
     def execute(self,
                 config: str,
                 shutdown_type: Optional[str] = "Graceful",
                 host_power_state: Optional[str] = "Off",
+                time_to_wait: Optional[str] = "",
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
-                do_deep: Optional[bool] = False,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
@@ -86,35 +112,52 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         IncludeInExport
         ShareParameters
 
-        :param shutdown_type:
-        :param host_power_state:
-        :param config:
-        :param shutdown_type:
-        :param do_deep: will return verbose output for each pci device.
+        :param host_power_state: On, Off
+        :param config: path to a config file.
+        :param shutdown_type:  Graceful, Forced, NoReboot.
+        :param time_to_wait:
         :param do_async: will schedule asyncio task.
-        :param verbose: verbose output.
         :param filename: if filename indicate call will save respond to a file.
+        :param verbose: verbose output.
         :param data_type: a data serialized back.
         :return: in data type json will return json
         """
         if verbose:
             print(f"cmd args data_type: {data_type} "
-                  f"do_deep:{do_deep} do_async:{do_async} filename:{filename}")
+                  f"shutdown_type:{shutdown_type} "
+                  f"host_power_state:{host_power_state} "
+                  f"do_async:{do_async} "
+                  f"filename:{filename}")
             print(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        open_file = open(config, "r")
-        modify_file = open_file.read()
-        modify_file = modify_file.replace('\n', "")
-        modify_file = modify_file.replace("   ", "")
-        open_file.close()
+        shutdown_types = ['Graceful', 'Forced', 'NoReboot']
+        host_power_states = ['On', 'Off']
+
+        if shutdown_type.title() not in shutdown_type:
+            raise InvalidArgument(f"Invalid shutdown type "
+                                  f"{shutdown_type} supported {shutdown_types}")
+
+        if host_power_state.title() not in host_power_states:
+            raise InvalidArgument(f"Invalid power state type "
+                                  f"{host_power_states} supported {host_power_states}")
+
+        path_config = Path(config).expanduser().resolve()
+        if not path_config.is_file():
+            raise InvalidArgument(f"Invalid path to a config file.")
+
+        with open(str(path_config), "r") as f:
+            open_file = open(config, "r")
+            buf = open_file.read()
+            buf = buf.replace('\n', "")
+            buf = buf.replace("   ", "")
 
         payload = {"ShutdownType": shutdown_type.title(),
                    "HostPowerState": host_power_state.title(),
-                   "ImportBuffer": modify_file,
+                   "ImportBuffer": buf,
                    "ShareParameters": {"Target": "ALL"}
                    }
 
@@ -123,16 +166,13 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
 
         response = self.api_post_call(r, json.dumps(payload), headers)
         ok = self.default_post_success(self, response, expected=202)
-        resp_hdr = response.headers
-        if 'Location' not in resp_hdr:
-            raise UnexpectedResponse("rest api failed.")
+        data = {}
 
-        location = response.headers['Location']
-        job_id = location.split("/")[-1]
-
-        if not do_async:
-            data = self.fetch_job(job_id)
-        else:
-            data = {"job_id": job_id}
+        if ok:
+            job_id = self.job_id_from_header(response)
+            if not do_async:
+                data = self.fetch_job(job_id)
+            else:
+                data = {"job_id": job_id}
 
         return CommandResult(data, None, None)
