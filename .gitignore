@@ -36,7 +36,6 @@ wandb/*
 wandb
 # C extensions
 *.so
-*.pyc
 .idea/DH-MAML.iml
 # Distribution / packaging
 .Python
@@ -54,7 +53,6 @@ var/
 wheels/
 pip-wheel-metadata/
 share/python-wheels/
-*.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
@@ -139,8 +137,6 @@ celerybeat.pid
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
 # Spyder project settings
 .spyderproject

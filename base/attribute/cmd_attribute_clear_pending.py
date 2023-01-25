@@ -76,7 +76,7 @@ class AttributeClearPending(IDracManager, scm_type=ApiRequestType.AttributeClear
                 ok = self.default_post_success(self, response, expected=200)
             else:
                 loop = asyncio.get_event_loop()
-                ok = loop.run_until_complete(self.api_async_post_until_complete(r, json.dumps(pd), headers))
+                ok = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
 
             api_req_result = {"Status": ok}
         except PostRequestFailed as pf:

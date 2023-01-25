@@ -16,7 +16,7 @@ import argparse
 from abc import abstractmethod
 from typing import Optional
 
-from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
+from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
 class GetCurrentBoot(IDracManager, scm_type=ApiRequestType.CurrentBoot,

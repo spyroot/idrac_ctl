@@ -6,7 +6,6 @@ is easy to query.
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 from abc import abstractmethod
 from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult

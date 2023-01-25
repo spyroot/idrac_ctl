@@ -74,7 +74,7 @@ class ExportSystemConfig(IDracManager,
         - Username to log on to the share — for CIFS share only.
         - Password to log on to the share — for CIFS share only.
         - Workgroup name to log on to the share
-        - Can be the component name or an FQDD. The default value is ALL.
+        - Can be the component name or an FQDN. The default value is ALL.
 
         :param do_async:
         :param data_type:
@@ -108,7 +108,7 @@ class ExportSystemConfig(IDracManager,
             self.default_post_success(self, response)
         else:
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_post_until_complete(r, json_pd, headers))
+            ok, response = loop.run_until_complete(self.async_post_until_complete(r, json_pd, headers))
 
         resp_hdr = response.headers
         if 'Location' not in resp_hdr:

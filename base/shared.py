@@ -1,6 +1,5 @@
 """Shared resource
 """
-import collections
 import json
 from enum import auto, Enum
 from typing import Optional

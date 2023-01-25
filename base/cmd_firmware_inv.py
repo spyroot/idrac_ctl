@@ -12,7 +12,6 @@ from abc import abstractmethod
 from typing import Optional
 
 from base import Singleton, ApiRequestType, IDracManager, save_if_needed, CommandResult
-import requests
 
 
 class FirmwareInventoryQuery(IDracManager, scm_type=ApiRequestType.FirmwareInventoryQuery,

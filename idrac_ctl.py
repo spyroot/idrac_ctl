@@ -49,6 +49,7 @@ def json_printer(json_data, cmd_args,
                  header: Optional[str] = None,
                  footer: Optional[str] = None) -> None:
     """Json stdout printer.
+    :param cmd_args:
     :param header:
     :param footer:
     :param colorized:

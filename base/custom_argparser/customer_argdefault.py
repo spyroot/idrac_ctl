@@ -9,13 +9,13 @@ class CustomArgumentDefaultsHelpFormatter(argparse.HelpFormatter):
     """
 
     def _get_help_string(self, action):
-        help = action.help
+        help_msg = action.help
         if '%(default)' not in action.help:
             if action.default is not argparse.SUPPRESS:
                 defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
                 if action.option_strings or action.nargs in defaulting_nargs:
-                    help += ' (default: %(default)s)'
-        return help
+                    help_msg += ' (default: %(default)s)'
+        return help_msg
 
     def _split_lines(self, text, width):
         if text.startswith('R|'):

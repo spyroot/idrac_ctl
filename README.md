@@ -164,7 +164,7 @@ We see image attached from get_virtual_media
         }
 ]
 ```
-Set BIOS boot in one shot. In this setting on reboot, we will boot from CDROM when installation is complete. 
+Set BIOS boot in one shot. In this setting on reboot, we will boot from CD-ROM when installation is complete. 
 BIOS will boot OS from the default location. i.e., whatever is first on the list.
 
 ```bash

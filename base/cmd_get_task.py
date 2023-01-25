@@ -70,7 +70,7 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
         - Username to log on to the share — for CIFS share only.
         - Password to log on to the share — for CIFS share only.
         - Workgroup name to log on to the share
-        - Can be the component name or an FQDD. The default value is ALL.
+        - Can be the component name or an FQDN. The default value is ALL.
 
         :param job_id:
         :param do_async:

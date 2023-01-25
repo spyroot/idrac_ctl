@@ -72,7 +72,7 @@ class BootSourceClearPending(IDracManager, scm_type=ApiRequestType.BootSourceCle
                 api_req_result["Response"] = response.status_code
             else:
                 loop = asyncio.get_event_loop()
-                ok = loop.run_until_complete(self.api_async_post_until_complete(r, json.dumps(pd), headers))
+                ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
         except PostRequestFailed as pf:
             print("Error:", pf)
             pass
