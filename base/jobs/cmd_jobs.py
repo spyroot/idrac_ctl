@@ -76,7 +76,7 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                                 help="Sort jobs by time. First entry the last job.")
 
         # RebootCompleted
-        help_text = "fetch list of jobs"
+        help_text = "command fetch a list of jobs"
         return cmd_parser, "jobs", help_text
 
     def execute(self,

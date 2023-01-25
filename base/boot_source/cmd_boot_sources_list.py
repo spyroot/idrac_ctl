@@ -30,15 +30,15 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class BootOptions(IDracManager, scm_type=ApiRequestType.BootOptions,
-                  name='boot_sources_query',
-                  metaclass=Singleton):
+class BootOptionsList(IDracManager, scm_type=ApiRequestType.BootOptions,
+                      name='boot_sources_query',
+                      metaclass=Singleton):
     """
     Command enable boot option
     """
 
     def __init__(self, *args, **kwargs):
-        super(BootOptions, self).__init__(*args, **kwargs)
+        super(BootOptionsList, self).__init__(*args, **kwargs)
 
     @staticmethod
     @abstractmethod
@@ -55,8 +55,8 @@ class BootOptions(IDracManager, scm_type=ApiRequestType.BootOptions,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the boot source"
-        return cmd_parser, "boot_source", help_text
+        help_text = "command fetch the boot source list"
+        return cmd_parser, "boot-source-list", help_text
 
     def execute(self, filename: [str] = None,
                 data_type: Optional[str] = "json",

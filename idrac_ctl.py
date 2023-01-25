@@ -12,6 +12,7 @@ import collections
 import json
 import os
 import sys
+import textwrap
 from typing import Optional, Dict
 
 import urllib3
@@ -21,9 +22,15 @@ from pygments.formatters.terminal256 import Terminal256Formatter
 
 from base.cmd_utils import save_if_needed
 from base.shared import RedfishAction
-from base.cmd_exceptions import InvalidArgument
+from base.cmd_exceptions import InvalidArgument, FailedDiscoverAction
 from base.idrac_manager import AuthenticationFailed, IDracManager, ResourceNotFound
+from base.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def formatter(prog):
+    argparse.HelpFormatter(prog, max_help_position=100, width=200)
 
 
 class info:
@@ -36,30 +43,44 @@ class info:
 __version__ = info.version
 
 
-def json_printer(json_data, sort: Optional[bool] = True, indents: Optional[int] = 4,
-                 colorized: Optional[bool] = True) -> None:
+def json_printer(json_data, cmd_args,
+                 sort: Optional[bool] = True, indents: Optional[int] = 4,
+                 colorized: Optional[bool] = True,
+                 header: Optional[str] = None,
+                 footer: Optional[str] = None) -> None:
     """Json stdout printer.
+    :param header:
+    :param footer:
     :param colorized:
     :param json_data:
     :param indents:
     :param sort:
     :return:
     """
+    if cmd_args.no_stdout:
+        return
+
     if isinstance(json_data, str):
         json_raw = json.dumps(json.loads(json_data),
                               sort_keys=sort, indent=indents)
     else:
         json_raw = json.dumps(json_data,
                               sort_keys=sort, indent=indents)
+
+    if header is not None:
+        print(header)
+
     if colorized:
         colorful = highlight(
                 json_raw,
                 lexer=JsonLexer(),
-                formatter=Terminal256Formatter(),
-        )
+                formatter=Terminal256Formatter())
         print(colorful)
     else:
         print(json_raw)
+
+    if footer is not None:
+        print(footer)
 
 
 def main(cmd_args, command_name_to_cmd: Dict) -> None:
@@ -82,27 +103,27 @@ def main(cmd_args, command_name_to_cmd: Dict) -> None:
         if cmd_args.subcommand in command_name_to_cmd:
             cmd = command_name_to_cmd[cmd_args.subcommand]
             arg_dict = dict((k, v) for k, v in vars(args).items() if k != "message_type")
-            print("#args dictionary:")
-            if args.verbose:
-                json_printer(arg_dict)
+            if cmd_args.verbose:
+                print("# args dictionary:")
+                json_printer(arg_dict, cmd_args)
 
             command_result = redfish_api.sync_invoke(cmd.type,
                                                      cmd.name,
                                                      **arg_dict)
 
             if cmd_args.json and command_result.data is not None:
-                print("#cmd respond:")
-                json_printer(command_result.data)
+                json_printer(command_result.data, cmd_args,
+                             header="# respond data from the command:")
 
             # extra data for deep walks
             if command_result.extra is not None:
                 extra = command_result.extra
-                print("#extra data:")
                 if args.json:
-                    json_printer(extra)
+                    json_printer(extra, cmd_args,
+                                 header="#command extra data:")
 
                 # save extra as separate files.
-                if hasattr(cmd_args, 'do_save') and args.do_save:
+                if hasattr(cmd_args, 'do_save') and cmd_args.do_save:
                     for extra_k in extra.keys():
                         if args.verbose:
                             print(f"Saving {extra_k}.json")
@@ -110,24 +131,29 @@ def main(cmd_args, command_name_to_cmd: Dict) -> None:
 
             # discovered rest action.
             if command_result.discovered is not None:
-                print("redfish actions:")
                 if cmd_args.json:
                     if isinstance(command_result.discovered, dict):
                         for ak in command_result.discovered.keys():
                             if isinstance(command_result.discovered[ak], RedfishAction):
-                                json_printer(json.dumps(command_result.discovered[ak].__dict__))
+                                json_printer(json.dumps(command_result.discovered[ak].__dict__), cmd_args,
+                                             header="# Redfish actions:")
                             else:
-                                json_printer(json.dumps(command_result.discovered[ak]))
+                                json_printer(json.dumps(command_result.discovered[ak]),
+                                             cmd_args,
+                                             header="# Redfish actions:")
                     else:
-                        json_printer(command_result.discovered)
+                        json_printer(command_result.discovered, cmd_args,
+                                     header="# Redfish actions:")
 
     except ResourceNotFound as rnf:
         print("Error:", rnf)
     except InvalidArgument as ia:
         print("Error:", ia)
+    except FailedDiscoverAction as fda:
+        print("Error:", fda)
 
 
-def create_cmd_tree() -> Dict:
+def create_cmd_tree(arg_parser) -> Dict:
     """
     :return:
     """
@@ -136,25 +162,47 @@ def create_cmd_tree() -> Dict:
     commands_registry = redfish_api.get_registry()
     command_name = collections.namedtuple("Command", "type name")
 
+    subparsers = arg_parser.add_subparsers(title='main command', metavar="main command",
+                                           help='list of idrac_ctl commands',
+                                           dest="subcommand",
+                                           description='''Each action requires choosing
+                                           a main command bios, boot, etc|n          
+                                           Example: idrac_ctl.py bios\n''',
+                                           required=True)
+
     for k in commands_registry:
         for sub_key in commands_registry[k]:
             cls = commands_registry[k][sub_key]
             if debug:
                 print(f"Registering command {k} {sub_key}")
             if hasattr(cls, "register_subcommand"):
-                arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls)
+                cli_arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls)
+
+                # try:
+                #     cli_arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls, parent=arg_parser)
+                # except TypeError:
+                #     cli_arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls)
+
                 if debug:
                     print(f"Registering command name {cmd_name} {cmd_help}")
-                subparsers.add_parser(cmd_name, parents=[arg_parser], help=f"{str(cmd_help)}")
+                subparsers.add_parser(cmd_name, parents=[cli_arg_parser], help=f"{str(cmd_help)}",
+                                      formatter_class=CustomArgumentDefaultsHelpFormatter,
+                                      )
                 command_name_to_cmd[cmd_name] = command_name(k, sub_key)
 
     return command_name_to_cmd
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=" iDrac command line tools. Author Mus",
-                                     epilog="For more details example. Make sure to check "
-                                            "https://github.com/spyroot/idrac_ctl.")
+    parser = argparse.ArgumentParser(prog="idrac_ctl", add_help=True,
+                                     description='''iDrac command line tools. |n
+                                     It a standalone command line tool provide option to interact with  |n 
+                                     Dell iDRAC via Redfish REST API. It supports both asynchronous and |n
+                                     synchronous options to interact with iDRAC.|n
+                                     Author Mus''',
+                                     epilog="For more details example. Make sure to check."
+                                            "https://github.com/spyroot/idrac_ctl",
+                                     formatter_class=CustomArgumentDefaultsHelpFormatter)
     # global args
     parser.add_argument('--idrac_ip', required=False, type=str,
                         default=os.environ.get('IDRAC_IP', ''),
@@ -176,15 +224,13 @@ if __name__ == "__main__":
                         help="enables verbose output.")
     parser.add_argument('--json', action='store_true', required=False, default=True,
                         help="by default we use json to output to console.")
+    parser.add_argument('--no-stdout', '--no_stdout',  action='store_true', required=False, default=False,
+                        help="by default we use stdout output.")
     parser.add_argument('-f', '--filename', required=False, type=str,
                         default="", help="Filename if we need save to a file.")
 
-    subparsers = parser.add_subparsers(title='subcommand',
-                                       help='system for subcommands',
-                                       dest="subcommand")
-
     debug = False
-    cmd_dict = create_cmd_tree()
+    cmd_dict = create_cmd_tree(parser)
     args = parser.parse_args()
 
     if args.idrac_ip is None or len(args.idrac_ip) == 0:

@@ -1,6 +1,7 @@
 """Shared resource
 """
 import collections
+import json
 from enum import auto, Enum
 from typing import Optional
 
@@ -8,8 +9,9 @@ from typing import Optional
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    QueryIdrac = auto()
     JobDel = auto()
-    ClearPending = auto()
+    AttributeClearPending = auto()
     JobGet = auto()
     Jobs = auto()
     BootOptions = auto()
@@ -38,7 +40,11 @@ class ApiRequestType(Enum):
     BootOneShot = auto()
     StorageViewQuery = auto()
     StorageListQuery = auto()
-
+    BiosClearPending = auto()
+    BootOptionQuery = auto()
+    BootSettingsQuery = auto()
+    BootSourceClear = auto()
+    JobServices = auto()
 
 class RedfishAction:
     """Action discovery encapsulate each action to RedfishAction.
@@ -63,6 +69,10 @@ class RedfishAction:
         if self.args is None:
             self.args = {}
         self.args[arg_name] = allowable_value
+
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+                          sort_keys=True, indent=4)
 
 
 class Singleton(type):

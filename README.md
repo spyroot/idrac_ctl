@@ -24,7 +24,10 @@ export IDRAC_USERNAME=root
 
 Make sure you are using python >= 3.9
 ```bash
+git clone https://github.com/spyroot/idrac_ctl.git
+cd idrac_ctl
 pip install -r requirements.txt
+python idrac_ctl.py --help
 ```
 
 Now I'm still trying to optimize the root menu for easy consumption. For now, all subcommands are in root, 

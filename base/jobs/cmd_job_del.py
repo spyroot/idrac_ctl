@@ -1,7 +1,7 @@
-"""iDRAC fetch job from iDRAC
+"""iDRAC delete job from iDRAC action
 
-Command provides the option to retrieve job information  from iDRAC
-and serialize back as caller as JSON, YAML, and XML.
+Command provides the option to delete a
+job from iDRAC.
 
 Author Mus spyroot@gmail.com
 """
@@ -14,14 +14,14 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
-class JobGet(IDracManager, scm_type=ApiRequestType.JobGet,
-             name='job_query',
+class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
+             name='job_del',
              metaclass=Singleton):
     """Command gets a job from iDRAC
     """
 
     def __init__(self, *args, **kwargs):
-        super(JobGet, self).__init__(*args, **kwargs)
+        super(JobDel, self).__init__(*args, **kwargs)
 
     @staticmethod
     @abstractmethod
@@ -41,8 +41,8 @@ class JobGet(IDracManager, scm_type=ApiRequestType.JobGet,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch a job"
-        return cmd_parser, "job", help_text
+        help_text = "command delete a job"
+        return cmd_parser, "job-rm", help_text
 
     def execute(self, job_id: str,
                 filename: Optional[str] = None,
@@ -50,9 +50,9 @@ class JobGet(IDracManager, scm_type=ApiRequestType.JobGet,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Query information for particular job.
+        """Executes delete job from iDRAC action
 
-        python idrac_ctl.py job --job_id JID_744718373591
+        python idrac_ctl.py del_job --job_id RID_744980379189
 
         :param job_id: iDRAC job_id JID_744718373591
         :param do_async: note async will subscribe to an event loop.
@@ -71,12 +71,13 @@ class JobGet(IDracManager, scm_type=ApiRequestType.JobGet,
             headers.update(self.json_content_type)
 
         r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
-            f"Oem/Dell/Jobs/{job_id}?$expand=*($levels=1)"
+            f"Oem/Dell/Jobs/{job_id}"
 
         if not do_async:
-            response = self.api_get_call(r, headers)
+            response = self.api_delete_call(r, headers)
             self.default_error_handler(response)
         else:
+            # TODO
             loop = asyncio.get_event_loop()
             response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
         data = response.json()

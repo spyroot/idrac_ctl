@@ -46,7 +46,7 @@ class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
                              default=False, help="deep walk. will make a separate "
                                                  "rest call for each discovered api.")
 
-        help_text = "fetch the boot source"
+        help_text = "command fetch the boot source"
         return cmd_arg, "boot", help_text
 
     def execute(self,

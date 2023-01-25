@@ -1,13 +1,10 @@
 """iDRAC enable boot options.
 
-Command provides the option to retrieve boot source from iDRAC and serialize
-back as caller as JSON, YAML, and XML. In addition, it automatically
-registers to the command line ctl tool. Similarly to the rest command
-caller can save to a file and consume asynchronously or synchronously.
+Command provides the option to enable boot source,
+so it is used during a boot process.
 
-Doc
-https://www.dell.com/support/manuals/en-us/idrac9-lifecycle-controller-v3.3-series/
-idrac9_3.36_redfishapiguide/dellbootsources?guid=guid-4803ff0e-76ad-42c5-a971-820123cd0b83&lang=en-us
+For example.
+python idrac_ctl.py boot-source-enable --dev NIC.Slot.8-1 --enable yes
 
 Example
 idrac_ctl.py set_boot_source --dev NIC.Slot.8-1 --enable yes
@@ -17,6 +14,7 @@ Enables boot on nic slot 8-1
 Author Mus spyroot@gmail.com
 """
 import argparse
+import asyncio
 import json
 from abc import abstractmethod
 from typing import Optional
@@ -26,7 +24,8 @@ from base.cmd_utils import str2bool
 from base.idrac_manager import PatchRequestFailed
 
 
-class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
+class EnableBootOptions(IDracManager,
+                        scm_type=ApiRequestType.EnableBootOptions,
                         name='boot_patch',
                         metaclass=Singleton):
     """
@@ -43,7 +42,9 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
         :param cls:
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False)
+        cmd_parser = argparse.ArgumentParser(add_help=False,
+                                             description="command enable as boot source a device.")
+
         cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
                                 default=False,
                                 help="Will create a task and will not wait.")
@@ -52,16 +53,16 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        cmd_parser.add_argument('--dev', required=True, dest="boot_source", type=str,
-                                default=None,
-                                help="Fetch verbose information for a boot device.")
+        cmd_parser.add_argument('--dev', required=True, dest="boot_source",
+                                type=str, default=None, metavar="DEVICE",
+                                help="fetch verbose information for a device. Example --dev NIC.Slot.8-1")
 
-        cmd_parser.add_argument('--enable', required=True,
+        cmd_parser.add_argument('--enable', required=True, metavar="yes",
                                 dest="is_enabled", type=str2bool, nargs='?',
                                 help="Enable or Disable target boot device. yes|no, true|false")
 
-        help_text = "Fetch the boot source"
-        return cmd_parser, "set_boot_source", help_text
+        help_text = "command enable the boot on a particular device."
+        return cmd_parser, "boot-source-enable", help_text
 
     def execute(self,
                 boot_source: str,
@@ -109,15 +110,25 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
             print(f"Unknown dev. available boot source. {boot_data_sources}")
             return CommandResult(None, None, None)
 
-        cmd_result = CommandResult(None, None, None)
-
+        ok = False
+        json_data = {}
         try:
             r = f"https://{self.idrac_ip}{target_dev}"
             payload = {"BootOptionEnabled": bool(is_enabled)}
-            resp = self.api_patch_call(r, json.dumps(payload), hdr=headers)
-            self.default_json_printer(self, resp.json())
-            self.default_patch_success(self, resp)
-            cmd_result.data = CommandResult(resp.json(), None, None)
+            if not do_async:
+                resp = self.api_patch_call(r, json.dumps(payload), hdr=headers)
+                ok = self.default_patch_success(self, resp)
+            else:
+                loop = asyncio.get_event_loop()
+                ok, resp = loop.run_until_complete(
+                        self.api_async_patch_until_complete(
+                                r, json.dumps(payload), headers)
+                )
+
+                json_data = resp.json()
+                if '@Message.ExtendedInfo' in json_data:
+                    json_data = json_data['@Message.ExtendedInfo']
+
         except PatchRequestFailed as patch_err:
             print("Error:", patch_err)
             pass
@@ -125,6 +136,6 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
             print("Error:", err)
             pass
 
-        self.default_json_printer(self, cmd_result.data)
-
-        return cmd_result
+        api_result = {"Status": ok}
+        api_result.update(json_data)
+        return CommandResult(api_result, None, None)

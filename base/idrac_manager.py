@@ -30,7 +30,9 @@ import time
 from tqdm import tqdm
 from abc import abstractmethod
 from typing import Optional, Tuple, Dict
+
 from base.shared import ApiRequestType, RedfishAction
+from base.cmd_utils import save_if_needed
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
@@ -356,16 +358,18 @@ class IDracManager:
 
     @staticmethod
     @abstractmethod
-    def default_json_printer(cls, json_data,
+    def default_json_printer(json_data,
                              sort: Optional[bool] = True,
                              indents: Optional[int] = 4):
         """json default stdout printer.
-        :param cls:
         :param json_data:
         :param indents:
         :param sort:
         :return:
         """
+        if isinstance(json_data, requests.models.Response):
+            json_data = json_data.json()
+
         if isinstance(json_data, str):
             json_raw = json.dumps(json.loads(json_data),
                                   sort_keys=sort, indent=indents)
@@ -415,8 +419,10 @@ class IDracManager:
         :param json_data:
         :return:
         """
-        action_dict = {}
+        if isinstance(json_data, requests.models.Response):
+            json_data = json_data.json()
 
+        action_dict = {}
         unfiltered_actions, full_redfish_names = cls._get_actions(cls, json_data)
         for ra in unfiltered_actions.keys():
             if 'target' not in unfiltered_actions[ra]:
@@ -524,6 +530,23 @@ class IDracManager:
                                                           verify=self._is_verify_cert,
                                                           auth=(self._username, self._password)))
 
+    async def api_async_patch_until_complete(self, r: str,
+                                             payload: str, hdr: Dict, loop=None):
+        """Make async patch api request until completion , it issues post with x-auth
+        authentication header or base. Caller can use this in asyncio routine.
+
+        :param r: request.
+        :param hdr: http header.
+        :param loop: asyncio loop
+        :param payload: json payload
+        :return:
+        """
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        response = await self.api_async_patch_call(loop, r, payload, hdr)
+        ok = await self.async_default_patch_success(await response)
+        return await response, ok
+
     async def api_async_post_until_complete(self, r: str,
                                             payload: str, hdr: Dict, loop=None):
         """Make async post api request until completion , it issues post with x-auth
@@ -619,7 +642,7 @@ class IDracManager:
         return err_msg
 
     @staticmethod
-    def default_patch_success(cls, response,
+    def default_patch_success(cls, response: requests.models.Response,
                               expected: Optional[int] = 200) -> bool:
         """Default HTTP patch success handler
         Default handler to check patch request respond.
@@ -666,7 +689,7 @@ class IDracManager:
                                     f"{response.status_code}")
 
     @staticmethod
-    async def async_default_post_success(response):
+    async def async_default_post_success(response: requests.models.Response) -> bool:
         """Default error handler, for post
         :param response: response HTTP response.
         :return: True or False and if failed raise exception
@@ -675,9 +698,90 @@ class IDracManager:
         return IDracManager.default_post_success(IDracManager, response)
 
     @staticmethod
-    async def async_default_patch_success(response):
+    async def async_default_patch_success(response: requests.models.Response) -> bool:
         """Default error handler for patch http method.
         :param response: response HTTP response.
         :return: True or False and if failed raise exception
         """
         return IDracManager.default_patch_success(IDracManager, response)
+
+    @staticmethod
+    def expanded(level=1):
+        """Return prefix to use for expanded respond.
+        :param level:
+        :return:
+        """
+        return f"?$expand=*($levels={level})"
+
+    def base_query(self,
+                   resource: str,
+                   filename: Optional[str] = None,
+                   do_async: Optional[bool] = False,
+                   do_expanded: Optional[bool] = False,
+                   data_type: Optional[str] = "json",
+                   verbose: Optional[bool] = False,
+                   **kwargs) -> CommandResult:
+        """Base query executes query.
+
+        :param resource: path to a resource
+        :param do_async: note async will subscribe to an event loop.
+        :param do_expanded:  will do expand query
+        :param filename: if filename indicate call will save a bios setting to a file.
+        :param verbose: enables verbose output
+        :param data_type: json or xml
+        :return: CommandResult and if filename provide will save to a file.
+        """
+        if verbose:
+            print(f"cmd args"
+                  f"data_type: {data_type} "
+                  f"resource:{resource} "
+                  f"do_async:{do_async} "
+                  f"filename:{filename}")
+            print(f"the rest of args: {kwargs}")
+
+        headers = {}
+        if data_type == "json":
+            headers.update(self.json_content_type)
+
+        if do_expanded:
+            r = f"https://{self.idrac_ip}{resource}{self.expanded()}"
+        else:
+            r = f"https://{self.idrac_ip}{resource}{self.expanded()}"
+
+        if not do_async:
+            response = self.api_get_call(r, headers)
+            self.default_error_handler(response)
+        else:
+            loop = asyncio.get_event_loop()
+            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+
+        data = response.json()
+        save_if_needed(filename, data)
+        return CommandResult(data, None, None)
+
+    @staticmethod
+    def base_parser(is_async: Optional[bool] = True,
+                    is_file_save: Optional[bool] = True,
+                    is_expanded: Optional[bool] = True):
+        """This base optional parser for all sub command.
+        Each sub-command can add additional optional flags
+        and args.
+        :return:
+        """
+        cmd_parser = argparse.ArgumentParser(add_help=False)
+        if is_async:
+            cmd_parser.add_argument('-a', '--async', action='store_true',
+                                    required=False, dest="do_async",
+                                    default=False, help="will use async call.")
+
+        if is_expanded:
+            cmd_parser.add_argument('-e', '--expanded', action='store_true',
+                                    required=False, dest="do_expanded",
+                                    default=False,
+                                    help="expanded request for deeper view.")
+
+        if is_file_save:
+            cmd_parser.add_argument('-f', '--filename', required=False,
+                                    type=str, default="",
+                                    help="filename if we need to save a respond to a file.")
+        return cmd_parser

@@ -58,8 +58,8 @@ class AttributesQuery(IDracManager, scm_type=ApiRequestType.AttributesQuery,
                              default="",
                              help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the attribute view"
-        return cmd_arg, "attribute", help_text
+        help_text = "command fetch the attribute view"
+        return cmd_arg, "attr", help_text
 
     def execute(self, filename: Optional[str] = None,
                 data_type: Optional[str] = "json",

@@ -1,17 +1,11 @@
 """iDRAC enable boot options.
 
 This cmd return Dell Boot Sources Configuration and the related
-resources.
+resources for particular device
 
-Command provides the option to retrieve boot source from iDRAC and serialize
-back as caller as JSON, YAML, and XML. In addition, it automatically
-registers to the command line ctl tool. Similarly to the rest command
-caller can save to a file and consume asynchronously or synchronously.
+Example.
+python idrac_ctl.py boot-source-get --dev NIC.Slot.8-1
 
-
-Doc
-https://www.dell.com/support/manuals/en-us/idrac9-lifecycle-controller-v3.3-series/
-idrac9_3.36_redfishapiguide/dellbootsources?guid=guid-4803ff0e-76ad-42c5-a971-820123cd0b83&lang=en-us
 
 Author Mus spyroot@gmail.com
 """
@@ -24,11 +18,12 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
-class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
+class EnableBootOptions(IDracManager,
+                        scm_type=ApiRequestType.EnableBootOptions,
                         name='boot_source_query',
                         metaclass=Singleton):
     """
-    Command enable boot option
+    Command fetch boot option for particular device.
     """
 
     def __init__(self, *args, **kwargs):
@@ -41,19 +36,23 @@ class EnableBootOptions(IDracManager, scm_type=ApiRequestType.EnableBootOptions,
         :param cls:
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
-                                default=False, help="Will create a task and will not wait.")
+        cmd_parser = argparse.ArgumentParser(add_help=False,
+                                             description="command fetch the boot source for device/devices")
+        # idrac_ctl.py boot-source-get --dev NIC.Slot.8-1
+        cmd_parser.add_argument('--async', action='store_true', required=False,
+                                dest="do_async", default=False,
+                                help="will use async task and will not wait")
 
-        cmd_parser.add_argument('--dev', required=False, dest="boot_source", type=str,
-                                default=None, help="Fetch verbose information for a boot device.")
+        cmd_parser.add_argument('--dev', required=False, dest="boot_source",
+                                type=str, default=None,  metavar="DEVICE",
+                                help="fetch verbose information for a device. Example --dev NIC.Slot.8-1")
 
-        cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                                default="",
+        cmd_parser.add_argument('-f', '--filename', required=False,
+                                type=str, default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the boot source for device/devices"
-        return cmd_parser, "get_boot_source", help_text
+        help_text = "command fetch the boot source for device/devices"
+        return cmd_parser, "boot-source-get", help_text
 
     def execute(self,
                 boot_source: Optional[str] = None,
