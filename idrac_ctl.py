@@ -121,7 +121,7 @@ def main(cmd_args, command_name_to_cmd: Dict) -> None:
                              header="# respond data from the command:")
 
             # extra data for deep walks
-            if command_result.extra is not None:
+            if command_result.extra is not None and cmd_args.no_extra is False:
                 extra = command_result.extra
                 if args.json:
                     json_printer(extra, cmd_args,
@@ -135,7 +135,7 @@ def main(cmd_args, command_name_to_cmd: Dict) -> None:
                         save_if_needed(f"{extra_k}.json", extra[extra_k])
 
             # discovered rest action.
-            if command_result.discovered is not None:
+            if command_result.discovered is not None and cmd_args.no_action is False:
                 if cmd_args.json:
                     if isinstance(command_result.discovered, dict):
                         for ak in command_result.discovered.keys():
@@ -227,6 +227,10 @@ if __name__ == "__main__":
                         help="enables debug.")
     parser.add_argument('--verbose', action='store_true', required=False, default=False,
                         help="enables verbose output.")
+    parser.add_argument('--no_extra', action='store_true', required=False, default=False,
+                        help="disables extra data stdout output.")
+    parser.add_argument('--no_action', action='store_true', required=False, default=False,
+                        help="disables rest action data stdout output.")
     parser.add_argument('--json', action='store_true', required=False, default=True,
                         help="by default we use json to output to console.")
     parser.add_argument('--no-stdout', '--no_stdout',  action='store_true', required=False, default=False,

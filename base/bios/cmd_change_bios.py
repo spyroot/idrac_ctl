@@ -168,10 +168,18 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
                                              start_time=None, duration_time=None)
 
         base_payload.update(payload)
+        if verbose:
+            print(f"payload: {base_payload}")
 
         target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
         api_result = self.base_patch(target_api, payload=payload,
                                      do_async=do_async, expected_status=200)
+        if verbose:
+            resp = api_result.extra
+            print(f"api_result.data: hdr {resp.headers}")
+            print(f"api_result.data: states {resp.status_code}")
+            print(f"api_result.data: data {resp.json()}")
+
         result_data = api_result.data
 
         if api_result.extra is not None:
@@ -208,4 +216,4 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
             else:
                 warnings.warn(f"Failed fetch chassis power state")
 
-        return CommandResult(result_data, None, None)
+        return CommandResult({}, None, None)
