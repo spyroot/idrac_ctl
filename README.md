@@ -272,7 +272,7 @@ sudo systemctl restart smbd
 Now we can mount.  Note in my case I use default username vmware and password 123456.
 
 ```bash
-python idrac_ctl.py oem-attach --ip_addr 10.241.7.99 --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
+python idrac_ctl.py oem-attach --ip_addr $CIFS_SERVER --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
 ```
 
 Now we can check status.

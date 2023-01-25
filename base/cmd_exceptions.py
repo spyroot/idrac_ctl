@@ -12,3 +12,7 @@ class NoPendingValues(Exception):
     """Must raise if failed discover action.
     """
     pass
+
+
+class UnsupportedAction(Exception):
+    pass

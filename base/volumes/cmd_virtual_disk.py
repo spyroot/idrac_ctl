@@ -42,8 +42,8 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
         """
         cmd_arg = argparse.ArgumentParser(add_help=False)
         cmd_arg.add_argument('--device_id', required=False, type=str,
-                             default="",
-                             help="storage device id. Example NonRAID.Slot.6-1.")
+                             default="", help="storage device id. "
+                                              "Example NonRAID.Slot.6-1.")
 
         cmd_arg.add_argument('-f', '--filename', required=False, type=str,
                              default="",

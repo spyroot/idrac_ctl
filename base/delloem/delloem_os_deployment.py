@@ -1,5 +1,5 @@
-"""iDRAC Redfish API with Dell OEM extension
-to get available actions.
+"""iDRAC Redfish API with Dell OEM extension to
+get available actions.
 
 Author Mus spyroot@gmail.com
 """
@@ -8,15 +8,15 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class DellOemActions(IDracManager,
-                     scm_type=ApiRequestType.DellOemActions,
-                     name='dell_oem_actions',
-                     metaclass=Singleton):
+class DellOemTask(IDracManager,
+                  scm_type=ApiRequestType.DellOemTask,
+                  name='dell_oem_actions',
+                  metaclass=Singleton):
     """A command query job_service_query.
     """
 
     def __init__(self, *args, **kwargs):
-        super(DellOemActions, self).__init__(*args, **kwargs)
+        super(DellOemTask, self).__init__(*args, **kwargs)
 
     @staticmethod
     @abstractmethod
@@ -27,7 +27,7 @@ class DellOemActions(IDracManager,
         """
         cmd_parser = cls.base_parser()
         help_text = "command get supported dell os oem actions"
-        return cmd_parser, "oem-actions", help_text
+        return cmd_parser, "oem-net-iso-task", help_text
 
     def execute(self,
                 filename: Optional[str] = None,
@@ -45,7 +45,7 @@ class DellOemActions(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService"
+        target_api = "/redfish/v1/TaskService/Tasks/OSDeployment"
         cmd_result = self.base_query(target_api,
                                      filename=filename,
                                      do_async=do_async,

@@ -43,7 +43,6 @@ from .cmd_virtual_media_insert import *
 from .cmd_virtual_media_eject import *
 from .cmd_current_boot import *
 from .cmd_boot_one_shot import *
-from .cmd_virtual_disk import *
 
 from .cmd_query import *
 
@@ -51,18 +50,28 @@ from .cmd_query import *
 from .storage.cmd_storage_controllers import *
 from .storage.cmd_storage_list import *
 from .storage.cmd_storage_get import *
+from .storage.cmd_drives import *
+from .storage.cmd_convert_none_raid import *
+from .storage.cmd_convert_to_raid import *
 
 from .chassis.cmd_chassis_query import *
 from .chassis.cmd_chasis_reset import *
 
 # dell oem attach
-from .delloem.attach_status import *
+from .delloem.delloem_attach_status import *
 from .delloem.delloem_actions import *
 from .delloem.delloem_attach import *
 from .delloem.delloem_detach import *
-from .delloem.delloem_networkios import *
+from .delloem.delloem_disconnect import *
+from .delloem.delloem_get_networkios import *
 from .delloem.delloem_boot_netios import *
+from .delloem.delloem_os_deployment import *
+
 
 from .tasks.cmd_tasks_list import *
 from .tasks.cmd_tasks_get import *
+
+from .volumes.cmd_initilize import *
+from .volumes.cmd_volumes import *
+from .volumes.cmd_virtual_disk import *
 

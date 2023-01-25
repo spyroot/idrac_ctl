@@ -61,7 +61,7 @@ class StorageQuery(IDracManager, scm_type=ApiRequestType.StorageQuery,
 
         cmd_parser.add_argument('--filter', required=False, type=str, dest="id_filter",
                                 default="",
-                                help="Filter on controller information. "
+                                help="Filter based on controller information. "
                                      "Example --filter AHCI , "
                                      "will filter and only AHCI controllers")
 
@@ -77,72 +77,59 @@ class StorageQuery(IDracManager, scm_type=ApiRequestType.StorageQuery,
                 do_async: Optional[bool] = False,
                 id_filter: Optional[str] = "",
                 **kwargs) -> CommandResult:
+        """Query storage controller from idrac.
 
-            """Query storage controller from idrac.
+         Example of members
+         "Members": [
+                 {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/NonRAID.Slot.6-1"},
+                 {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.1-1"},
+                 {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Slot.4-1"},
+                 {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.2-1"}
+                 ]
+        :param filename:
+        :param data_type:
+        :param do_deep:
+        :param do_expanded:
+        :param verbose:
+        :param do_async:
+        :param id_filter:
+        :param kwargs:
+        :return:
+        """
+        if verbose:
+            print(f"cmd args data_type: {data_type} "
+                  f"do_deep:{do_deep} do_async:{do_async} id_filter:{id_filter}")
+            print(f"the rest of args: {kwargs}")
 
-            Example of members
+        headers = {}
+        if data_type == "json":
+            headers.update(self.json_content_type)
 
-            "Members": [
-            {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/NonRAID.Slot.6-1"},
-            {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.1-1"},
-            {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Slot.4-1"},
-            {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.2-1"}
+        target_api = "/redfish/v1/Systems/System.Embedded.1/Storage"
+        if do_expanded:
+            r = f"https://{self.idrac_ip}{target_api}{self.expanded()}"
+        else:
+            r = f"https://{self.idrac_ip}{target_api}"
 
-            On return will hold list of controller in
-            CommandResult.data
-            ['NonRAID.Slot.6-1', 'AHCI.Embedded.1-1', 'AHCI.Slot.4-1', 'AHCI.Embedded.2-1']
+        if not do_async:
+            response = self.api_get_call(r, headers)
+            self.default_error_handler(response)
+        else:
+            loop = asyncio.get_event_loop()
+            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
 
-            CommandResult.discovered
-            ['/redfish/v1/Systems/System.Embedded.1/Storage/NonRAID.Slot.6-1',
-            '/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.1-1',
-            '/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Slot.4-1',
-            '/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.2-1']
+        data = response.json()
+        save_if_needed(filename, data)
 
-            :param do_expanded:
-            :param verbose: do a verbose output
-            :param do_async: will not block
-            :param data_type: json or xml
-            :param id_filter: a filter a storage controller i.e. filter @id_filter
-            :param filename: if filename indicate call will save a bios setting to a file.
-            :param do_deep: do deep walk for each controller.
-            :return: CommandResult and if filename provide will save to a file.
-            """
-            if verbose:
-                print(f"cmd args data_type: {data_type} "
-                      f"do_deep:{do_deep} do_async:{do_async} id_filter:{id_filter}")
-                print(f"the rest of args: {kwargs}")
+        if id_filter is not None and len(id_filter) > 0:
+            controller_list = [id_data['@odata.id'].split("/")[-1] for id_data in data['Members']
+                               if id_filter in id_data['@odata.id']]
 
-            headers = {}
-            if data_type == "json":
-                headers.update(self.json_content_type)
+            controller_uri = [id_data['@odata.id'] for id_data in data['Members']
+                              if id_filter in id_data['@odata.id']]
 
-            target_api = "/redfish/v1/Systems/System.Embedded.1/Storage"
-            if do_expanded:
-                r = f"https://{self.idrac_ip}{target_api}{self.expanded()}"
-            else:
-                r = f"https://{self.idrac_ip}{target_api}"
+        else:
+            controller_list = [id_data['@odata.id'].split("/")[-1] for id_data in data['Members']]
+            controller_uri = [id_data['@odata.id'] for id_data in data['Members']]
 
-            if not do_async:
-                response = self.api_get_call(r, headers)
-                self.default_error_handler(response)
-            else:
-                loop = asyncio.get_event_loop()
-                response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
-
-            data = response.json()
-            self.default_json_printer(data)
-
-            save_if_needed(filename, data)
-
-            if id_filter is not None and len(id_filter) > 0:
-                controller_list = [id_data['@odata.id'].split("/")[-1] for id_data in data['Members']
-                                   if id_filter in id_data['@odata.id']]
-
-                controller_uri = [id_data['@odata.id'] for id_data in data['Members']
-                                  if id_filter in id_data['@odata.id']]
-
-            else:
-                controller_list = [id_data['@odata.id'].split("/")[-1] for id_data in data['Members']]
-                controller_uri = [id_data['@odata.id'] for id_data in data['Members']]
-
-            return CommandResult(controller_list, controller_uri, None)
+        return CommandResult(controller_list, controller_uri, None)

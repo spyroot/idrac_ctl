@@ -46,6 +46,10 @@ class ExportSystemConfig(IDracManager,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
+        cmd_parser.add_argument('--export_use', action='store_true',
+                                required=False,  default=False,
+                                help="Will create a task and will not wait.")
+
         help_text = "command exports system configuration"
         return cmd_parser, "system-export", help_text
 
@@ -97,6 +101,9 @@ class ExportSystemConfig(IDracManager,
         payload = {"ExportFormat": export_format.upper(),
                    "ShareParameters": {"Target": target},
                    "IncludeInExport": include_in_export}
+
+        if "Clone" in export_use or "Replace" in export_use:
+            payload["ExportUse"] = export_use
 
         r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
             f"Actions/Oem/EID_674_Manager.ExportSystemConfiguration"

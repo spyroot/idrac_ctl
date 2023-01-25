@@ -64,11 +64,6 @@ class DellOemAttach(IDracManager, scm_type=ApiRequestType.OemAttach,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-
-        print(f"args {ip_addr}"
-              f"{share_type}"
-              f"{remote_image}")
-
         cmd_result = self.sync_invoke(ApiRequestType.DellOemActions, "dell_oem_actions")
         redfish_action = cmd_result.discovered['ConnectNetworkISOImage']
         target_api = redfish_action.target

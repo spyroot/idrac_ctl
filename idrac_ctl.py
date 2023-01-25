@@ -22,7 +22,7 @@ from pygments.formatters.terminal256 import Terminal256Formatter
 
 from base.cmd_utils import save_if_needed
 from base.shared import RedfishAction, RedfishActionEncoder
-from base.cmd_exceptions import InvalidArgument, FailedDiscoverAction
+from base.cmd_exceptions import InvalidArgument, FailedDiscoverAction, UnsupportedAction
 from base.idrac_manager import AuthenticationFailed, IDracManager, ResourceNotFound
 from base.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 
@@ -156,6 +156,9 @@ def main(cmd_args, command_name_to_cmd: Dict) -> None:
         print("Error:", ia)
     except FailedDiscoverAction as fda:
         print("Error:", fda)
+    except UnsupportedAction as ua:
+        print("Error:", ua)
+
 
 
 def create_cmd_tree(arg_parser) -> Dict:

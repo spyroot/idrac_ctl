@@ -1,7 +1,7 @@
 """iDRAC Redfish API with Dell OEM extension
 to boot from network ISO.
 
-python idrac_ctl.py oem-boot-netios --ip_addr 10.241.7.99 \
+python idrac_ctl.py oem-boot-netios --ip_addr $MYIP \
 --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
 
 python idrac_ctl.py oem-attach-status
@@ -66,9 +66,8 @@ class DellOemNetIsoBoot(IDracManager,
         :return: CommandResult and if filename provide will save to a file.
         """
         cmd_result = self.sync_invoke(ApiRequestType.DellOemActions, "dell_oem_actions")
-        redfish_action = cmd_result.discovered['ConnectNetworkISOImage']
+        redfish_action = cmd_result.discovered['BootToNetworkISO']
         target_api = redfish_action.target
-        # args = redfish_action.args
 
         payload = {
             'IPAddress': ip_addr,
@@ -86,11 +85,6 @@ class DellOemNetIsoBoot(IDracManager,
 
         api_result = self.base_post(target_api, payload=payload,
                                     do_async=do_async, expected_status=202)
-        result = {}
-        if api_result is not None and api_result.extra is not None:
-            data = api_result.extra.json()
-            result = data
-            job_id = self.job_id_from_header(api_result.extra)
-            print(api_result.extra.headers)
-
-        return CommandResult(result, None, None)
+        resp = self.parse_task_id(api_result)
+        api_result.data.update(resp)
+        return CommandResult(api_result, None, None)

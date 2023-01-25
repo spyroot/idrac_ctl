@@ -1,6 +1,7 @@
-"""iDRAC Redfish API with Dell OEM extension to detach network iso.
+"""iDRAC Redfish API with Dell OEM extension to
+disconnect network iso.
 
-python idrac_ctl.py oem-detach
+python idrac_ctl.py oem-disconnect
 
 Author Mus spyroot@gmail.com
 """
@@ -10,14 +11,14 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class DellOemDetach(IDracManager, scm_type=ApiRequestType.DellOemDetach,
-                    name='delloem_detach',
+class DellOemDisconnect(IDracManager, scm_type=ApiRequestType.DellOemDisconnect,
+                    name='delloem_disconnect',
                     metaclass=Singleton):
-    """A command uses dell oem to attach ISO
+    """A command uses dell oem to disconnect ISO
     """
 
     def __init__(self, *args, **kwargs):
-        super(DellOemDetach, self).__init__(*args, **kwargs)
+        super(DellOemDisconnect, self).__init__(*args, **kwargs)
 
     @staticmethod
     @abstractmethod
@@ -27,24 +28,26 @@ class DellOemDetach(IDracManager, scm_type=ApiRequestType.DellOemDetach,
         :return:
         """
         cmd_parser = cls.base_parser(is_remote_share=False)
-        help_text = "command detach network iso"
-        return cmd_parser, "oem-detach", help_text
+        help_text = "command disconnect network iso"
+        return cmd_parser, "oem-disconnect", help_text
 
     def execute(self,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Executes dell oem detach
+        """Executes dell oem disconnect
         :param do_async: note async will subscribe to an event loop.
         :param verbose: enables verbose output
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
         cmd_result = self.sync_invoke(ApiRequestType.DellOemActions, "dell_oem_actions")
-        redfish_action = cmd_result.discovered['DetachISOImage']
+        redfish_action = cmd_result.discovered['DisconnectNetworkISOImage']
         target_api = redfish_action.target
 
         api_result = self.base_post(target_api,
                                     do_async=do_async, expected_status=200)
+        resp = self.parse_task_id(api_result)
+        api_result.data.update(resp)
         return CommandResult(api_result.data, None, None)

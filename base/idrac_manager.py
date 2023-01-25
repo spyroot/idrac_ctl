@@ -30,7 +30,7 @@ import json
 import time
 from tqdm import tqdm
 from abc import abstractmethod
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, re
 
 from base.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from base.cmd_utils import save_if_needed
@@ -289,6 +289,7 @@ class IDracManager:
         :raise AuthenticationFailed MissingResource
         """
         last_update = 0
+        percent_done = 0
         with tqdm(total=100) as pbar:
             while True:
                 resp = self.api_get_call(f"https://{self.idrac_ip}/redfish/v1/"
@@ -304,7 +305,10 @@ class IDracManager:
                     resp_data = resp.json()
                     if 'TaskStatus' in resp_data and resp_data['TaskStatus'] == 'OK':
                         if 'PercentComplete' in resp_data:
-                            percent_done = int(resp_data['PercentComplete'])
+                            try:
+                                percent_done = int(resp_data['PercentComplete'])
+                            except TypeError:
+                                pass
                             if percent_done > last_update:
                                 last_update = percent_done
                                 inc = percent_done - pbar.n
@@ -314,6 +318,8 @@ class IDracManager:
                     print("unexpected status code", resp.status_code)
                     time.sleep(sleep_time)
                     print("Unknown status code")
+
+        return resp_data
 
     @staticmethod
     async def async_default_error_handler(response: requests.models.Response) -> bool:
@@ -422,6 +428,29 @@ class IDracManager:
                 full_redfish_names[rest_api_action] = a
 
         return unfiltered_actions, full_redfish_names
+
+    @staticmethod
+    def discover_member_redfish_actions(cls, json_data):
+        """
+        :param cls:
+        :param json_data:
+        :return:
+        """
+        action_dict = {}
+        if 'Members' not in json_data:
+            if 'Actions' in json_data:
+                return cls.discover_redfish_actions(cls, json_data)
+            else:
+                return action_dict
+
+        member_data = json_data['Members']
+        for m in member_data:
+            if isinstance(m, dict):
+                if 'Actions' in m.keys():
+                    action = cls.discover_redfish_actions(cls, m)
+                    action_dict.update(action)
+
+        return action_dict
 
     @staticmethod
     def discover_redfish_actions(cls, json_data):
@@ -1011,6 +1040,21 @@ class IDracManager:
         return cmd_parser
 
     @staticmethod
+    def job_id_from_respond(response: requests.models.Response) -> str:
+        """
+        :param response:
+        :return:
+        """
+        response_dict = str(response.__dict__)
+        try:
+            job_id = re.search("JID_.+?,", response_dict).group()
+            return job_id
+        except:
+            pass
+
+        return None
+
+    @staticmethod
     def job_id_from_header(response: requests.models.Response) -> str:
         """Returns job id from response header.
         :param response:
@@ -1018,7 +1062,7 @@ class IDracManager:
         :raise UnexpectedResponse if header not present.
         """
         resp_hdr = response.headers
-        if resp_hdr is not None and 'Location' not in resp_hdr:
+        if 'Location' not in resp_hdr:
             raise UnexpectedResponse("rest api failed.")
 
         location = response.headers['Location']
@@ -1058,3 +1102,33 @@ class IDracManager:
             raise ValueError("Invalid reboot type.")
 
         return pd
+
+    def parse_task_id(self, data):
+        """
+        :param data:
+        :return:
+        """
+        # get response from extra
+        if hasattr(data, "extra"):
+            resp = data.extra
+        elif isinstance(data, requests.models.Response):
+            resp = data
+        else:
+            raise ValueError("Unknown data type.")
+
+        job_id = None
+        try:
+            job_id = self.job_id_from_header(resp)
+        except UnexpectedResponse as ur:
+            pass
+
+        # try to get from response
+        if job_id is None:
+            job_id = self.job_id_from_respond(resp)
+
+        if job_id is not None:
+            print(f"job_id {job_id}")
+            data = self.fetch_job(job_id)
+            return data
+
+        return {}

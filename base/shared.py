@@ -8,6 +8,14 @@ from typing import Optional
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    ConvertToRaid = auto()
+    ConvertNoneRaid = ()
+    Drives = auto()
+    VolumeInit = auto()
+    VolumeQuery = auto()
+    ImportOneTimeBoot = auto()
+    DellOemTask = auto()
+    DellOemDisconnect = auto()
     RemoteServicesRssAPIStatus = auto()
     DellLcQuery = auto()
     RemoteServicesAPIStatus = auto()
