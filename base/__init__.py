@@ -42,3 +42,11 @@ from .storage.cmd_storage_get import *
 
 from .chassis.cmd_chassis_query import *
 from .chassis.cmd_chasis_reset import *
+
+# dell oem attach
+from .delloem.attach_status import *
+from .delloem.delloem_actions import *
+from .delloem.delloem_attach import *
+from .delloem.delloem_detach import *
+from .delloem.delloem_networkios import *
+from .delloem.delloem_boot_netios import *

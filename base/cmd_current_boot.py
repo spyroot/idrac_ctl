@@ -45,7 +45,7 @@ class GetCurrentBoot(IDracManager, scm_type=ApiRequestType.CurrentBoot,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the boot source for device/devices"
+        help_text = "command fetch the boot source for device/devices"
         return cmd_parser, "current_boot", help_text
 
     def execute(self,

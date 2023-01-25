@@ -248,4 +248,54 @@ python idrac_ctl.py  job --job_id JID_745386566338
 
 ```
 
+## Example attaching ISO from CIFS share and using Dell OEM API.
+
+Install Samba,  in my case I share /var/www/html/ which I also use for nginx
+
+```bash
+sudo apt install samba
+systemctl status smbd --no-pager -l
+sudo systemctl enable --now smbd
+sudo ufw allow samba
+sudo usermod -aG sambashare $USER
+sudo systemctl start --now smbd
+
+echo "[sambashare]
+    comment = Samba on www
+    path = /var/www/html/
+    read only = no
+    browsable = yes" >> /etc/samba/smb.conf
+
+sudo systemctl restart smbd
+```
+
+Now we can mount.  Note in my case I use default username vmware and password 123456.
+
+```bash
+python idrac_ctl.py oem-attach --ip_addr 10.241.7.99 --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
+```
+
+Now we can check status.
+
+```bash
+python idrac_ctl.py oem-attach-status
+{
+    "DriversAttachStatus": "NotAttached",
+    "ISOAttachStatus": "Attached"
+}
+```
+
+```idrac_ctl.py oem-net-ios-status
+python idrac_ctl.py oem-net-ios-status
+{
+    "HostAttachedStatus": "Attached",
+    "HostBootedFromISO": "No",
+    "IPAddr": "10.241.7.99",
+    "ISOConnectionStatus": "ConnectionUp",
+    "ImageName": "ubuntu-22.04.1-desktop-amd64.iso",
+    "ShareName": "sambashare",
+    "UserName": "vmware"
+}
+```
+
 More example TBD.

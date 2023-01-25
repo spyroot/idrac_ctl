@@ -796,7 +796,8 @@ class IDracManager:
                    data_type: Optional[str] = "json",
                    verbose: Optional[bool] = False,
                    **kwargs) -> CommandResult:
-        """Base query executes query.
+        """command will give the status of the Drivers and ISO Image
+        that has been exposed to host.
 
         :param resource: path to a resource
         :param do_async: note async will subscribe to an event loop.
@@ -834,6 +835,41 @@ class IDracManager:
         save_if_needed(filename, data)
         return CommandResult(data, None, None)
 
+    def base_post(self,
+                  resource: str,
+                  payload: Optional[dict] = None,
+                  do_async: Optional[bool] = False,
+                  data_type: Optional[str] = "json",
+                  expected_status: Optional[int] = 200) -> CommandResult:
+
+        headers = {}
+        if data_type == "json":
+            headers.update(self.json_content_type)
+
+        api_req_result = {}
+        if payload is None:
+            pd = {}
+        else:
+            pd = payload
+
+        ok = False
+        response = None
+        try:
+            r = f"https://{self.idrac_ip}{resource}"
+            if not do_async:
+                response = self.api_post_call(r, json.dumps(pd), headers)
+                ok = self.default_post_success(self, response, expected=expected_status)
+            else:
+                loop = asyncio.get_event_loop()
+                ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
+
+        except PostRequestFailed as pf:
+            print("Error:", pf)
+            pass
+
+        return CommandResult(self.api_success_msg(ok), None, response)
+
+
     @staticmethod
     def api_success_msg(status: bool) -> Dict:
         return {"Status": status}
@@ -841,7 +877,8 @@ class IDracManager:
     @staticmethod
     def base_parser(is_async: Optional[bool] = True,
                     is_file_save: Optional[bool] = True,
-                    is_expanded: Optional[bool] = True):
+                    is_expanded: Optional[bool] = True,
+                    is_remote_share: Optional[bool] = False):
         """This base optional parser for all sub command.
         Each sub-command can add additional optional flags
         and args.
@@ -859,10 +896,29 @@ class IDracManager:
                                     default=False,
                                     help="expanded request for deeper view.")
 
-        if is_file_save:
-            cmd_parser.add_argument('-f', '--filename', required=False,
+        # this optional args for remote share CIFS/NFS/HTTP etc.
+        if is_remote_share:
+            cmd_parser.add_argument('--ip_addr', required=True,
+                                    type=str, default=None,
+                                    help="ip address for CIFS|NFS.")
+            cmd_parser.add_argument('--share_type', required=False,
+                                    type=str, default="CIFS",
+                                    help="share type CIFS|NFS.")
+            cmd_parser.add_argument('--share_name', required=True,
+                                    type=str, default=None,
+                                    help="share name.")
+            cmd_parser.add_argument('--remote_image', required=True,
+                                    type=str, default=None,
+                                    help="remote image. Example my_iso. ")
+            cmd_parser.add_argument('--remote_username', required=False,
+                                    type=str, default="vmware",
+                                    help="remote username if required.")
+            cmd_parser.add_argument('--remote_password', required=False,
+                                    type=str, default="123456",
+                                    help="password if required.")
+            cmd_parser.add_argument('--remote_workgroup', required=False,
                                     type=str, default="",
-                                    help="filename if we need to save a respond to a file.")
+                                    help="group name if required.")
         return cmd_parser
 
     @staticmethod

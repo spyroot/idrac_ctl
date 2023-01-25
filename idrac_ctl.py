@@ -14,6 +14,7 @@ import os
 import sys
 from typing import Optional, Dict
 
+import requests
 import urllib3
 from pygments import highlight
 from pygments.lexers.data import JsonLexer
@@ -60,7 +61,9 @@ def json_printer(json_data, cmd_args,
     if cmd_args.no_stdout:
         return
 
-    if isinstance(json_data, str):
+    if isinstance(json_data, requests.models.Response):
+        json_raw = json_data.json()
+    elif isinstance(json_data, str):
         json_raw = json.dumps(json.loads(json_data),
                               sort_keys=sort, indent=indents)
     else:

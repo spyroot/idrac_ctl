@@ -8,6 +8,9 @@ from typing import Optional
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    GetNetworkIsoAttachStatus = auto()
+    OemAttach = auto()
+    DellOemActions = auto()
     QueryIdrac = auto()
     JobDel = auto()
     AttributeClearPending = auto()
@@ -46,6 +49,10 @@ class ApiRequestType(Enum):
     JobServices = auto()
     ChassisQuery = auto()
     ChassisReset = auto()
+    GetAttachStatus = auto()
+    DellOemNetIsoBoot = ()
+    DellOemDetach = auto()
+
 
 
 class RedfishAction:
