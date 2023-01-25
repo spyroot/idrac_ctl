@@ -13,8 +13,9 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Optional
 
-from base import CommandResult, UnexpectedResponse, InvalidArgument
+from base import CommandResult
 from base import IDracManager, ApiRequestType, Singleton
+from base.cmd_exceptions import InvalidArgument
 
 
 class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
@@ -47,36 +48,21 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
                              required=False, type=str, default="",
                              help="filename, if we need save to a file.")
 
-        cmd_arg.add_argument('-f', '--shutdown_type',
-                             required=False, type=str, default="",
+        cmd_arg.add_argument('--shutdown_type',
+                             required=False, type=str, default="Graceful",
                              help="Graceful, Forced, NoReboot.")
 
-        cmd_arg.add_argument('-f', '--host_power_state',
-                             required=False, type=str, default="",
+        cmd_arg.add_argument('--host_power_state',
+                             required=False, type=str, default="On",
                              help="Graceful, Forced, NoReboot.")
 
-        cmd_arg.add_argument('-f', '--time_to_wait',
+        cmd_arg.add_argument('--time_to_wait',
                              required=False, type=int, default=300,
                              help="The time to wait for the host to shut down. "
                                   "Default and minimum value is 300 seconds. Maximum value is 3600 seconds..")
 
         help_text = "command import system configuration"
         return cmd_arg, "system-import", help_text
-
-    @staticmethod
-    def job_id_from_header(response):
-        """
-        :param response:
-        :return:
-        """
-        resp_hdr = response.headers
-        if 'Location' not in resp_hdr:
-            raise UnexpectedResponse("rest api failed.")
-
-        location = response.headers['Location']
-        job_id = location.split("/")[-1]
-
-        return job_id
 
     def execute(self,
                 config: str,
@@ -152,8 +138,7 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
             raise InvalidArgument(f"Invalid path to a config file.")
 
         with open(str(path_config), "r") as f:
-            open_file = open(config, "r")
-            buf = open_file.read()
+            buf = f.read()
             buf = buf.replace('\n', "")
             buf = buf.replace("   ", "")
 

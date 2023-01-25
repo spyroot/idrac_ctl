@@ -864,3 +864,19 @@ class IDracManager:
                                     type=str, default="",
                                     help="filename if we need to save a respond to a file.")
         return cmd_parser
+
+    @staticmethod
+    def job_id_from_header(response) -> str:
+        """Returns job id from response header.
+        :param response:
+        :return:
+        :raise UnexpectedResponse if header not present.
+        """
+        resp_hdr = response.headers
+        if 'Location' not in resp_hdr:
+            raise UnexpectedResponse("rest api failed.")
+
+        location = response.headers['Location']
+        job_id = location.split("/")[-1]
+
+        return job_id
