@@ -865,7 +865,7 @@ class IDracManager:
         if do_expanded:
             r = f"https://{self.idrac_ip}{resource}{self.expanded()}"
         else:
-            r = f"https://{self.idrac_ip}{resource}{self.expanded()}"
+            r = f"https://{self.idrac_ip}{resource}"
 
         if not do_async:
             response = self.api_get_call(r, headers)

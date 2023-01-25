@@ -23,7 +23,7 @@ from .jobs.cmd_job_services import *
 from .cmd_firmware import *
 from .cmd_firmware_inv import *
 from .cmd_import import *
-from .cmd_pci import *
+from .pci.cmd_pci import *
 from .cmd_get_task import *
 from .jobs.cmd_job_del import *
 from .cmd_manager import *

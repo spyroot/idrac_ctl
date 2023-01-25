@@ -7,7 +7,7 @@ to a file and consume asynchronously or synchronously.
 
 Author Mus spyroot@gmail.com
 """
-import argparse
+import asyncio
 from abc import abstractmethod
 from typing import Optional
 
@@ -34,17 +34,13 @@ class PciDeviceQuery(IDracManager,
         :param cls:
         :return:
         """
-        cmd_args = argparse.ArgumentParser(add_help=False)
-        cmd_args.add_argument('pci_type', choices=['PCIeDevices', 'PCIeFunctions'],
-                              default="PCIeDevices",
-                              help="either pci device or pci function")
+        cmd_parser = cls.base_parser()
+        cmd_parser.add_argument('pci_type', choices=['PCIeDevices', 'PCIeFunctions'],
+                                default="PCIeDevices",
+                                help="either pci device or pci function")
 
-        cmd_args.add_argument('-f', '--filename', required=False, type=str,
-                              default="",
-                              help="filename if we need to save a respond to a file.")
-
-        help_text = "fetch the pci device or function"
-        return cmd_args, "pci", help_text
+        help_text = "command fetch the pci device or function"
+        return cmd_parser, "pci", help_text
 
     def execute(self,
                 filename: Optional[str] = None,
@@ -70,10 +66,17 @@ class PciDeviceQuery(IDracManager,
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
+
         r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
             f"System.Embedded.1?$select={pci_type}"
-        response = self.api_get_call(r, headers)
-        self.default_error_handler(response)
+
+        if not do_async:
+            response = self.api_get_call(r, headers)
+            self.default_error_handler(response)
+        else:
+            loop = asyncio.get_event_loop()
+            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+
         data = response.json()
         pci_data = []
         if pci_type in data:
@@ -81,8 +84,12 @@ class PciDeviceQuery(IDracManager,
             with tqdm(total=len(api_endpoints)) as pbar:
                 for r in api_endpoints:
                     r = f"https://{self.idrac_ip}{r['@odata.id']}"
-                    response = self.api_get_call(r, headers)
-                    self.default_error_handler(response)
+                    if not do_async:
+                        response = self.api_get_call(r, headers)
+                        self.default_error_handler(response)
+                    else:
+                        loop = asyncio.get_event_loop()
+                        response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
                     pci_data.append(response.json())
                     pbar.update(1)
 
