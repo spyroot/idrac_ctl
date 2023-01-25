@@ -77,9 +77,8 @@ class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
             response = self.api_delete_call(r, headers)
             self.default_error_handler(response)
         else:
-            # TODO
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+            response = loop.run_until_complete(self.api_async_del_until_complete(r, headers))
         data = response.json()
 
         save_if_needed(filename, data)

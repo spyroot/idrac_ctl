@@ -63,6 +63,10 @@ class PostRequestFailed(Exception):
     pass
 
 
+class DeleteRequestFailed(Exception):
+    pass
+
+
 class UnsupportedAction(Exception):
     pass
 
@@ -389,6 +393,7 @@ class IDracManager:
         """
         unfiltered_actions = {}
         full_redfish_names = {}
+
         if 'Actions' not in json_data:
             return unfiltered_actions, full_redfish_names
 
@@ -412,6 +417,33 @@ class IDracManager:
                 full_redfish_names[rest_api_action] = a
 
         return unfiltered_actions, full_redfish_names
+
+    @staticmethod
+    def discover_redfish_actions(cls, json_data):
+        """Discovers all redfish action, args and args choices.
+        :param json_data:
+        :return:
+        """
+        if isinstance(json_data, requests.models.Response):
+            json_data = json_data.json()
+
+        action_dict = {}
+        unfiltered_actions, full_redfish_names = cls._get_actions(cls, json_data)
+        for ra in unfiltered_actions.keys():
+            if 'target' not in unfiltered_actions[ra]:
+                continue
+            action_tuple = unfiltered_actions[ra]
+            if isinstance(action_tuple, Dict):
+                arg_keys = action_tuple.keys()
+                action_dict[ra] = RedfishAction(action_name=ra,
+                                                target=action_tuple['target'],
+                                                full_redfish_name=full_redfish_names[ra])
+                for k in arg_keys:
+                    if '@Redfish.AllowableValues' in k:
+                        arg_name = k.split('@')[0]
+                        action_dict[ra].add_action_arg(arg_name, action_tuple[k])
+
+        return action_dict
 
     @staticmethod
     def discover_redfish_actions(cls, json_data):
@@ -547,10 +579,29 @@ class IDracManager:
         ok = await self.async_default_patch_success(await response)
         return await response, ok
 
-    async def api_async_post_until_complete(self, r: str,
-                                            payload: str, hdr: Dict, loop=None):
+    async def async_post_until_complete(self, r: str,
+                                        payload: str, hdr: Dict, loop=None):
         """Make async post api request until completion , it issues post with x-auth
         authentication header or base. Caller can use this in asyncio routine.
+
+        :param r: request.
+        :param hdr: http header.
+        :param loop: asyncio loop
+        :param payload: json payload
+        :return:
+        """
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        response = await self.api_async_post_call(loop, r, payload, hdr)
+        ok = await self.async_default_post_success(await response)
+        return await response, ok
+
+    async def api_async_post_until_complete2(self, r: str,
+                                             payload: str, hdr: Dict, loop=None):
+        """Make async post api request until completion , it issues post with x-auth
+        authentication header or base. Caller can use this in asyncio routine.
+
+        @TODO THIS OLD need remove
 
         :param r: request.
         :param hdr: http header.
@@ -614,6 +665,37 @@ class IDracManager:
         else:
             return loop.run_in_executor(None,
                                         functools.partial(requests.patch,
+                                                          req,
+                                                          data=payload,
+                                                          verify=self._is_verify_cert,
+                                                          headers=headers,
+                                                          auth=(self._username, self._password)))
+
+    async def api_async_delete_call(self, loop, req, payload: str, hdr: Dict):
+        """Make async delete api request either with
+        x-auth authentication header or base.
+
+        :param loop:  asyncio event loop
+        :param req:  request
+        :param payload:  json payload
+        :param hdr: http header dict that will append to HTTP/HTTPS request.
+        :return: request.
+        """
+        headers = {}
+        headers.update(self.content_type)
+        if hdr is not None:
+            headers.update(hdr)
+
+        if self.x_auth is not None:
+            return loop.run_in_executor(None,
+                                        functools.partial(requests.delete,
+                                                          req,
+                                                          data=payload,
+                                                          verify=self._is_verify_cert,
+                                                          headers=headers))
+        else:
+            return loop.run_in_executor(None,
+                                        functools.partial(requests.delete,
                                                           req,
                                                           data=payload,
                                                           verify=self._is_verify_cert,
@@ -689,6 +771,34 @@ class IDracManager:
                                     f"{response.status_code}")
 
     @staticmethod
+    def default_delete_success(cls, response,
+                               expected: Optional[int] = 200) -> bool:
+        """Default delete success handler,  Check for status code.
+        and raise exception.  Default handler to check post
+        request respond.
+
+        :param cls:
+        :param response: HTTP response
+        :param expected:  Option status code that we caller consider success.
+        :return: True if patch msg succeed
+        :raise DeleteRequestFailed if POST Method failed
+        """
+        if response.status_code == expected:
+            return True
+
+        if response.status_code == 200 \
+                or response.status_code == 202 \
+                or response.status_code == 204:
+            return True
+        else:
+            err_msg = IDracManager.parse_error(IDracManager, response)
+            raise DeleteRequestFailed(f"{err_msg}\nHTTP Status code: "
+                                      f"{response.status_code}")
+
+    def api_async_del_until_complete(self, r, headers):
+        pass
+
+    @staticmethod
     async def async_default_post_success(response: requests.models.Response) -> bool:
         """Default error handler, for post
         :param response: response HTTP response.
@@ -696,6 +806,15 @@ class IDracManager:
         :raise  PostRequestFailed
         """
         return IDracManager.default_post_success(IDracManager, response)
+
+    @staticmethod
+    async def async_default_delete_success(response: requests.models.Response) -> bool:
+        """Default error handler, for post
+        :param response: response HTTP response.
+        :return: True or False and if failed raise exception
+        :raise  PostRequestFailed
+        """
+        return IDracManager.default_delete_success(IDracManager, response)
 
     @staticmethod
     async def async_default_patch_success(response: requests.models.Response) -> bool:
@@ -758,6 +877,10 @@ class IDracManager:
         data = response.json()
         save_if_needed(filename, data)
         return CommandResult(data, None, None)
+
+    @staticmethod
+    def api_success_msg(status: bool) -> Dict:
+        return {"Status": status}
 
     @staticmethod
     def base_parser(is_async: Optional[bool] = True,

@@ -37,3 +37,6 @@ from .cmd_storage_list import *
 from .cmd_storage_get import *
 from .cmd_query import *
 
+
+from .chassis.cmd_chassis_query import *
+from .chassis.cmd_chasis_reset import *

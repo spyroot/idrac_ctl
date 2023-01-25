@@ -185,8 +185,5 @@ class VirtualMediaInsert(IDracManager,
                 del payload[key]
 
         response = self.api_post_call(r, json.dumps(payload), headers)
-        api_result = {}
-        if self.default_post_success(self, response, expected=204):
-            api_result = {"Status": "succeed"}
-
-        return CommandResult(api_result, None, None)
+        ok = self.default_post_success(self, response, expected=204)
+        return CommandResult(self.api_success_msg(ok), None, None)

@@ -45,6 +45,9 @@ class ApiRequestType(Enum):
     BootSettingsQuery = auto()
     BootSourceClear = auto()
     JobServices = auto()
+    ChassisQuery = auto()
+    ChassisReset = auto()
+
 
 class RedfishAction:
     """Action discovery encapsulate each action to RedfishAction.

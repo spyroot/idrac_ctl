@@ -6,6 +6,7 @@ Command provides the option to reboot, and change power state.
 Author Mus spyroot@gmail.com
 """
 import argparse
+import asyncio
 import json
 from abc import abstractmethod
 from typing import Optional
@@ -54,9 +55,10 @@ class RebootHost(IDracManager,
                                      "GracefulShutdown, "
                                      "PushPowerButton, Nmi, PowerCycle.")
 
-        cmd_parser.add_argument('--async', action='store_true', required=False,
-                                default="", help="Will reset and will not block. "
-                                                 "By default wait task to complete")
+        cmd_parser.add_argument('-a', '--async', action='store_true',
+                                required=False, dest="do_async",
+                                default=False, help="will use async call.")
+
         help_text = "reboots the system"
         return cmd_parser, "reboot", help_text
 
@@ -68,9 +70,11 @@ class RebootHost(IDracManager,
                 boot_source_override_enabled: Optional[str] = "",
                 boot_source_override_mode: Optional[str] = "",
                 interface_type: Optional[str] = "",
+                do_async: Optional[bool] = False,
                 **kwargs
                 ) -> CommandResult:
         """
+        :param do_async:
         :param filename:
         :param data_type:
         :param reset_type: "On, ForceOff, ForceRestart, GracefulShutdown, PushPowerButton, Nmi"
@@ -103,14 +107,16 @@ class RebootHost(IDracManager,
             f"Actions/ComputerSystem.Reset"
 
         payload = {'ResetType': reset_type}
-        api_result = {}
-        response = self.api_post_call(r, json.dumps(payload), headers)
-        if self.default_post_success(self, response, expected=204):
-            api_result = {"Status": "succeed"}
+        if not do_async:
+            response = self.api_post_call(r, json.dumps(payload), headers)
+            ok = self.default_post_success(self, response)
+        else:
+            loop = asyncio.get_event_loop()
+            ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(payload), headers))
 
         jobs = self.sync_invoke(ApiRequestType.Jobs, "jobs_sources_query",
                                 reboot_pending=True, sort_by_time=True)
-        
+
         self.default_json_printer(self, jobs.data)
         resp_hdr = response.headers
         data = {"job_id": None}
@@ -121,4 +127,5 @@ class RebootHost(IDracManager,
                 job_id = location.split("/")[-1]
                 print("JOB_ID", job_id)
                 data = self.fetch_job(job_id)
-        return CommandResult(api_result, None, None)
+
+        return CommandResult(self.api_success_msg(ok), None, None)
