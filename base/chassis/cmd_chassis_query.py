@@ -27,6 +27,10 @@ class ChassisQuery(IDracManager, scm_type=ApiRequestType.ChassisQuery,
         :return:
         """
         cmd_parser = cls.base_parser()
+        cmd_parser.add_argument('--filter',
+                                required=False, dest="data_filter", type=str,
+                                default=False, help="filter on key. Example PowerState")
+
         help_text = "command query chassis services"
         return cmd_parser, "chassis", help_text
 
@@ -36,9 +40,11 @@ class ChassisQuery(IDracManager, scm_type=ApiRequestType.ChassisQuery,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
+                data_filter: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Executes query for chassis.
         python idrac_ctl.py chassis
+        :param data_filter:
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -47,12 +53,16 @@ class ChassisQuery(IDracManager, scm_type=ApiRequestType.ChassisQuery,
         :return: CommandResult and if filename provide will save to a file.
         """
         target_api = "/redfish/v1/Chassis"
+        if data_filter:
+            do_expanded = True
+
         cmd_result = self.base_query(target_api,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
 
         actions = {}
+        filter_result = {}
         if 'Members' in cmd_result.data:
             member_data = cmd_result.data['Members']
             for m in member_data:
@@ -60,5 +70,11 @@ class ChassisQuery(IDracManager, scm_type=ApiRequestType.ChassisQuery,
                     if 'Actions' in m.keys():
                         action = self.discover_redfish_actions(self, m)
                         actions.update(action)
+            if data_filter:
+                for m in member_data:
+                    if data_filter in m:
+                        filter_result[data_filter] = m[data_filter]
+                        break
+                cmd_result = filter_result
 
         return CommandResult(cmd_result, actions, None)

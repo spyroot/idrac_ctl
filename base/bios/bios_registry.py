@@ -11,7 +11,7 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from base import Singleton, ApiRequestType, IDracManager, CommandResult
+from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
 class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
@@ -53,6 +53,11 @@ class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
                                 default=False,
                                 help="return list of all attribute names.")
 
+        cmd_parser.add_argument('--filter-read_only', action='store_true',
+                                required=False, dest="no_read_only",
+                                default=False,
+                                help="will filter out all read-only.")
+
         help_text = "command query bios registry"
         return cmd_parser, "bios-registry", help_text
 
@@ -61,6 +66,7 @@ class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
                 is_attr_only: Optional[bool] = False,
                 attr_name: Optional[str] = None,
                 attr_list: Optional[bool] = False,
+                no_read_only: Optional[bool] = False,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
@@ -69,6 +75,7 @@ class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
                 **kwargs) -> CommandResult:
         """Executes query bios registry.
 
+        :param no_read_only:  filters, remove all read only.
         :param attr_list: will also return list of all attributes
         :param attr_name: will filler based on attribute names.
         :param is_registry_only: will return complete registry. (Default)
@@ -82,7 +89,7 @@ class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
         """
         target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/BiosRegistry"
         cmd_result = self.base_query(target_api,
-                                     filename=filename,
+                                     filename=None,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
 
@@ -119,6 +126,26 @@ class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
             if is_registry_only:
                 registry = cmd_result.data['RegistryEntries']
                 data = registry['Attributes']
+
+        filtered_read_only = []
+        if no_read_only:
+            if 'RegistryEntries' in data:
+                source_data = registry['RegistryEntries']['Attributes']
+            elif 'Attributes' in data:
+                source_data = registry['Attributes']
+            elif isinstance(data, list):
+                source_data = data
+            else:
+                raise ValueError("unknown value.")
+
+            for entry in source_data:
+                if entry['ReadOnly']:
+                    continue
+                else:
+                    filtered_read_only.append(entry)
+            data = filtered_read_only
+
+        save_if_needed(filename, data)
 
         return CommandResult(data, None, attribute_names)
 

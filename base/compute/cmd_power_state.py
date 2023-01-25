@@ -62,7 +62,8 @@ class RebootHost(IDracManager,
         help_text = "reboots the system"
         return cmd_parser, "reboot", help_text
 
-    def execute(self, filename,
+    def execute(self,
+                filename: Optional[str] = "",
                 data_type: Optional[str] = "json",
                 reset_type: Optional[str] = "On",
                 power_state: Optional[str] = "On",

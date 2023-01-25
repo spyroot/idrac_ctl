@@ -9,7 +9,7 @@ from .bios.cmd_boot_order import *
 from .bios.bios_registry import *
 from .bios.cmd_change_bios import *
 
-from .cmd_power_state import *
+from .compute.cmd_power_state import *
 from base.raid.cmd_raid_service import *
 from .bios.cmd_bios import *
 from .bios.cmd_bios_clear_pending import *

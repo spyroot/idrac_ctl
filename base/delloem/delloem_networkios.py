@@ -24,7 +24,7 @@ class GetNetworkIsoAttachStatus(IDracManager, scm_type=ApiRequestType.GetNetwork
         :param cls:
         :return:
         """
-        cmd_parser = cls.base_parser()
+        cmd_parser = cls.base_parser(is_reboot=True)
         help_text = "command get network iso status"
         return cmd_parser, "oem-net-ios-status", help_text
 
@@ -34,6 +34,7 @@ class GetNetworkIsoAttachStatus(IDracManager, scm_type=ApiRequestType.GetNetwork
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
+                do_reboot: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Executes dell oem get attach status action.
 
@@ -44,6 +45,7 @@ class GetNetworkIsoAttachStatus(IDracManager, scm_type=ApiRequestType.GetNetwork
         "ISOAttachStatus": "NotAttached"
         }
         python idrac_ctl.py chassis
+        :param do_reboot:
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -57,7 +59,9 @@ class GetNetworkIsoAttachStatus(IDracManager, scm_type=ApiRequestType.GetNetwork
 
         api_result = self.base_post(target_api, do_async=do_async)
         result = {}
-        resp_keys = ["HostAttachedStatus", "HostBootedFromISO", "IPAddr", "ISOConnectionStatus",
+        resp_keys = ["HostAttachedStatus",
+                     "HostBootedFromISO",
+                     "IPAddr", "ISOConnectionStatus",
                      "ImageName", "ShareName", "UserName"]
 
         if api_result is not None and api_result.extra is not None:
@@ -65,5 +69,10 @@ class GetNetworkIsoAttachStatus(IDracManager, scm_type=ApiRequestType.GetNetwork
             for rk in resp_keys:
                 if rk in data:
                     result[rk] = data[rk]
+
+        if do_reboot:
+            cmd_reboot = self.reboot()
+            if 'Status' in cmd_reboot:
+                result.update({"Reboot": cmd_reboot['Status']})
 
         return CommandResult(result, None, None)

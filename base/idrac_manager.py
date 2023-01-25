@@ -23,6 +23,7 @@ import argparse
 import asyncio
 import collections
 import functools
+import warnings
 
 import requests
 import json
@@ -310,16 +311,18 @@ class IDracManager:
                                 pbar.update(n=inc)
                             time.sleep(sleep_time)
                 else:
-                    print(resp.status_code)
+                    print("unexpected status code", resp.status_code)
                     time.sleep(sleep_time)
                     print("Unknown status code")
 
     @staticmethod
-    async def async_default_error_handler(response):
+    async def async_default_error_handler(response: requests.models.Response) -> bool:
         """Default error handler.
         :param response:
         :return:
         """
+        if response.status_code >= 200 or response.status_code < 300:
+            return True
         if response.status_code == 401:
             raise AuthenticationFailed("Authentication failed.")
         if response.status_code != 200:
@@ -327,7 +330,7 @@ class IDracManager:
                                      f"Status code {response.status_code}")
 
     @staticmethod
-    def default_error_handler(response):
+    def default_error_handler(response) -> bool:
         """Default error handler.
         :param response:
         :return:
@@ -663,7 +666,7 @@ class IDracManager:
                                                           auth=(self._username, self._password)))
 
     @staticmethod
-    def parse_error(error_response):
+    def parse_error(error_response: requests.models.Response):
         """Default Parser for error msg from
         JSON error response based on iDRAC.
         :param error_response:
@@ -919,13 +922,43 @@ class IDracManager:
 
     @staticmethod
     def api_success_msg(status: bool) -> Dict:
+        """Default api success respond.
+        :param status:
+        :return:
+        """
         return {"Status": status}
+
+    def reboot(self, power_state_attr="PowerState",
+               default_reboot_type="ForceRestart") -> dict:
+        """Check if power state is on , reboots a host.
+        :return: return a dict stora if operation succeed..
+        """
+        result_data = {}
+        cmd_result = self.sync_invoke(ApiRequestType.ChassisQuery,
+                                      "chassis_service_query",
+                                      data_filter=power_state_attr)
+
+        if isinstance(cmd_result.data, dict) and 'PowerState' in cmd_result.data:
+            pd_state = cmd_result.data[power_state_attr]
+            if pd_state == 'On':
+                cmd_result = self.sync_invoke(ApiRequestType.RebootHost,
+                                              "reboot",
+                                              reset_type=default_reboot_type)
+                if 'Status' in cmd_result.data:
+                    result_data.update({"Reboot": cmd_result.data['Status']})
+            else:
+                warnings.warn(f"Can't reboot a host , chassis power state {pd_state}")
+        else:
+            warnings.warn(f"Failed fetch chassis power state")
+
+        return result_data
 
     @staticmethod
     def base_parser(is_async: Optional[bool] = True,
                     is_file_save: Optional[bool] = True,
                     is_expanded: Optional[bool] = True,
-                    is_remote_share: Optional[bool] = False):
+                    is_remote_share: Optional[bool] = False,
+                    is_reboot: Optional[bool] = False):
         """This base optional parser for all sub command.
         Each sub-command can add additional optional flags
         and args.
@@ -942,6 +975,15 @@ class IDracManager:
                                     required=False, dest="do_expanded",
                                     default=False,
                                     help="expanded request for deeper view.")
+        if is_file_save:
+            cmd_parser.add_argument('-f', '--filename', required=False, default="",
+                                    type=str,
+                                    help="filename if we need to save a respond to a file.")
+
+        if is_reboot:
+            cmd_parser.add_argument('-r', '--reboot', action='store_true',
+                                    required=False, dest="do_reboot",
+                                    default=False, help="will reboot a host.")
 
         # this optional args for remote share CIFS/NFS/HTTP etc.
         if is_remote_share:
@@ -969,7 +1011,7 @@ class IDracManager:
         return cmd_parser
 
     @staticmethod
-    def job_id_from_header(response) -> str:
+    def job_id_from_header(response: requests.models.Response) -> str:
         """Returns job id from response header.
         :param response:
         :return:
@@ -998,7 +1040,7 @@ class IDracManager:
                 "@Redfish.SettingsApplyTime": {
                     "ApplyTime": "InMaintenanceWindowOnReset",
                     "MaintenanceWindowStartTime": start_time,
-                    "MaintenanceWindowDurationInSeconds": int(duration_time)
+                    "MaintenanceWindowDurationInSeconds": duration_time
                 }
             }
         elif reboot_type == ScheduleJobType.AutoReboot:

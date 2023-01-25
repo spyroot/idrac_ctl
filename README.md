@@ -298,4 +298,65 @@ python idrac_ctl.py oem-net-ios-status
 }
 ```
 
+## Example changing BIOS values
+
+First, obtain a list of all possible attributes and values that BIOS supports. 
+Note many values we can't change. Keep attention to the read-only flag.
+
+Also, note if a reboot is required or not.
+
+```bash
+python idrac_ctl.py bios-registry --attr_list
+```
+
+For example attribute PowerCycleRequest.
+
+```bash
+python idrac_ctl.py bios-registry --attr_name PowerCycleRequest
+```
+
+```json
+[
+    {
+        "AttributeName": "PowerCycleRequest",
+        "CurrentValue": null,
+        "DisplayName": "Power Cycle Request",
+        "DisplayOrder": 10008,
+        "HelpText": "Specifies how the system reacts when system transitions to S5 state.  When set to None, the transition to S5 is normal.  When set to Full Power Cycle, the system will temporarily be forced into a lower power state, similar to removing and replacing AC.",
+        "Hidden": false,
+        "Immutable": false,
+        "MenuPath": "./MiscSettingsRef",
+        "ReadOnly": false,
+        "ResetRequired": true,
+        "Type": "Enumeration",
+        "Value": [
+            {
+                "ValueDisplayName": "None",
+                "ValueName": "None"
+            },
+            {
+                "ValueDisplayName": "Full Power Cycle",
+                "ValueName": "FullPowerCycle"
+            }
+        ],
+        "WarningText": null,
+        "WriteOnly": false
+    }
+]
+```
+
+We can also query for a BIOS attributes that we can change. 
+
+Save result to a file and find value that you need change.
+
+```bash
+python idrac_ctl.py bios-registry --filter-read_only -f bios.json
+```
+
+In my case I disable Mem Test and enabled MmioAbove4Gb
+
+```bash
+python idrac_ctl.py bios-change  --attr_name MemTest,MmioAbove4Gb --attr_value Disabled,Enabled
+```
+
 More example TBD.
