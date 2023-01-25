@@ -1,9 +1,7 @@
 """iDRAC firmware command
 
-Command provides the option to retrieve firmware setting from iDRAC and serialize
-back as caller as JSON, YAML, and XML. In addition, it automatically
-registers to the command line ctl tool. Similarly to the rest command caller can save
-to a file and consume asynchronously or synchronously.
+Command provides the option to import configuration.
+python idrac_ctl.py system-import --config system.json
 
 Author Mus spyroot@gmail.com
 """
@@ -12,7 +10,7 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from base import CommandResult
+from base import CommandResult, UnexpectedResponse
 from base import IDracManager, ApiRequestType, Singleton
 
 
@@ -49,8 +47,8 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
                              required=False, type=str, default="",
                              help="filename, if we need save to a file.")
 
-        help_text = "fetch the firmware view"
-        return cmd_arg, "import", help_text
+        help_text = "command import system configuration"
+        return cmd_arg, "system-import", help_text
 
     def execute(self,
                 config: str,
@@ -124,23 +122,17 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
             f"Actions/Oem/EID_674_Manager.ImportSystemConfiguration"
 
         response = self.api_post_call(r, json.dumps(payload), headers)
-        data = response.json()
-        print(response.headers)
-        print(data)
+        ok = self.default_post_success(self, response, expected=202)
+        resp_hdr = response.headers
+        if 'Location' not in resp_hdr:
+            raise UnexpectedResponse("rest api failed.")
 
-        self.default_post_success(self, response)
-        job_id = response.headers['Location'].split("/")[-1]
+        location = response.headers['Location']
+        job_id = location.split("/")[-1]
 
-        #
-        # if not do_async:
-        #     response = self.api_get_call(r, headers)
-        #     self.default_error_handler(response)
-        # else:
-        #     loop = asyncio.get_event_loop()
-        #     response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
-        #
-        # self.default_error_handler(response)
-        # data = response.json()
-        #
-        # save_if_needed(filename, data)
-        return CommandResult({}, None, None)
+        if not do_async:
+            data = self.fetch_job(job_id)
+        else:
+            data = {"job_id": job_id}
+
+        return CommandResult(data, None, None)

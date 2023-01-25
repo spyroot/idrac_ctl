@@ -46,8 +46,8 @@ class ExportSystemConfig(IDracManager,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "exports system configuration. "
-        return cmd_parser, "export", help_text
+        help_text = "command exports system configuration"
+        return cmd_parser, "system-export", help_text
 
     def execute(self,
                 data_type: Optional[str] = "json",

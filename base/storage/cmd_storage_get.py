@@ -3,7 +3,11 @@
 Command provides the option to retrieve storage information for specific
 controller disk from iDRAC.
 
-python idrac_ctl.py storage_get --storage_controller NonRAID.Slot.6-1
+Example
+python idrac_ctl.py storage-get --storage_controller NonRAID.Slot.6-1
+
+Expanded
+python idrac_ctl.py storage-get --storage_controller NonRAID.Slot.6-1 -e
 
 Author Mus spyroot@gmail.com
 """
@@ -31,17 +35,13 @@ class StorageView(IDracManager, scm_type=ApiRequestType.StorageViewQuery,
         :param cls:
         :return:
         """
-        cmd_arg = argparse.ArgumentParser(add_help=False)
-        cmd_arg.add_argument('-f', '--filename', required=False, type=str,
-                             default="",
-                             help="filename if we need to save a respond to a file.")
+        cmd_parser = cls.base_parser()
+        cmd_parser.add_argument('--storage_controller', required=False, type=str,
+                                default="",
+                                help="controller name.")
 
-        cmd_arg.add_argument('--storage_controller', required=False, type=str,
-                             default="",
-                             help="filename if we need to save a respond to a file.")
-
-        help_text = "fetch the storage information"
-        return cmd_arg, "storage_get", help_text
+        help_text = "command fetch the storage information"
+        return cmd_parser, "storage-get", help_text
 
     def execute(self,
                 filename: Optional[str] = None,
@@ -49,8 +49,10 @@ class StorageView(IDracManager, scm_type=ApiRequestType.StorageViewQuery,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
+                do_expanded: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Queries storage controller from iDRAC.
+        """Get storage controller details.
+        :param do_expanded:
         :param storage_controller: if empty cmd will return list of controllers.
         :param verbose: enables verbose output
         :param do_async: will not block and return result as future.
@@ -63,11 +65,8 @@ class StorageView(IDracManager, scm_type=ApiRequestType.StorageViewQuery,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
-            f"System.Embedded.1/Storage/{storage_controller}"
-
-        response = self.api_get_call(r, headers)
-        self.default_error_handler(response)
-        data = response.json()
-        save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        target_api = f"/redfish/v1/Systems/System.Embedded.1/Storage/{storage_controller}"
+        return self.base_query(target_api,
+                               filename=filename,
+                               do_async=do_async,
+                               do_expanded=do_expanded)

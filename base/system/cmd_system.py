@@ -59,7 +59,7 @@ class SystemQuery(IDracManager, scm_type=ApiRequestType.SystemQuery,
         cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
                                 default=False, help="Will create a task and will not wait.")
 
-        help_text = "fetch the system view."
+        help_text = "command fetch the system view."
         return cmd_parser, "system", help_text
 
     def execute(self,
