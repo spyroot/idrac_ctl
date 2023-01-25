@@ -12,7 +12,6 @@ import collections
 import json
 import os
 import sys
-import textwrap
 from typing import Optional, Dict
 
 import urllib3

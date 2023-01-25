@@ -11,7 +11,7 @@ import asyncio
 from abc import abstractmethod
 from typing import Optional
 
-from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed, find_ids
+from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
 class BootSettings(IDracManager, scm_type=ApiRequestType.BootSettingsQuery,
