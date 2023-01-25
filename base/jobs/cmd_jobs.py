@@ -72,7 +72,7 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
 
         cmd_parser.add_argument('--sort_by_time', action='store_true',
                                 required=False, dest="sort_by_time",
-                                default=False,
+                                default=True,
                                 help="Sort jobs by time. First entry the last job.")
 
         # RebootCompleted
@@ -84,9 +84,9 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                 filter_scheduled: Optional[bool] = False,
                 filter_completed: Optional[bool] = False,
                 reboot_completed: Optional[bool] = False,
-                running: Optional[bool] = False,
-                sort_by_time: Optional[bool] = False,
                 reboot_pending: Optional[bool] = False,
+                running: Optional[bool] = False,
+                sort_by_time: Optional[bool] = True,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False, **kwargs) -> CommandResult:
@@ -115,13 +115,14 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
         self.default_error_handler(response)
         filtered_data = []
         if filter_scheduled:
-            scheduled_jobs = [job for job in data['Members'] if job['JobState'] == 'Scheduled']
+            scheduled_jobs = [job for job in data['Members'] if job['JobState'] == 'Scheduled'
+                              or job['JobState'] == 'Scheduling']
             filtered_data += scheduled_jobs
         if filter_completed:
             completed_jobs = [job for job in data['Members'] if job['JobState'] == 'Completed']
             filtered_data += completed_jobs
         if reboot_completed:
-            reboot_completed_jobs = [job for job in data['Members'] if job['JobState'] == 'Completed']
+            reboot_completed_jobs = [job for job in data['Members'] if job['JobState'] == 'RebootCompleted']
             filtered_data += reboot_completed_jobs
         if running:
             reboot_completed_jobs = [job for job in data['Members'] if job['JobState'] == 'Running']
@@ -142,7 +143,7 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
             else:
                 member_data = [filtered_data]
             filtered_data = sorted(member_data, reverse=True, key=lambda
-                x: datetime.fromisoformat(x['ActualRunningStartTime']).timestamp()
+                x: datetime.fromisoformat(x['StartTime']).timestamp()
             if 'ActualRunningStartTime' in x else None)
 
         return CommandResult(filtered_data, None, None)

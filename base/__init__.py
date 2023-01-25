@@ -5,6 +5,10 @@ from .system.cmd_system_config import *
 from .system.cmd_system_import import *
 
 from .cmd_boot import *
+from .bios.cmd_boot_order import *
+from .bios.bios_registry import *
+from .bios.cmd_change_bios import *
+
 from .cmd_power_state import *
 from base.raid.cmd_raid_service import *
 from .bios.cmd_bios import *

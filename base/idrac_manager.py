@@ -31,7 +31,7 @@ from tqdm import tqdm
 from abc import abstractmethod
 from typing import Optional, Tuple, Dict
 
-from base.shared import ApiRequestType, RedfishAction
+from base.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from base.cmd_utils import save_if_needed
 
 """Each command encapsulate result in named tuple"""
@@ -727,13 +727,12 @@ class IDracManager:
                                     f"{response.status_code}")
 
     @staticmethod
-    def default_delete_success(cls, response: requests.models.Response,
+    def default_delete_success(response: requests.models.Response,
                                expected: Optional[int] = 200) -> bool:
         """Default delete success handler,  Check for status code.
         and raise exception.  Default handler to check post
         request respond.
 
-        :param cls:
         :param response: HTTP response
         :param expected:  Option status code that we caller consider success.
         :return: True if patch msg succeed
@@ -770,7 +769,7 @@ class IDracManager:
         :return: True or False and if failed raise exception
         :raise  PostRequestFailed
         """
-        return IDracManager.default_delete_success(IDracManager, response)
+        return IDracManager.default_delete_success(response)
 
     @staticmethod
     async def async_default_patch_success(response: requests.models.Response) -> bool:
@@ -835,13 +834,59 @@ class IDracManager:
         save_if_needed(filename, data)
         return CommandResult(data, None, None)
 
+    def base_patch(self,
+                   resource: str,
+                   payload: Optional[dict] = None,
+                   do_async: Optional[bool] = False,
+                   data_type: Optional[str] = "json",
+                   expected_status: Optional[int] = 200) -> CommandResult:
+        """Base http patch
+        :param resource:
+        :param payload:
+        :param do_async:
+        :param data_type:
+        :param expected_status:
+        :return:
+        """
+        headers = {}
+        if data_type == "json":
+            headers.update(self.json_content_type)
+
+        if payload is None:
+            pd = {}
+        else:
+            pd = payload
+
+        ok = False
+        response = None
+        try:
+            r = f"https://{self.idrac_ip}{resource}"
+            if not do_async:
+                response = self.api_patch_call(r, json.dumps(pd), headers)
+                ok = self.default_patch_success(self, response, expected=expected_status)
+            else:
+                loop = asyncio.get_event_loop()
+                ok, response = loop.run_until_complete(self.api_async_patch_until_complete(r, json.dumps(pd), headers))
+        except PatchRequestFailed as pf:
+            print("Error:", pf)
+            pass
+
+        return CommandResult(self.api_success_msg(ok), None, response)
+
     def base_post(self,
                   resource: str,
                   payload: Optional[dict] = None,
                   do_async: Optional[bool] = False,
                   data_type: Optional[str] = "json",
                   expected_status: Optional[int] = 200) -> CommandResult:
-
+        """Base http post request..
+        :param resource:
+        :param payload:
+        :param do_async:
+        :param data_type:
+        :param expected_status:
+        :return:
+        """
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
@@ -868,7 +913,6 @@ class IDracManager:
             pass
 
         return CommandResult(self.api_success_msg(ok), None, response)
-
 
     @staticmethod
     def api_success_msg(status: bool) -> Dict:
@@ -929,10 +973,43 @@ class IDracManager:
         :raise UnexpectedResponse if header not present.
         """
         resp_hdr = response.headers
-        if 'Location' not in resp_hdr:
+        if resp_hdr is not None and 'Location' not in resp_hdr:
             raise UnexpectedResponse("rest api failed.")
 
         location = response.headers['Location']
         job_id = location.split("/")[-1]
-
         return job_id
+
+    @staticmethod
+    def schedule_job(reboot_type: ScheduleJobType,
+                     start_time: Optional[str],
+                     duration_time: Optional[int]) -> dict:
+        """
+        :param reboot_type: reboot types.
+        :param start_time: start time for a job
+        :param duration_time: duration for a job
+        :return:
+        """
+        if reboot_type == ScheduleJobType.NoReboot:
+            pd = {
+                "@Redfish.SettingsApplyTime": {
+                    "ApplyTime": "InMaintenanceWindowOnReset",
+                    "MaintenanceWindowStartTime": start_time,
+                    "MaintenanceWindowDurationInSeconds": int(duration_time)
+                }
+            }
+        elif reboot_type == ScheduleJobType.AutoReboot:
+            pd = {
+                "@Redfish.SettingsApplyTime": {
+                    "ApplyTime": "AtMaintenanceWindowStart",
+                    "MaintenanceWindowStartTime": start_time,
+                    "MaintenanceWindowDurationInSeconds": duration_time
+                }
+            }
+        elif reboot_type == ScheduleJobType.OnReset:
+            pd = {"@Redfish.SettingsApplyTime": {"ApplyTime": "OnReset"}}
+
+        else:
+            raise ValueError("Invalid reboot type.")
+
+        return pd

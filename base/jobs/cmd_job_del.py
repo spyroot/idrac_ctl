@@ -12,6 +12,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
+from base.idrac_manager import DeleteRequestFailed
 
 
 class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
@@ -73,13 +74,17 @@ class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
         r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
             f"Oem/Dell/Jobs/{job_id}"
 
-        if not do_async:
-            response = self.api_delete_call(r, headers)
-            self.default_error_handler(response)
-        else:
-            loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_del_until_complete(r, headers))
-        data = response.json()
+        ok = False
+        try:
+            if not do_async:
+                response = self.api_delete_call(r, headers)
+                ok = self.default_delete_success(response)
+            else:
+                loop = asyncio.get_event_loop()
+                response = loop.run_until_complete(self.api_async_del_until_complete(r, headers))
+                data = response.json()
+                save_if_needed(filename, data)
+        except DeleteRequestFailed as drq:
+            print(drq)
 
-        save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        return CommandResult(self.api_success_msg(ok), None, None)

@@ -11,7 +11,7 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from base import IDracManager, ApiRequestType, Singleton, CommandResult
+from base import IDracManager, ApiRequestType, Singleton, CommandResult, UnexpectedResponse
 from base.cmd_exceptions import InvalidArgument
 
 
@@ -106,6 +106,7 @@ class RebootHost(IDracManager,
         r = f"https://{self.idrac_ip}/redfish/v1/Systems/System.Embedded.1/" \
             f"Actions/ComputerSystem.Reset"
 
+        ok = False
         payload = {'ResetType': reset_type}
         if not do_async:
             response = self.api_post_call(r, json.dumps(payload), headers)
@@ -114,18 +115,11 @@ class RebootHost(IDracManager,
             loop = asyncio.get_event_loop()
             ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(payload), headers))
 
-        jobs = self.sync_invoke(ApiRequestType.Jobs, "jobs_sources_query",
-                                reboot_pending=True, sort_by_time=True)
-
-        self.default_json_printer(self, jobs.data)
-        resp_hdr = response.headers
-        data = {"job_id": None}
-
-        if resp_hdr is not None:
-            if 'Location' in resp_hdr:
-                location = resp_hdr.headers['Location']
-                job_id = location.split("/")[-1]
-                print("JOB_ID", job_id)
-                data = self.fetch_job(job_id)
+        try:
+            job_id = self.job_id_from_header(response)
+            if job_id is not None:
+                self.fetch_job(job_id)
+        except UnexpectedResponse:
+            pass
 
         return CommandResult(self.api_success_msg(ok), None, None)

@@ -8,6 +8,9 @@ from typing import Optional
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    BiosChangeSettings = auto()
+    BiosRegistry = auto()
+    ChangeBootOrder = auto()
     GetNetworkIsoAttachStatus = auto()
     OemAttach = auto()
     DellOemActions = auto()
@@ -53,6 +56,13 @@ class ApiRequestType(Enum):
     DellOemNetIsoBoot = ()
     DellOemDetach = auto()
 
+
+class ScheduleJobType(Enum):
+    """Each commands enum.
+    """
+    NoReboot = auto()
+    AutoReboot = auto()
+    OnReset = auto()
 
 
 class RedfishAction:
