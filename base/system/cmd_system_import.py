@@ -1,6 +1,8 @@
-"""iDRAC firmware command
+"""iDRAC import system config from json file.
 
 Command provides the option to import configuration.
+
+python idrac_ctl.py system-export --filename system.json
 python idrac_ctl.py system-import --config system.json
 
 Author Mus spyroot@gmail.com

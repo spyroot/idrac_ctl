@@ -210,14 +210,16 @@ Note
 idrac_ctl.py boot_one_shot --uefi_target
 ```
 
-## Export config
+## Export/Import system configuration
 
 The export config, by default, will create a task and wait for completion. So will see 
 the status bar progress.  If we don't want to wait, we can pass --the async flag.  
 In this setting, each request to iDRAC send asynchronously, and we don't want results 
 for job completion.
+
 ```bash
-python idrac_ctl.py export --filename system.json
+python idrac_ctl.py system-export --filename system.json
+python idrac_ctl.py system-import --config system.json
 ```
 
 If we don't need to wait, we can pass --async. It will create a job, but it will not wait 
