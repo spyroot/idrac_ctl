@@ -4,14 +4,14 @@ python idrac_ctl.py chassis-reset --reset_type ForceOff
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 import asyncio
 import json
 from abc import abstractmethod
 from typing import Optional
 
-from base import IDracManager, ApiRequestType, Singleton, CommandResult, InvalidArgument, FailedDiscoverAction, \
-    PostRequestFailed
+from base import IDracManager, ApiRequestType, Singleton
+from base import CommandResult, InvalidArgument
+from base import FailedDiscoverAction, PostRequestFailed
 
 
 class ChassisReset(IDracManager,
