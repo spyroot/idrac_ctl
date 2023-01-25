@@ -14,7 +14,7 @@ from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
 class JobWatch(IDracManager, scm_type=ApiRequestType.JobWatch,
-               name='job_del',
+               name='job_watch',
                metaclass=Singleton):
     """Command watch job progress.
     """
@@ -33,7 +33,7 @@ class JobWatch(IDracManager, scm_type=ApiRequestType.JobWatch,
         cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
                                 default=False, help="Will create a task and will not wait.")
 
-        cmd_parser.add_argument('--job_id', required=True, dest="job_id", type=str,
+        cmd_parser.add_argument('-j', '--job_id', required=True, dest="job_id", type=str,
                                 default=None, help="Job id. Example JID_744718373591")
 
         cmd_parser.add_argument('-f', '--filename', required=False, type=str,
@@ -66,4 +66,4 @@ class JobWatch(IDracManager, scm_type=ApiRequestType.JobWatch,
             print(f"the rest of args: {kwargs}")
 
         data = self.fetch_job(job_id)
-        return CommandResult(JobWatch, None, None)
+        return CommandResult(data, None, None)

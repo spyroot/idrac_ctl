@@ -30,8 +30,8 @@ class TasksGet(IDracManager, scm_type=ApiRequestType.TaskGet,
         cmd_parser.add_argument('-t' '--task_id', required=True, dest="task_id", type=str,
                                 default=None, help="Job id. Example JID_744718373591")
 
-        help_text = "command fetch tasks"
-        return cmd_parser, "tasks-get", help_text
+        help_text = "command fetch task"
+        return cmd_parser, "task-get", help_text
 
     def execute(self,
                 task_id: str,

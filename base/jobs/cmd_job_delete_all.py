@@ -9,8 +9,9 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class JobRmDellServices(IDracManager, scm_type=ApiRequestType.JobRmDellServices,
-                        name='job_service_query',
+class JobRmDellServices(IDracManager,
+                        scm_type=ApiRequestType.JobRmDellServices,
+                        name='job_delete_all',
                         metaclass=Singleton):
     """A command query job_service_query.
     """
@@ -51,16 +52,13 @@ class JobRmDellServices(IDracManager, scm_type=ApiRequestType.JobRmDellServices,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
         actions = self.discover_redfish_actions(self, cmd_result.data)
-
-        payload = {'JobID': "JID_CLEARALL"}
+        payload = {'JobID': "JID_CLEARALL_FORCE"}
         target_api = actions['DeleteJobQueue'].target
-
-        r = f"https://{self.idrac_ip}{target_api}"
-        api_result = self.base_post(target_api,
-                                    do_async=do_async, payload=payload, expected_status=200)
+        api_result = self.base_post(target_api, do_async=do_async,
+                                    payload=payload, expected_status=200)
         result = {}
         if api_result is not None and api_result.extra is not None:
-            print(api_result.extra.status_code)
             data = api_result.extra.json()
+            result.update(data)
 
         return CommandResult(result, None, None)

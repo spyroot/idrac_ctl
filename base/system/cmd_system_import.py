@@ -7,7 +7,6 @@ python idrac_ctl.py system-import --config system.json
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 import json
 from abc import abstractmethod
 from pathlib import Path
@@ -16,6 +15,7 @@ from typing import Optional
 from base import CommandResult
 from base import IDracManager, ApiRequestType, Singleton
 from base.cmd_exceptions import InvalidArgument
+from base.idrac_manager import PostRequestFailed
 
 
 class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
@@ -36,17 +36,10 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         :param cls:
         :return:
         """
-        cmd_arg = argparse.ArgumentParser(add_help=False)
+        cmd_arg = cls.base_parser(is_reboot=True, is_expanded=False)
 
         cmd_arg.add_argument('--config', required=True, dest="config", type=str,
                              default=None, help="Import system config")
-
-        cmd_arg.add_argument('--async', action='store_true', required=False, dest="do_async",
-                             default=False, help="Will do async request.")
-
-        cmd_arg.add_argument('-f', '--filename',
-                             required=False, type=str, default="",
-                             help="filename, if we need save to a file.")
 
         cmd_arg.add_argument('--shutdown_type',
                              required=False, type=str, default="Graceful",
@@ -59,7 +52,8 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         cmd_arg.add_argument('--time_to_wait',
                              required=False, type=int, default=300,
                              help="The time to wait for the host to shut down. "
-                                  "Default and minimum value is 300 seconds. Maximum value is 3600 seconds..")
+                                  "Default and minimum value is 300 seconds. "
+                                  "Maximum value is 3600 seconds..")
 
         help_text = "command import system configuration"
         return cmd_arg, "system-import", help_text
@@ -73,8 +67,9 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
+                do_reboot: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Query firmware from idrac
+        """Import system config
 
         ImportBuffer
         Buffer content to perform import. Required only for LOCAL
@@ -100,6 +95,7 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         IncludeInExport
         ShareParameters
 
+        :param do_reboot:
         :param host_power_state: On, Off
         :param config: path to a config file.
         :param shutdown_type:  Graceful, Forced, NoReboot.
@@ -151,15 +147,24 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
             f"Actions/Oem/EID_674_Manager.ImportSystemConfiguration"
 
-        response = self.api_post_call(r, json.dumps(payload), headers)
-        ok = self.default_post_success(self, response, expected=202)
         data = {}
 
-        if ok:
-            job_id = self.job_id_from_header(response)
-            if not do_async:
-                data = self.fetch_job(job_id)
-            else:
-                data = {"job_id": job_id}
+        try:
+            response = self.api_post_call(r, json.dumps(payload), headers)
+            ok = self.default_post_success(self, response, expected=202)
+
+            if ok:
+                job_id = self.job_id_from_header(response)
+                if job_id is not None:
+                    if not do_async:
+                        data = self.fetch_job(job_id)
+                    else:
+                        data = {"job_id": job_id}
+
+            if do_reboot:
+                reboot_result = self.reboot()
+                data.update(reboot_result)
+        except PostRequestFailed as prf:
+            print(prf)
 
         return CommandResult(data, None, None)

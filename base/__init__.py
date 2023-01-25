@@ -9,6 +9,10 @@ from .bios.cmd_boot_order import *
 from .bios.bios_registry import *
 from .bios.cmd_change_bios import *
 
+from .dell_lc.cmd_dell_lc_api import *
+from .dell_lc.cmd_dell_lc_rs import *
+from .dell_lc.cmd_dell_lc_services import *
+
 from .compute.cmd_power_state import *
 from base.raid.cmd_raid_service import *
 from .bios.cmd_bios import *

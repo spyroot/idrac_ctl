@@ -1,6 +1,7 @@
 """iDRAC query jobs services
 
-Command  query jobs services.
+The DellJobService resource provides some actions to support Job management functionality.
+
 
 Author Mus spyroot@gmail.com
 """

@@ -70,6 +70,11 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                                 default=False,
                                 help="returns only reboot pending jobs.")
 
+        cmd_parser.add_argument('--failed', action='store_true',
+                                required=False, dest="failed",
+                                default=False,
+                                help="returns only failed jobs.")
+
         cmd_parser.add_argument('--sort_by_time', action='store_true',
                                 required=False, dest="sort_by_time",
                                 default=True,
@@ -85,14 +90,17 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                 filter_completed: Optional[bool] = False,
                 reboot_completed: Optional[bool] = False,
                 reboot_pending: Optional[bool] = False,
+                failed: Optional[bool] = False,
                 running: Optional[bool] = False,
                 sort_by_time: Optional[bool] = True,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False, **kwargs) -> CommandResult:
         """List idrac jobs.
-        :param sort_by_time:
-        :param reboot_pending:
+
+        :param failed: retrieve failed jobs
+        :param sort_by_time:  sort by start time
+        :param reboot_pending: retrieve jobs reboot pending status
         :param running: retrieve running jobs
         :param reboot_completed: retrieve completed jobs
         :param filter_scheduled: retrieve scheduled jobs
@@ -129,6 +137,9 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
             filtered_data += reboot_completed_jobs
         if reboot_pending:
             reboot_pending_jobs = [job for job in data['Members'] if job['JobState'] == 'RebootPending']
+            filtered_data += reboot_pending_jobs
+        if failed:
+            reboot_pending_jobs = [job for job in data['Members'] if job['JobState'] == 'Failed']
             filtered_data += reboot_pending_jobs
         # default
         if filter_scheduled is False and filter_completed \

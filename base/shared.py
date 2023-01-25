@@ -8,6 +8,9 @@ from typing import Optional
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    RemoteServicesRssAPIStatus = auto()
+    DellLcQuery = auto()
+    RemoteServicesAPIStatus = auto()
     JobRmDellServices = auto()
     JobDellServices = auto()
     TasksList = auto()

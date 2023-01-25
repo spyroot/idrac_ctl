@@ -12,7 +12,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from base import IDracManager, ApiRequestType, Singleton
-from base.idrac_manager import CommandResult
+from base.idrac_manager import CommandResult, MissingResource
 
 
 class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
@@ -45,7 +45,7 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "exports system configuration. "
+        help_text = "command fetch task. "
         return cmd_parser, "task", help_text
 
     def execute(self,
@@ -85,5 +85,12 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
                   f"do_async:{do_async} job_id:{job_id}")
             print(f"the rest of args: {kwargs}")
 
-        data = self.fetch_job(job_id)
+        chassis_data = self.sync_invoke(ApiRequestType.ChassisQuery, "chassis_service_query")
+
+        data = {}
+        try:
+            data = self.fetch_job(job_id)
+        except MissingResource as mr:
+            pass
+
         return CommandResult(data, None, None)
