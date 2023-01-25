@@ -8,6 +8,10 @@ from typing import Optional
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    JobRmDellServices = auto()
+    JobDellServices = auto()
+    TasksList = auto()
+    JobWatch = auto()
     BiosChangeSettings = auto()
     BiosRegistry = auto()
     ChangeBootOrder = auto()
@@ -55,6 +59,7 @@ class ApiRequestType(Enum):
     GetAttachStatus = auto()
     DellOemNetIsoBoot = ()
     DellOemDetach = auto()
+    TaskGet = auto()
 
 
 class ScheduleJobType(Enum):
@@ -65,18 +70,33 @@ class ScheduleJobType(Enum):
     OnReset = auto()
 
 
+from json import JSONEncoder
+
+
+class RedfishActionEncoder(JSONEncoder):
+    def default(self, obj):
+        return obj.__dict__
+
+
 class RedfishAction:
     """Action discovery encapsulate each action to RedfishAction.
     """
 
-    def __init__(self,
-                 action_name: Optional[str] = "",
-                 target: Optional[str] = "",
+    def __init__(self, action_name: Optional[str] = "", target: Optional[str] = "",
                  full_redfish_name: Optional[str] = ""):
+        super().__init__()
         self.action_name = action_name
-        self.target = target
         self.full_redfish_name = full_redfish_name
+        self.target = target
         self.args = None
+
+    def __iter__(self):
+        yield from {
+            "action_name": self.action_name,
+            "full_redfish_name": self.full_redfish_name,
+            "target": self.target,
+            "args": self.args,
+        }.items()
 
     def add_action_arg(self, arg_name, allowable_value):
         """Add action argument name and allowable values for
@@ -92,6 +112,15 @@ class RedfishAction:
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__,
                           sort_keys=True, indent=4)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return json.dumps(dict(self), ensure_ascii=False)
+
+    def to_json(self):
+        return json.dumps(dict(self), ensure_ascii=False)
 
 
 class Singleton(type):

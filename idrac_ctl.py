@@ -21,7 +21,7 @@ from pygments.lexers.data import JsonLexer
 from pygments.formatters.terminal256 import Terminal256Formatter
 
 from base.cmd_utils import save_if_needed
-from base.shared import RedfishAction
+from base.shared import RedfishAction, RedfishActionEncoder
 from base.cmd_exceptions import InvalidArgument, FailedDiscoverAction
 from base.idrac_manager import AuthenticationFailed, IDracManager, ResourceNotFound
 from base.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
@@ -61,14 +61,16 @@ def json_printer(json_data, cmd_args,
     if cmd_args.no_stdout:
         return
 
-    if isinstance(json_data, requests.models.Response):
+    if isinstance(json_data, RedfishAction):
+        json_raw = json_data.toJSON()
+    elif isinstance(json_data, requests.models.Response):
         json_raw = json_data.json()
     elif isinstance(json_data, str):
         json_raw = json.dumps(json.loads(json_data),
                               sort_keys=sort, indent=indents)
     else:
         json_raw = json.dumps(json_data,
-                              sort_keys=sort, indent=indents)
+                              sort_keys=sort, indent=indents, cls=RedfishActionEncoder)
 
     if header is not None:
         print(header)

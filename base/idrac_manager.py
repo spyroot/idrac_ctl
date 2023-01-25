@@ -332,6 +332,8 @@ class IDracManager:
         :param response:
         :return:
         """
+        if response.status_code >= 200 or response.status_code < 300:
+            return True
         if response.status_code == 401:
             raise AuthenticationFailed("Authentication failed.")
         if response.status_code == 404:
@@ -436,9 +438,10 @@ class IDracManager:
             action_tuple = unfiltered_actions[ra]
             if isinstance(action_tuple, Dict):
                 arg_keys = action_tuple.keys()
-                action_dict[ra] = RedfishAction(action_name=ra,
-                                                target=action_tuple['target'],
-                                                full_redfish_name=full_redfish_names[ra])
+                redfish_action = RedfishAction(action_name=ra,
+                                               target=action_tuple['target'],
+                                               full_redfish_name=full_redfish_names[ra])
+                action_dict[ra] = redfish_action
                 for k in arg_keys:
                     if '@Redfish.AllowableValues' in k:
                         arg_name = k.split('@')[0]

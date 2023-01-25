@@ -24,11 +24,15 @@ from .boot_source.cmd_clear_pending import *
 from .jobs.cmd_jobs import *
 from .jobs.cmd_job_get import *
 from .jobs.cmd_job_services import *
+from .jobs.cmd_job_watch import *
+from .jobs.cmd_job_del import *
+from .jobs.cmd_job_dell_services import *
+from .jobs.cmd_job_delete_all import *
+
 from .cmd_firmware import *
 from .cmd_firmware_inv import *
 from .pci.cmd_pci import *
 from .cmd_get_task import *
-from .jobs.cmd_job_del import *
 from .cmd_manager import *
 from .cmd_virtual_media_get import *
 from .cmd_virtual_media_insert import *
@@ -54,3 +58,7 @@ from .delloem.delloem_attach import *
 from .delloem.delloem_detach import *
 from .delloem.delloem_networkios import *
 from .delloem.delloem_boot_netios import *
+
+from .tasks.cmd_tasks_list import *
+from .tasks.cmd_tasks_get import *
+
