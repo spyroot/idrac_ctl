@@ -78,7 +78,7 @@ class VirtualMediaEject(IDracManager,
         if len(actions) == 0:
             valid_dev_id = [m['Id'] for m in members]
             raise InvalidArgument(f"Invalid device id {device_id}, "
-                                  f"support device id {valid_dev_id}")
+                                  f"supported device id {valid_dev_id}")
 
         # if another image already mounted.
         inserted = {'image': m['Image'] for

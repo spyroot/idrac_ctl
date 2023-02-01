@@ -131,7 +131,7 @@ class VirtualMediaInsert(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Execute command virtual media eject
+        """Execute command, inserts a virtual media eject.
         :param device_id: virtual media device id 1 or 1
         :param remote_username:  username for remote authentication
         :param remote_password:  password for remote authentication
