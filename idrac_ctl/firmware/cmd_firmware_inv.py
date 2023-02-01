@@ -42,7 +42,7 @@ class FirmwareInventoryQuery(IDracManager, scm_type=ApiRequestType.FirmwareInven
                              default="",
                              help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the firmware inventory view"
+        help_text = "command fetch the firmware inventory view"
         return cmd_arg, "firmware_inventory", help_text
 
     def execute(self,

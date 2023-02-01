@@ -39,7 +39,11 @@ from .firmware.cmd_firmware_inv import *
 
 from .pci.cmd_pci import *
 from .cmd_get_task import *
-from .cmd_manager import *
+
+# manager cmds
+from .manager.cmd_manager import *
+from .manager.cmd_manager_reset import *
+
 
 # virtual medial cmds
 from .virtual_media.cmd_virtual_media_get import *

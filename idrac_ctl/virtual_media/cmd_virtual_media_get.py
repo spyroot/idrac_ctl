@@ -60,7 +60,7 @@ class VirtualMediaGet(IDracManager,
                              default="",
                              help="filter based sub-key under device.")
 
-        help_text = "fetch the virtual media"
+        help_text = "command fetch the virtual media."
         return cmd_arg, "get_vm", help_text
 
     def execute(self,

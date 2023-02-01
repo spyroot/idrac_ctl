@@ -1,7 +1,7 @@
 """iDRAC manager command
 
 Command provides the option to retrieve iDRAC manager view.
-python idrac_ctl.py manager
+idrac_ctl manager
 
 Author Mus spyroot@gmail.com
 """
@@ -12,13 +12,13 @@ from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 
 
-class Manager(IDracManager, scm_type=ApiRequestType.ResetManager,
-              name='manager',
+class Manager(IDracManager,
+              scm_type=ApiRequestType.ManagerQuery,
+              name='manager_query',
               metaclass=Singleton):
-    """iDRAC Attribute Query Command, fetch attribute data, caller can save to a file
-    or output to a file or pass downstream.
+    """iDRAC Manager server Command, fetch manager service,
+    caller can save to a file or output to a file or pass downstream.
     """
-
     def __init__(self, *args, **kwargs):
         super(Manager, self).__init__(*args, **kwargs)
 
@@ -38,7 +38,7 @@ class Manager(IDracManager, scm_type=ApiRequestType.ResetManager,
                              default="",
                              help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the attribute view"
+        help_text = "command fetch the manager view"
         return cmd_arg, "manager", help_text
 
     def execute(self, filename: Optional[str] = None,
@@ -47,7 +47,7 @@ class Manager(IDracManager, scm_type=ApiRequestType.ResetManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Queries attributes from iDRAC.
+        """Queries manager services from iDRAC.
         :param do_async:
         :param verbose:
         :param do_deep:

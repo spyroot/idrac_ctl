@@ -53,7 +53,6 @@ class ApiRequestType(Enum):
     Tasks = auto()
     GetTask = auto()
     ImportSystem = auto()
-    ResetManager = auto()
     VirtualMediaGet = auto()
     VirtualMediaInsert = auto()
     VirtualMediaEject = auto()
@@ -72,6 +71,9 @@ class ApiRequestType(Enum):
     DellOemNetIsoBoot = ()
     DellOemDetach = auto()
     TaskGet = auto()
+
+    ManagerQuery = auto()
+    ManagerReset = auto()
 
 
 class ScheduleJobType(Enum):

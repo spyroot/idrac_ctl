@@ -18,6 +18,7 @@ from typing import Optional, Dict
 import requests
 import urllib3
 from pygments import highlight
+# import logging
 
 try:
     from pygments.lexers.data import JsonLexer
@@ -39,13 +40,20 @@ try:
 except ImportError as ir:
     warnings.warn("Failed import urllib3")
 
+# logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s '
+#                            '[%(filename)s:%(lineno)d] %(message)s',
+#                     datefmt='%Y-%m-%d:%H:%M:%S',
+#                     level=logging.DEBUG)
+#
+# logger = logging.getLogger(__name__)
+
 
 def formatter(prog):
     argparse.HelpFormatter(prog, max_help_position=100, width=200)
 
 
 class info:
-    version = '0.8'
+    version = '1.0.5'
     description = 'iDRAC command line tools.'
     author = 'Mus'
     author_email = 'spyroot@gmail.com'
@@ -54,8 +62,17 @@ class info:
 __version__ = info.version
 
 
-def json_printer(json_data, cmd_args,
-                 sort: Optional[bool] = True, indents: Optional[int] = 4,
+def log_verbose(cmd_args, err):
+    if cmd_args.verbose:
+        err_msg = str(err)
+        warnings.warn(f"Failed parse server respond. {err_msg}")
+    return
+
+
+def json_printer(json_data,
+                 cmd_args: argparse.Namespace,
+                 sort: Optional[bool] = True,
+                 indents: Optional[int] = 4,
                  colorized: Optional[bool] = True,
                  header: Optional[str] = None,
                  footer: Optional[str] = None) -> None:
@@ -72,35 +89,49 @@ def json_printer(json_data, cmd_args,
     if cmd_args.no_stdout:
         return
 
-    if isinstance(json_data, RedfishAction):
-        json_raw = json_data.toJSON()
-    elif isinstance(json_data, requests.models.Response):
-        json_raw = json_data.json()
-    elif isinstance(json_data, str):
-        json_raw = json.dumps(json.loads(json_data),
-                              sort_keys=sort, indent=indents)
-    else:
-        json_raw = json.dumps(json_data,
-                              sort_keys=sort, indent=indents, cls=RedfishActionEncoder)
+    json_raw = {}
+    try:
+        if isinstance(json_data, RedfishAction):
+            json_raw = json_data.toJSON()
+        elif isinstance(json_data, requests.models.Response):
+            header = json_data.headers
+            content_type = header.get('content-type')
+            if content_type is not None:
+                json_raw = json_data.json()
+        elif isinstance(json_data, str):
+            json_raw = json.dumps(json.loads(json_data),
+                                  sort_keys=sort, indent=indents)
+        else:
+            json_raw = json.dumps(json_data,
+                                  sort_keys=sort, indent=indents,
+                                  cls=RedfishActionEncoder)
 
-    if header is not None:
-        print(header)
+        if len(json_raw) > 0:
+            if header is not None:
+                print(header)
 
-    if colorized:
-        colorful = highlight(
-            json_raw,
-            lexer=JsonLexer(),
-            formatter=Terminal256Formatter())
-        print(colorful)
-    else:
-        print(json_raw)
+            if colorized:
+                colorful = highlight(
+                    json_raw,
+                    lexer=JsonLexer(),
+                    formatter=Terminal256Formatter())
+                print(colorful)
+            else:
+                print(json_raw)
 
-    if footer is not None:
-        print(footer)
+            if footer is not None:
+                print(footer)
+
+    except requests.exceptions.JSONDecodeError as rjde:
+        log_verbose(cmd_args, rjde)
+        return
+    except json.decoder.JSONDecodeError as jde:
+        log_verbose(cmd_args, jde)
+        return
 
 
-def main(cmd_args, command_name_to_cmd: Dict) -> None:
-    """Main handler
+def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
+    """Main entry point
     """
     if cmd_args.insecure:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -252,6 +283,8 @@ def idrac_main_ctl():
                         help="by default we use stdout output.")
     parser.add_argument('-f', '--filename', required=False, type=str,
                         default="", help="Filename if we need save to a file.")
+    parser.add_argument('-v', '--version', action='version',
+                        version="%(prog)s " + __version__)
 
     cmd_dict = create_cmd_tree(parser)
     args = parser.parse_args()

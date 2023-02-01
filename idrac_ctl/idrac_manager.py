@@ -30,7 +30,8 @@ import json
 import time
 from tqdm import tqdm
 from abc import abstractmethod
-from typing import Optional, Tuple, Dict, re, Any
+from typing import Optional, Tuple, Dict, Any
+import re
 
 from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from idrac_ctl.cmd_utils import save_if_needed
@@ -518,7 +519,7 @@ class IDracManager:
                                  if attr_filter.lower() in attr.lower())
         return json_data
 
-    def api_post_call(self, req: str, payload: str, hdr: dict):
+    def api_post_call(self, req: str, payload: str, hdr: dict) -> requests.models.Response:
         """Make api post request.
         :param req: path to a path request
         :param payload:  json payload
@@ -914,13 +915,15 @@ class IDracManager:
                   payload: Optional[dict] = None,
                   do_async: Optional[bool] = False,
                   data_type: Optional[str] = "json",
-                  expected_status: Optional[int] = 200) -> CommandResult:
-        """Base http post request..
-        :param resource:
-        :param payload:
+                  expected_status: Optional[int] = 20,
+                  verbose: Optional[bool] = False) -> CommandResult:
+        """Base http post request
+        :param resource: a remote resource
+        :param payload: a json payload
         :param do_async:
         :param data_type:
         :param expected_status:
+        :param verbose: enables verbose output
         :return:
         """
         headers = {}
@@ -938,6 +941,10 @@ class IDracManager:
             r = f"https://{self.idrac_ip}{resource}"
             if not do_async:
                 response = self.api_post_call(r, json.dumps(pd), headers)
+                if verbose:
+                    print(f"received status code {response.status_code}")
+                    print(f"received status code {response.headers}")
+                    print(f"received {response.raw}")
                 ok = self.default_post_success(self, response, expected=expected_status)
             else:
                 loop = asyncio.get_event_loop()
@@ -1048,12 +1055,15 @@ class IDracManager:
         :param response:
         :return:
         """
-        response_dict = str(response.__dict__)
         try:
-            job_id = re.search("JID_.+?,", response_dict).group()
-            return job_id
+            if response is not None:
+                response_dict = str(response.__dict__)
+                job_id = re.search("JID_.+?,", response_dict).group()
+                return job_id
+        except AttributeError as attr_err:
+            warnings.warn(f"failed parse respond error {attr_err}")
         except Exception as err:
-            warnings.warn(str(err))
+            warnings.warn(f"failed parse respond error {err}")
             pass
 
         return None
@@ -1108,17 +1118,23 @@ class IDracManager:
         return pd
 
     def parse_task_id(self, data):
-        """
+        """Parse data and fetch job id.
         :param data:
         :return:
         """
         # get response from extra
+        if data is None:
+            return {}
+
         if hasattr(data, "extra"):
             resp = data.extra
         elif isinstance(data, requests.models.Response):
             resp = data
         else:
             raise ValueError("Unknown data type.")
+
+        if resp is None:
+            return {}
 
         job_id = None
         try:
@@ -1131,7 +1147,6 @@ class IDracManager:
             job_id = self.job_id_from_respond(resp)
 
         if job_id is not None:
-            print(f"job_id {job_id}")
             data = self.fetch_job(job_id)
             return data
 

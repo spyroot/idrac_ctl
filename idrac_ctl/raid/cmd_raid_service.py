@@ -21,7 +21,8 @@ from idrac_ctl import ApiRequestType, IDracManager, Singleton, CommandResult
 from idrac_ctl.cmd_utils import save_if_needed
 
 
-class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
+class RaidServiceQuery(IDracManager,
+                       scm_type=ApiRequestType.RaidServiceQuery,
                        name='raid_service_query',
                        metaclass=Singleton):
     """Raid service query Command, fetch raid  service data, caller can save to a file
@@ -42,7 +43,7 @@ class RaidServiceQuery(IDracManager, scm_type=ApiRequestType.RaidServiceQuery,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "fetch the bios information"
+        help_text = "command raid information"
         return cmd_parser, "raid", help_text
 
     def execute(self,
