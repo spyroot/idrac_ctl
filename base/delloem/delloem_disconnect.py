@@ -5,15 +5,16 @@ python idrac_ctl.py oem-disconnect
 
 Author Mus spyroot@gmail.com
 """
-import json
+
 from abc import abstractmethod
 from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class DellOemDisconnect(IDracManager, scm_type=ApiRequestType.DellOemDisconnect,
-                    name='delloem_disconnect',
-                    metaclass=Singleton):
+class DellOemDisconnect(IDracManager,
+                        scm_type=ApiRequestType.DellOemDisconnect,
+                        name='delloem_disconnect',
+                        metaclass=Singleton):
     """A command uses dell oem to disconnect ISO
     """
 
@@ -36,7 +37,7 @@ class DellOemDisconnect(IDracManager, scm_type=ApiRequestType.DellOemDisconnect,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Executes dell oem disconnect
+        """Executes dell oem disconnect, detach network iso.
         :param do_async: note async will subscribe to an event loop.
         :param verbose: enables verbose output
         :param data_type: json or xml

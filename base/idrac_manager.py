@@ -30,7 +30,7 @@ import json
 import time
 from tqdm import tqdm
 from abc import abstractmethod
-from typing import Optional, Tuple, Dict, re
+from typing import Optional, Tuple, Dict, re, Any
 
 from base.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from base.cmd_utils import save_if_needed
@@ -1040,7 +1040,7 @@ class IDracManager:
         return cmd_parser
 
     @staticmethod
-    def job_id_from_respond(response: requests.models.Response) -> str:
+    def job_id_from_respond(response: requests.models.Response) -> Any | None:
         """
         :param response:
         :return:
@@ -1049,7 +1049,7 @@ class IDracManager:
         try:
             job_id = re.search("JID_.+?,", response_dict).group()
             return job_id
-        except:
+        except Exception as err:
             pass
 
         return None

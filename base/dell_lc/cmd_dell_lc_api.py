@@ -1,5 +1,4 @@
-"""iDRAC dell lc api status
-
+"""iDRAC cmd fetch dell lc api status.
 Author Mus spyroot@gmail.com
 """
 import json
@@ -35,7 +34,7 @@ class GetRemoteServicesAPIStatus(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Execute command and fetch service api status
+        """Execute command and fetch service api status.
         :param verbose: enables verbose output
         :param do_async: will not block and return result as future.
         :param data_type:  json, xml etc.
@@ -50,5 +49,5 @@ class GetRemoteServicesAPIStatus(IDracManager,
                      "Actions/DellLCService.GetRemoteServicesAPIStatus"
         r = f"https://{self.idrac_ip}{target_api}"
         response = self.api_post_call(r, json.dumps({}), headers)
-        ok = self.default_post_success(self, response, expected=204)
+        _ = self.default_post_success(self, response, expected=204)
         return CommandResult(response.json(), None, None)

@@ -12,7 +12,6 @@ python idrac_ctl.py oem-attach --ip_addr 10.241.7.99 --share_name sambashare --r
 
 Author Mus spyroot@gmail.com
 """
-import json
 from abc import abstractmethod
 from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult

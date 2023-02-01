@@ -1,6 +1,7 @@
 """iDRAC clear pending values.
 
-Command provides the option to clear all the pending values.
+Command provides the option to clear all the pending attributes values.
+
 Author Mus spyroot@gmail.com
 """
 import argparse
@@ -13,7 +14,8 @@ from base import IDracManager, ApiRequestType, Singleton, CommandResult, FailedD
 from base.idrac_manager import PostRequestFailed
 
 
-class AttributeClearPending(IDracManager, scm_type=ApiRequestType.AttributeClearPending,
+class AttributeClearPending(IDracManager,
+                            scm_type=ApiRequestType.AttributeClearPending,
                             name='clear_pending',
                             metaclass=Singleton):
     """

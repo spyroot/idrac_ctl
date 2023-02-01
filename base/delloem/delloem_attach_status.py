@@ -8,7 +8,8 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class GetAttachStatus(IDracManager, scm_type=ApiRequestType.GetAttachStatus,
+class GetAttachStatus(IDracManager,
+                      scm_type=ApiRequestType.GetAttachStatus,
                       name='get_attach_status',
                       metaclass=Singleton):
     """A command query job_service_query.
@@ -46,7 +47,7 @@ class GetAttachStatus(IDracManager, scm_type=ApiRequestType.GetAttachStatus,
         python idrac_ctl.py chassis
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
-        :param filename: if filename indicate call will save a bios setting to a file.
+        :param filename: if filename indicate call will save a response to a file.
         :param verbose: enables verbose output
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.

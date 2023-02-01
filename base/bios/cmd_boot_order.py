@@ -4,6 +4,7 @@ python idrac_ctl.py chassis-reset --reset_type ForceOff
 
 Author Mus spyroot@gmail.com
 """
+import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -100,16 +101,6 @@ class ChangeBootOrder(IDracManager,
         if boot_order is not None:
             boot_order = boot_order.strip().split(",")
 
-        test_data = [
-                    "HardDisk.List.1-1",
-                    "NIC.Integrated.1-1-1",
-                    "NIC.Slot.8-1",
-                    "NIC.Slot.8-1",
-                    "NIC.Slot.8-1",
-                    "NIC.Slot.8-1",
-                    "Optical.iDRACVirtual.1-1"
-                ]
-
         payload = {
             "Boot": {
                 "BootOrder": boot_order
@@ -130,6 +121,7 @@ class ChangeBootOrder(IDracManager,
                     data = self.fetch_job(job_id)
                     result = data
             except UnexpectedResponse as ur:
+                warnings.warn(str(ur))
                 pass
 
         return CommandResult(result, None, None)

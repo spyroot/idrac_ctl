@@ -1,4 +1,4 @@
-"""iDRAC command clear bios pending values..
+"""iDRAC command clear bios pending values.
 
 Command provides the option to clear all the BIOS
 pending values.

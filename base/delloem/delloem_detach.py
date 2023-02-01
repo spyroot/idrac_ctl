@@ -4,13 +4,13 @@ python idrac_ctl.py oem-detach
 
 Author Mus spyroot@gmail.com
 """
-import json
 from abc import abstractmethod
 from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class DellOemDetach(IDracManager, scm_type=ApiRequestType.DellOemDetach,
+class DellOemDetach(IDracManager,
+                    scm_type=ApiRequestType.DellOemDetach,
                     name='delloem_detach',
                     metaclass=Singleton):
     """A command uses dell oem to attach ISO

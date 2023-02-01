@@ -14,7 +14,8 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
-class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
+class BiosRegistry(IDracManager,
+                   scm_type=ApiRequestType.BiosRegistry,
                    name='bios_registry',
                    metaclass=Singleton):
     """A command query job_service_query.
@@ -148,4 +149,3 @@ class BiosRegistry(IDracManager, scm_type=ApiRequestType.BiosRegistry,
         save_if_needed(filename, data)
 
         return CommandResult(data, None, attribute_names)
-

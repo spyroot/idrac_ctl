@@ -8,6 +8,7 @@ Author Mus spyroot@gmail.com
 import argparse
 import asyncio
 import json
+import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -101,26 +102,30 @@ class RebootHost(IDracManager,
             allowed_reset_types = ra['ResetType@Redfish.AllowableValues']
 
         if reset_type not in allowed_reset_types:
-            raise InvalidArgument(f"Invalid reset type {reset_type}, "
-                                  f"supported reset types {allowed_reset_types}")
+            raise InvalidArgument(f"Invalid reset type"
+                                  f" {reset_type}, "
+                                  f"supported reset types "
+                                  f"{allowed_reset_types}")
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Systems/System.Embedded.1/" \
-            f"Actions/ComputerSystem.Reset"
+        t = "/redfish/v1/Systems/System.Embedded.1Actions/ComputerSystem.Reset"
+        r = f"https://{self.idrac_ip}{t}"
 
-        ok = False
         payload = {'ResetType': reset_type}
         if not do_async:
             response = self.api_post_call(r, json.dumps(payload), headers)
             ok = self.default_post_success(self, response)
         else:
             loop = asyncio.get_event_loop()
-            ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(payload), headers))
+            ok, response = loop.run_until_complete(
+                self.async_post_until_complete(r, json.dumps(payload), headers)
+            )
 
         try:
             job_id = self.job_id_from_header(response)
             if job_id is not None:
                 self.fetch_job(job_id)
-        except UnexpectedResponse:
+        except UnexpectedResponse as ur:
+            warnings.warn(str(ur))
             pass
 
         return CommandResult(self.api_success_msg(ok), None, None)

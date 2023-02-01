@@ -12,6 +12,7 @@ caller can save to a file and consume asynchronously or synchronously.
 Author Mus spyroot@gmail.com
 """
 import json
+import warnings
 
 from abc import abstractmethod
 from typing import Optional
@@ -122,6 +123,7 @@ class BootOneShot(IDracManager,
                 data = self.fetch_job(job_id)
                 api_result.update(data)
         except UnexpectedResponse as ur:
+            warnings.warn(str(ur))
             pass
 
         if do_reboot:

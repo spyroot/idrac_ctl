@@ -247,15 +247,15 @@ if __name__ == "__main__":
 
     if args.idrac_ip is None or len(args.idrac_ip) == 0:
         print("Please indicate the idrac ip. "
-              "--idrac_ip or set IDRACK_IP environment.")
+              "--idrac_ip or set IDRAC_IP environment.")
         sys.exit(1)
     if args.idrac_username is None or len(args.idrac_username) == 0:
         print("Please indicate the idrac username. "
-              "--idrac_username or set IDRACK_USERNAME environment.")
+              "--idrac_username or set IDRAC_USERNAME environment.")
         sys.exit(1)
     if args.idrac_password is None or len(args.idrac_password) == 0:
         print("Please indicate the idrac password. "
-              "--idrac_password or set IDRACK_PASSWORD environment.")
+              "--idrac_password or set IDRAC_PASSWORD environment.")
         sys.exit(1)
 
     try:

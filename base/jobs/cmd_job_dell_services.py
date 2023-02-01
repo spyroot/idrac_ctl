@@ -5,7 +5,6 @@ The DellJobService resource provides some actions to support Job management func
 
 Author Mus spyroot@gmail.com
 """
-import json
 from abc import abstractmethod
 from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult

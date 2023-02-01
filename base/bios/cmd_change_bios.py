@@ -196,6 +196,7 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
                         if isinstance(api_result.data, dict):
                             result_data.update(data)
             except UnexpectedResponse as ur:
+                warnings.warn(str(ur))
                 pass
 
         if do_reboot:

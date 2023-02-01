@@ -1,3 +1,8 @@
+"""overwrites some argparse defaults methods.
+mainly for formatting.
+
+Author Mus spyroot@gmail.com
+"""
 import argparse
 import textwrap as _textwrap
 
@@ -41,6 +46,7 @@ class CustomArgumentDefaultsHelpFormatter(argparse.HelpFormatter):
                 for subaction in get_subactions():
                     yield subaction
             self._dedent()
+
     def _fill_text(self, text, width, indent):
         """
         :param text:

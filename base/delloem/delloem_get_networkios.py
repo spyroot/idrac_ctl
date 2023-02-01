@@ -8,7 +8,8 @@ from typing import Optional
 from base import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class GetNetworkIsoAttachStatus(IDracManager, scm_type=ApiRequestType.GetNetworkIsoAttachStatus,
+class GetNetworkIsoAttachStatus(IDracManager,
+                                scm_type=ApiRequestType.GetNetworkIsoAttachStatus,
                                 name='net_ios_attach_status',
                                 metaclass=Singleton):
     """A command query job_service_query.
