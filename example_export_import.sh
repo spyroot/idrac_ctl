@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # export config
 python idrac_ctl.py system-export -f last_config.json
 

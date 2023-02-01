@@ -104,10 +104,12 @@ class VirtualMediaGet(IDracManager,
                     break
             if target_device is None:
                 return CommandResult({"result": f"device id {device_id} not found"}, None, None)
+            else:
+                data = target_device
 
         if filter_key is not None and \
                 len(filter_key) > 0:
-            if filter_key not in data:
+            if filter_key.strip() not in data:
                 return CommandResult({"result": f"key {filter_key} not found"}, None, None)
             data = data[filter_key]
 
