@@ -35,36 +35,73 @@ hence format idrac_ctl command optional_args
 
 List of subcommands.
 
-```
-subcommand:
-                        system for subcommands
-    job_del             delete a job
-    clear_pending       reboots the system
-    job                 fetch a job
-    jobs                fetch list of jobs
-    boot_source         fetch the boot source
-    export              exports system configuration.
-    bios                fetch the bios information
-    attribute           fetch the attribute view
-    boot                fetch the boot source
+```bash
+main command          list of idrac_ctl commands
+    attr                command fetch the attribute view
+    attr-clear-pending  command clear attribute pending values
+    bios                command fetch the bios information
+    bios-change         command change bios values
+    bios-clear-pending  command clear bios pending values
+    bios-registry       command query bios registry
+    boot                command fetch the boot source
+    boot-clear-pending  command clear boot source pending values
+    boot-one-shot       command change one shoot boot
+    boot-option         command fetch the boot options
+    boot-settings       command fetch the boot setting and pending
+    boot-source-enable  command enable the boot on a particular device.
+    boot-source-get     command fetch the boot source for device/devices
+    boot-source-list    command fetch the boot source list
+    change-boot-order   command change boot order
+    chassis             command query chassis services
+    chassis-reset       command reset chassis
+    current_boot        command fetch the boot source for device/devices
+    dell-lc-svc         command query dell-lc services
+    eject_vm            command eject the virtual media
     firmware            fetch the firmware view
     firmware_inventory  fetch the firmware inventory view
-    pci                 fetch the pci device or function
-    reboot              reboots the system
-    system              fetch the system view.
-    raid                fetch the bios information
-    set_boot_source     Fetch the boot source
-    get_boot_source     fetch the boot source for device/devices
-    storage             fetch the storage information
-    task                exports system configuration.
-    import              fetch the firmware view
+    get_vm              fetch the virtual media
+    insert_vm           command insert virtual media
+    job                 command fetch a job
+    job-rm              command delete a job
+    job-rm-all          command delete all jobs
+    job-watch           command watch a job
+    jobs                command fetch a list of jobs
+    jobs-dell-service   command query jobs services
+    jobs-service        command query jobs services
     manager             fetch the attribute view
-    get_virtual_media   fetch the virtual media
-    insert_virtual_media
-                        insert virtual media
-    eject_virtual_media
-                        eject the virtual media
-    current_boot        fetch the boot source for device/devices
+    oem-actions         command get supported dell os oem actions
+    oem-attach          command attach network iso
+    oem-attach-status   command get attach status
+    oem-boot-netios     command boot from network iso
+    oem-detach          command detach network iso
+    oem-disconnect      command disconnect network iso
+    oem-net-ios-status  command get network iso status
+    oem-net-iso-task    command get supported dell os oem actions
+    pci                 command fetch the pci device or function
+    query               command query based on resource.
+    raid                fetch the bios information
+    reboot              reboots the system
+    service-api-rs-status
+                        command fetch service api status
+    service-api-status  command fetch service api status
+    storage-controllers
+                        command fetch the storage information
+    storage-convert-noraid
+                        command converts raid disk under controller to none raid
+    storage-convert-raid
+                        command converts none raid disk under controller to raid
+    storage-drives      command fetch the storage drives information
+    storage-get         command fetch the storage information
+    storage-list        command fetch the storage devices
+    system              command fetch the system view.
+    system-export       command exports system configuration
+    system-import       command import system configuration
+    task                command fetch task.
+    task-get            command fetch task
+    tasks-list          command fetch tasks list
+    volume-get          command query volume from storage device.
+    volume-init         command initialize volume..
+    volumes             fetch the virtual disk data
 ```
 
 From a system we can view all compute system action and attributes.
