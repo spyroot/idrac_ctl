@@ -21,7 +21,15 @@ export IDRAC_IP=MY_IP
 export IDRAC_PASSWORD=MY_USERNAME
 export IDRAC_USERNAME=root
 ```
+## Install
+```
+pip install idrac_ctl
+# run as standalone app
 
+idrac_ctl --help
+```
+
+## Manual install
 Make sure you are using python >= 3.9
 ```bash
 git clone https://github.com/spyroot/idrac_ctl.git
