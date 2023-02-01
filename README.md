@@ -24,7 +24,8 @@ export IDRAC_USERNAME=root
 ## Install
 ```
 pip install idrac_ctl
-# run as standalone app
+
+# and run it as standalone app
 
 idrac_ctl --help
 ```

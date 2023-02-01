@@ -1,4 +1,4 @@
-"""iDRAC reset a power state for compute system command
+"""iDRAC reset a power state for compute system command.
 
 This action is used to reset the system.
 Command provides the option to reboot, and change power state.
@@ -97,9 +97,17 @@ class RebootHost(IDracManager,
         system_state = self.sync_invoke(ApiRequestType.SystemQuery, "system_query")
         system_actions = system_state.data['Actions']
         allowed_reset_types = []
+
+        default_target = "/redfish/v1/Systems/System.Embedded.1" \
+                         "/Actions/ComputerSystem.Reset"
+
         if '#ComputerSystem.Reset' in system_actions:
             ra = system_actions['#ComputerSystem.Reset']
             allowed_reset_types = ra['ResetType@Redfish.AllowableValues']
+            if 'target' in ra:
+                target = ra['target']
+        else:
+            target = default_target
 
         if reset_type not in allowed_reset_types:
             raise InvalidArgument(f"Invalid reset type"
@@ -107,8 +115,7 @@ class RebootHost(IDracManager,
                                   f"supported reset types "
                                   f"{allowed_reset_types}")
 
-        t = "/redfish/v1/Systems/System.Embedded.1Actions/ComputerSystem.Reset"
-        r = f"https://{self.idrac_ip}{t}"
+        r = f"https://{self.idrac_ip}{target}"
 
         payload = {'ResetType': reset_type}
         if not do_async:

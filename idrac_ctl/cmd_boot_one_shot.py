@@ -100,9 +100,12 @@ class BootOneShot(IDracManager,
                 raise InvalidArgument(f"Invalid uefi device path {uefi_target},"
                                       f" supported uefi devices {boot_device}")
 
-        payload = {"Boot": {
-            "BootSourceOverrideTarget": device,
-            "UefiTargetBootSourceOverride": uefi_target}}
+        payload = {
+            "Boot": {
+                "BootSourceOverrideTarget": device,
+                "UefiTargetBootSourceOverride": uefi_target
+            }
+        }
 
         r = f"https://{self.idrac_ip}/redfish/v1/Systems/System.Embedded.1"
         for key, value in dict(payload['Boot']).items():
