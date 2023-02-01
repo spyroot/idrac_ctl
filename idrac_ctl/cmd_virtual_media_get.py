@@ -1,6 +1,6 @@
 """iDRAC command return virtual media.
 
-python idrac_ctl.py get_virtual_media
+idrac_ctl get_vm
 
 Command provides the option to retrieve virtual media from iDRAC
 and serialize back to caller as JSON, YAML, or XML.
@@ -8,10 +8,15 @@ In addition, it automatically registered to the command line ctl tool.
 Similarly to the rest command caller can save to a file and
 consume asynchronously or synchronously.
 
-python idrac_ctl.py get_virtual_media
+idrac_ctl get_vm
 
 - Each command return a result and list of REST Actions.
 - Each command loaded based __init__ hence anyone can extend and add custom command.
+
+Example.
+
+w will filter by device_id 1 and status inserted.
+get_vm --device_id 1 --filter_key Inserted
 
 Author Mus spyroot@gmail.com
 """
@@ -24,7 +29,8 @@ from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_utils import save_if_needed
 
 
-class VirtualMediaGet(IDracManager, scm_type=ApiRequestType.VirtualMediaGet,
+class VirtualMediaGet(IDracManager,
+                      scm_type=ApiRequestType.VirtualMediaGet,
                       name='virtual_disk_query',
                       metaclass=Singleton):
     """iDRACs REST API Virtual Disk Query Command, fetch virtual disk, caller can save
@@ -43,7 +49,16 @@ class VirtualMediaGet(IDracManager, scm_type=ApiRequestType.VirtualMediaGet,
         cmd_arg = argparse.ArgumentParser(add_help=False)
         cmd_arg.add_argument('-f', '--filename', required=False, type=str,
                              default="",
-                             help="filename if we need to save a respond to a file.")
+                             help="filename if we need to save a respond "
+                                  "to a file.")
+
+        cmd_arg.add_argument('--device_id', required=False, type=str,
+                             default="",
+                             help="filter based on device id.")
+
+        cmd_arg.add_argument('--filter_key', required=False, type=str,
+                             default="",
+                             help="filter based sub-key under device.")
 
         help_text = "fetch the virtual media"
         return cmd_arg, "get_vm", help_text
@@ -52,9 +67,13 @@ class VirtualMediaGet(IDracManager, scm_type=ApiRequestType.VirtualMediaGet,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
+                device_id: Optional[str] = "",
+                filter_key: Optional[str] = "",
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Execute command for virtual media query cmd.
+        """Execute command and fetch virtual media.
+        :param device_id: filter based on device
+        :param filter_key filter based on key.
         :param verbose: enables verbose output
         :param do_async: will not block and return result as future.
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -76,5 +95,15 @@ class VirtualMediaGet(IDracManager, scm_type=ApiRequestType.VirtualMediaGet,
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
         data = response.json()
+        if device_id is not None and len(device_id) > 0:
+            member_data = data['Members']
+            for e in member_data:
+                if 'Id' in e and device_id.strip() == e['Id']:
+                    data = e
+                    break
+
+        if filter_key is not None and len(filter_key) > 0:
+            data = data[filter_key]
+
         save_if_needed(filename, data)
         return CommandResult(data, None, None)

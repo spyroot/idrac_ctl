@@ -1,4 +1,5 @@
 /scripts/
+build_push.sh
 
 *.th
 *__pycache__*

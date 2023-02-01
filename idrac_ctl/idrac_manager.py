@@ -227,7 +227,7 @@ class IDracManager:
         await self.async_default_error_handler(await response)
         return await response
 
-    def api_get_call(self, r, hdr: Dict):
+    def api_get_call(self, r, hdr: Dict) -> requests.models.Response:
         """Make api request either with x-auth authentication header or idrac_ctl.
         :param r:  request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
