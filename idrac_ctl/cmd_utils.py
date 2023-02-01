@@ -20,15 +20,16 @@ def _find_ids(obj, key, result):
     if obj is None:
         return
 
-    for k in obj.keys():
-        if isinstance(obj[k], dict):
-            _find_ids(obj[k], key, result)
-        if isinstance(obj[k], list):
-            for e in obj[k]:
-                _find_ids(e, key, result)
-        else:
-            if k == key:
-                result.append(obj[k])
+    if isinstance(obj, dict):
+        for k in obj.keys():
+            if isinstance(obj[k], dict):
+                _find_ids(obj[k], key, result)
+            if isinstance(obj[k], list):
+                for e in obj[k]:
+                    _find_ids(e, key, result)
+            else:
+                if k == key:
+                    result.append(obj[k])
 
 
 def find_ids(obj, key):

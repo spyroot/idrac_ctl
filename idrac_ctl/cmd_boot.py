@@ -1,4 +1,4 @@
-"""iDRAC boot source command
+"""iDRAC boot query command
 
 Command provides the option to retrieve boot source from iDRAC and serialize
 back as caller as JSON, YAML, and XML. In addition, it automatically
@@ -16,7 +16,8 @@ from idrac_ctl import IDracManager, CommandResult
 from idrac_ctl.cmd_utils import save_if_needed, find_ids
 
 
-class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
+class BootQuery(IDracManager,
+                scm_type=ApiRequestType.BootQuery,
                 name='boot_query',
                 metaclass=Singleton):
     """
@@ -76,7 +77,9 @@ class BootQuery(IDracManager, scm_type=ApiRequestType.BootQuery,
             self.default_error_handler(response)
         else:
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+            response = loop.run_until_complete(
+                self.api_async_get_until_complete(r, headers)
+            )
 
         data = response.json()
         save_if_needed(filename, data)
