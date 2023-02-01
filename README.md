@@ -31,7 +31,7 @@ python idrac_ctl.py --help
 ```
 
 Now I'm still trying to optimize the root menu for easy consumption. For now, all subcommands are in root, 
-hence format idract_ctl command optional_args
+hence format idrac_ctl command optional_args
 
 List of subcommands.
 

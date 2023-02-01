@@ -12,12 +12,17 @@ import collections
 import json
 import os
 import sys
+import warnings
 from typing import Optional, Dict
 
 import requests
 import urllib3
 from pygments import highlight
-from pygments.lexers.data import JsonLexer
+try:
+    from pygments.lexers.data import JsonLexer
+except ImportError as ie:
+    warnings.warn("Failed import json lexer from pygments.")
+
 from pygments.formatters.terminal256 import Terminal256Formatter
 
 from base.cmd_utils import save_if_needed
@@ -26,7 +31,11 @@ from base.cmd_exceptions import InvalidArgument, FailedDiscoverAction, Unsupport
 from base.idrac_manager import AuthenticationFailed, IDracManager, ResourceNotFound
 from base.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+try:
+    from urllib3.exceptions import InsecureRequestWarning
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except ImportError as ir:
+    warnings.warn("Failed import urllib3")
 
 
 def formatter(prog):
@@ -160,9 +169,8 @@ def main(cmd_args, command_name_to_cmd: Dict) -> None:
         print("Error:", ua)
 
 
-
 def create_cmd_tree(arg_parser) -> Dict:
-    """
+    """Create command tree structure.
     :return:
     """
     redfish_api = IDracManager()

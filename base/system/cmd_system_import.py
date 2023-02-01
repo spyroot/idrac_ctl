@@ -31,8 +31,7 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
     @staticmethod
     @abstractmethod
     def register_subcommand(cls):
-        """
-
+        """Register system import cmd
         :param cls:
         :return:
         """

@@ -121,7 +121,7 @@ class BiosQuery(IDracManager, scm_type=ApiRequestType.BiosQuery,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        r = f"https://{self.idrac_ip}{idrac_api}"
+        r: str = f"https://{self.idrac_ip}{idrac_api}"
         if not do_async:
             response = self.api_get_call(r, headers)
             self.default_error_handler(response)

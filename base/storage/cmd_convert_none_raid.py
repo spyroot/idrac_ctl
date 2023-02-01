@@ -1,7 +1,9 @@
 """iDRAC
-The ConvertToNonRAID() method is used to convert a physical disks in
-RAID state of "Ready" to a Non-RAID state. After the method is successfully executed, the
-DCIM_PhysicalDiskView.RAIDStatus property of that physical disk should reflect the new state.
+
+The method is used to convert a physical disks in RAID state of "Ready"
+to a Non-RAID state. After the method is successfully executed, the
+DCIM_PhysicalDiskView.RAIDStatus property of that physical disk should
+reflect the new state.
 
 python idrac_ctl.py storage-convert-noraid -c AHCI.Embedded.2-1
 
@@ -14,7 +16,8 @@ from base import CommandResult, find_ids
 from base import IDracManager, ApiRequestType, Singleton
 
 
-class ConvertNoneRaid(IDracManager, scm_type=ApiRequestType.ConvertNoneRaid,
+class ConvertNoneRaid(IDracManager,
+                      scm_type=ApiRequestType.ConvertNoneRaid,
                       name='convert_none_raid',
                       metaclass=Singleton):
     """iDRACs REST API fetch storage information.
@@ -52,8 +55,8 @@ class ConvertNoneRaid(IDracManager, scm_type=ApiRequestType.ConvertNoneRaid,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Get storage controller details.
-        :param exclude_filter:  excluded disk or command separate disks
+        """convert disk under target controller to none raid.
+        :param exclude_filter:  excluded disk.
         :param do_expanded:
         :param controller: if empty cmd will return list of controllers.
         :param verbose: enables verbose output
@@ -64,7 +67,9 @@ class ConvertNoneRaid(IDracManager, scm_type=ApiRequestType.ConvertNoneRaid,
         :raise: AuthenticationFailed, UnexpectedResponse
         """
         drives = self.sync_invoke(ApiRequestType.StorageViewQuery,
-                                  "storage_get", controller=controller, data_filter="Drives")
+                                  "storage_get",
+                                  controller=controller,
+                                  data_filter="Drives")
 
         odata_ids = find_ids(drives.data, "@odata.id")
         final_data = []
@@ -97,10 +102,9 @@ class ConvertNoneRaid(IDracManager, scm_type=ApiRequestType.ConvertNoneRaid,
         target_api = "/redfish/v1/Dell/Systems/System.Embedded.1/DellRaidService" \
                      "/Actions/DellRaidService.ConvertToNonRAID"
 
-        if len(raid_disk_ids) > 0:
-            none_raid_disk_ids = [x for x in raid_disk_ids if x not in exclude_filter]
-
-            payload = {"PDArray": raid_disk_ids}
+        none_raid_disk_ids = [x for x in raid_disk_ids if x not in exclude_filter]
+        if len(none_raid_disk_ids) > 0:
+            payload = {"PDArray": none_raid_disk_ids}
             cmd_result = self.base_post(target_api, payload, do_async=do_async)
             resp = self.parse_task_id(cmd_result)
             cmd_result.data.update(resp)

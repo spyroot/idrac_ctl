@@ -84,9 +84,8 @@ class AttributesQuery(IDracManager, scm_type=ApiRequestType.AttributesQuery,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Managers/" \
-            f"System.Embedded.1/Attributes"
-
+        t = "/redfish/v1/Managers/System.Embedded.1/Attributes"
+        r = f"https://{self.idrac_ip}{t}"
         if not do_async:
             response = self.api_get_call(r, headers)
             self.default_error_handler(response)

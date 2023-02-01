@@ -1,7 +1,8 @@
 """iDRAC Redfish API with Dell OEM extension
 to get network ISO attach status.
 
-python idrac_ctl.py oem-attach --ip_addr 10.241.7.99 --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
+python idrac_ctl.py oem-attach --ip_addr 10.241.7.99 \
+--share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
 
 ❯ python idrac_ctl.py oem-attach-status
 # respond data from the command:

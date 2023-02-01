@@ -15,6 +15,7 @@ to a file and consume asynchronously or synchronously.
 Author Mus spyroot@gmail.com
 """
 import argparse
+import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -104,6 +105,7 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
                 response = self.api_get_call(r, headers)
                 self.default_error_handler(response)
             except ResourceNotFound as exp:
+                warnings.warn(str(exp))
                 continue
                 pass
             resp_data = response.json()

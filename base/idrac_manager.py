@@ -266,7 +266,7 @@ class IDracManager:
                                    auth=(self._username, self._password),
                                    headers=headers)
 
-    def sync_invoke(self, api_call: ApiRequestType, name: str, **kwargs):
+    def sync_invoke(self, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
         """Synchronous invocation of target command
         :param api_call: A enum for command.
         :param name: A name for command to differentiate sub-commands.
@@ -278,7 +278,8 @@ class IDracManager:
                        "password": self._password})
         return self.invoke(api_call, name, **kwargs)
 
-    def fetch_job(self, job_id: str,
+    def fetch_job(self,
+                  job_id: str,
                   sleep_time: Optional[int] = 2,
                   wait_for: Optional[int] = 200):
         """synchronous fetch a job from iDRAC and wait for completion.
@@ -926,7 +927,6 @@ class IDracManager:
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        api_req_result = {}
         if payload is None:
             pd = {}
         else:
@@ -941,7 +941,9 @@ class IDracManager:
                 ok = self.default_post_success(self, response, expected=expected_status)
             else:
                 loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
+                ok, response = loop.run_until_complete(
+                    self.async_post_until_complete(r, json.dumps(pd), headers)
+                )
 
         except PostRequestFailed as pf:
             print("Error:", pf)
@@ -957,7 +959,8 @@ class IDracManager:
         """
         return {"Status": status}
 
-    def reboot(self, power_state_attr="PowerState",
+    def reboot(self,
+               power_state_attr="PowerState",
                default_reboot_type="ForceRestart") -> dict:
         """Check if power state is on , reboots a host.
         :return: return a dict stora if operation succeed..
@@ -1041,7 +1044,7 @@ class IDracManager:
 
     @staticmethod
     def job_id_from_respond(response: requests.models.Response) -> Any | None:
-        """
+        """parse job id from a respond.
         :param response:
         :return:
         """
@@ -1050,6 +1053,7 @@ class IDracManager:
             job_id = re.search("JID_.+?,", response_dict).group()
             return job_id
         except Exception as err:
+            warnings.warn(str(err))
             pass
 
         return None

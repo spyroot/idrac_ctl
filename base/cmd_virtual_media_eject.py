@@ -11,6 +11,7 @@ Author Mus spyroot@gmail.com
 """
 import argparse
 import json
+import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -67,6 +68,9 @@ class VirtualMediaEject(IDracManager,
                                          "virtual_disk_query")
         if self.version_api():
             new_api = True
+
+        if new_api is False:
+            warnings.warn("Old api")
 
         members = virtual_media.data['Members']
         actions = [self.discover_redfish_actions(self, m) for m

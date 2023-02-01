@@ -3,6 +3,7 @@
 import json
 from enum import auto, Enum
 from typing import Optional
+from json import JSONEncoder
 
 
 class ApiRequestType(Enum):
@@ -37,7 +38,7 @@ class ApiRequestType(Enum):
     BootOptions = auto()
     SystemConfigQuery = auto()
     BiosQuery = auto()
-    IDrackQuery = auto()
+    IDracQuery = auto()
     AttributesQuery = auto()
     BootQuery = auto()
     FirmwareQuery = auto()
@@ -81,10 +82,9 @@ class ScheduleJobType(Enum):
     OnReset = auto()
 
 
-from json import JSONEncoder
-
-
 class RedfishActionEncoder(JSONEncoder):
+    """JSON decoder used to serialize nested dicts.
+    """
     def default(self, obj):
         return obj.__dict__
 
@@ -92,9 +92,12 @@ class RedfishActionEncoder(JSONEncoder):
 class RedfishAction:
     """Action discovery encapsulate each action to RedfishAction.
     """
-
-    def __init__(self, action_name: Optional[str] = "", target: Optional[str] = "",
+    def __init__(self,
+                 action_name: Optional[str] = "",
+                 target: Optional[str] = "",
                  full_redfish_name: Optional[str] = ""):
+        """Action discovered from json respond.
+        """
         super().__init__()
         self.action_name = action_name
         self.full_redfish_name = full_redfish_name

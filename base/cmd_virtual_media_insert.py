@@ -74,6 +74,7 @@ Author Mus spyroot@gmail.com
 """
 import argparse
 import json
+import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -151,6 +152,9 @@ class VirtualMediaInsert(IDracManager,
         if self.version_api():
             new_api = True
             # this for a future issue if old API doesn't work
+
+        if new_api is False:
+            warnings.warn("Detected old rest API.")
 
         members = virtual_media.data['Members']
         actions = [self.discover_redfish_actions(self, m) for m

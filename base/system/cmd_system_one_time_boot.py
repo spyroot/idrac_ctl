@@ -31,7 +31,7 @@ class ImportOneTimeBoot(IDracManager,
     @staticmethod
     @abstractmethod
     def register_subcommand(cls):
-        """
+        """Register command
         :param cls:
         :return:
         """

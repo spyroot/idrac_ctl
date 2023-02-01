@@ -62,16 +62,15 @@ class VolumeInit(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        vol_data = self.sync_invoke(ApiRequestType.VolumeQuery, "vol_query", dev_id=dev_id)
+        vol_data = self.sync_invoke(ApiRequestType.VolumeQuery,
+                                    "vol_query", dev_id=dev_id)
         if 'Initialize' not in vol_data.discovered:
-            raise UnsupportedAction(f"Device {dev_id} doesn't support this action. "
+            raise UnsupportedAction(f"Device {dev_id} "
+                                    f"doesn't support this action. "
                                     f"Supported {vol_data.discovered.keys()}")
 
         redfish_action = vol_data.discovered['Initialize']
         target_api = redfish_action.target
-        args = redfish_action.args
-        args_options = args['InitializeType']
-
         payload = {'InitializeType': "Fast"}
         cmd_result = self.base_post(target_api, payload, do_async=do_async)
         resp = self.parse_task_id(cmd_result)

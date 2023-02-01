@@ -25,6 +25,7 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
               metaclass=Singleton):
     """Command handler for list of jobs
     """
+
     def __init__(self, *args, **kwargs):
         super(JobList, self).__init__(*args, **kwargs)
 
@@ -153,8 +154,10 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                 member_data = filtered_data
             else:
                 member_data = [filtered_data]
-            filtered_data = sorted(member_data, reverse=True, key=lambda
+            filtered_data = sorted(
+                member_data, reverse=True, key=lambda
                 x: datetime.fromisoformat(x['StartTime']).timestamp()
-            if 'ActualRunningStartTime' in x else None)
+                if 'ActualRunningStartTime' in x else None
+            )
 
         return CommandResult(filtered_data, None, None)
