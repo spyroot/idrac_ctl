@@ -359,4 +359,7 @@ In my case I disable Mem Test and enabled MmioAbove4Gb
 python idrac_ctl.py bios-change  --attr_name MemTest,MmioAbove4Gb --attr_value Disabled,Enabled
 ```
 
+
+Please use the  [GitHub issue] tracker (https://github.com/spyroot/idrac_ctl/issues) submit bugs or request features.
+
 More example TBD.
