@@ -45,6 +45,10 @@ class BootOneShot(IDracManager,
                                 default="Cd",
                                 help="boot device Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard etc")
 
+        cmd_parser.add_argument('--power_on', required=False, type=bool,
+                                default=False,
+                                help="will power on a chassis if in a power-down state.")
+
         cmd_parser.add_argument('--uefi_target', required=False, type=str,
                                 default=None,
                                 help="uefi_target")
@@ -61,6 +65,7 @@ class BootOneShot(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_reboot: Optional[bool] = False,
+                power_on: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Query information for particular boot source device from idrac.
         Example python idrac_ctl.py get_boot_source --dev "HardDisk.List.1-1"
@@ -68,6 +73,7 @@ class BootOneShot(IDracManager,
         VenHw(986D1755-B9D0-4F8D-A0DA-D1DB18672045)
 
         :param do_reboot:  will reboot host
+        :param power_on: will power on server.
         :param uefi_target:
         :param device:  get the list of supported device.
                         For example None, Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard,UefiHttp
@@ -87,13 +93,23 @@ class BootOneShot(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        current_boot = self.sync_invoke(ApiRequestType.CurrentBoot, "current_boot_query")
+        if power_on:
+            current_boot = self.sync_invoke(
+                ApiRequestType.ChassisReset, "current_boot_query", reset_type="On"
+            )
+
+        current_boot = self.sync_invoke(
+            ApiRequestType.CurrentBoot, "current_boot_query"
+        )
         boot_device = current_boot.data['BootSourceOverrideTarget@Redfish.AllowableValues']
         if device not in boot_device:
-            raise InvalidArgument(f"Invalid boot device {device}, supported device {boot_device}")
+            raise InvalidArgument(f"Invalid boot device {device}, "
+                                  f"supported device {boot_device}")
 
         if uefi_target is not None:
-            current_boot = self.sync_invoke(ApiRequestType.BootOptions, "boot_sources_query")
+            current_boot = self.sync_invoke(
+                ApiRequestType.BootOptions, "boot_sources_query"
+            )
             self.default_json_printer(self, current_boot.extra)
             uefi_devs = [d['UefiDevicePath'] for d in current_boot.extra['Members'] if 'UefiDevicePath' in d]
             if uefi_target not in uefi_devs:

@@ -226,12 +226,6 @@ def create_cmd_tree(arg_parser, debug=False) -> Dict:
                 print(f"Registering command {k} {sub_key}")
             if hasattr(cls, "register_subcommand"):
                 cli_arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls)
-
-                # try:
-                #     cli_arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls, parent=arg_parser)
-                # except TypeError:
-                #     cli_arg_parser, cmd_name, cmd_help = cls.register_subcommand(cls)
-
                 if debug:
                     print(f"Registering command name {cmd_name} {cmd_help}")
                 subparsers.add_parser(cmd_name, parents=[cli_arg_parser], help=f"{str(cmd_help)}",
@@ -306,3 +300,8 @@ def idrac_main_ctl():
         main(args, cmd_dict)
     except AuthenticationFailed as af:
         print(f"Error: {af}")
+    except urllib3.connection.HTTPSConnection as http_error:
+        print(f"Error: {http_error}")
+
+
+

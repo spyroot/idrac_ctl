@@ -58,7 +58,9 @@ class ChassisReset(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        chassis_data = self.sync_invoke(ApiRequestType.ChassisQuery, "chassis_service_query")
+        chassis_data = self.sync_invoke(
+            ApiRequestType.ChassisQuery, "chassis_service_query"
+        )
         redfish_action = chassis_data.discovered['Reset']
 
         target_api = redfish_action.target
@@ -81,7 +83,9 @@ class ChassisReset(IDracManager,
                 ok = self.default_post_success(self, response)
             else:
                 loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(payload), headers))
+                ok, response = loop.run_until_complete(
+                    self.async_post_until_complete(r, json.dumps(payload), headers)
+                )
         except PostRequestFailed as prf:
             print(prf)
             pass

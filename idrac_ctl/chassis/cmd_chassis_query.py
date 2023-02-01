@@ -10,7 +10,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class ChassisQuery(IDracManager, scm_type=ApiRequestType.ChassisQuery,
+class ChassisQuery(IDracManager,
+                   scm_type=ApiRequestType.ChassisQuery,
                    name='chassis_service_query',
                    metaclass=Singleton):
     """A command query job_service_query.
