@@ -33,14 +33,18 @@ from .jobs.cmd_job_del import *
 from .jobs.cmd_job_dell_services import *
 from .jobs.cmd_job_delete_all import *
 
-from .cmd_firmware import *
-from .cmd_firmware_inv import *
+# firmwares cmds
+from .firmware.cmd_firmware import *
+from .firmware.cmd_firmware_inv import *
+
 from .pci.cmd_pci import *
 from .cmd_get_task import *
 from .cmd_manager import *
-from .cmd_virtual_media_get import *
-from .cmd_virtual_media_insert import *
-from .cmd_virtual_media_eject import *
+
+# virtual medial cmds
+from .virtual_media.cmd_virtual_media_get import *
+from .virtual_media.cmd_virtual_media_insert import *
+from .virtual_media.cmd_virtual_media_eject import *
 from .cmd_current_boot import *
 from .cmd_boot_one_shot import *
 

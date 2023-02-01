@@ -17,7 +17,8 @@ from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_utils import save_if_needed
 
 
-class FirmwareQuery(IDracManager, scm_type=ApiRequestType.FirmwareQuery,
+class FirmwareQuery(IDracManager,
+                    scm_type=ApiRequestType.FirmwareQuery,
                     name='firmware_query',
                     metaclass=Singleton):
     """
@@ -48,7 +49,7 @@ class FirmwareQuery(IDracManager, scm_type=ApiRequestType.FirmwareQuery,
                              required=False, type=str, default="",
                              help="filename, if we need save to a file.")
 
-        help_text = "fetch the firmware view"
+        help_text = "command fetch the firmware view"
         return cmd_arg, "firmware", help_text
 
     def execute(self,

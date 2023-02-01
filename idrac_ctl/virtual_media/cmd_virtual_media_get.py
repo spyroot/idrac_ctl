@@ -97,12 +97,18 @@ class VirtualMediaGet(IDracManager,
         data = response.json()
         if device_id is not None and len(device_id) > 0:
             member_data = data['Members']
+            target_device = None
             for e in member_data:
                 if 'Id' in e and device_id.strip() == e['Id']:
-                    data = e
+                    target_device = e
                     break
+            if target_device is None:
+                return CommandResult({"result": f"device id {device_id} not found"}, None, None)
 
-        if filter_key is not None and len(filter_key) > 0:
+        if filter_key is not None and \
+                len(filter_key) > 0:
+            if filter_key not in data:
+                return CommandResult({"result": f"key {filter_key} not found"}, None, None)
             data = data[filter_key]
 
         save_if_needed(filename, data)
