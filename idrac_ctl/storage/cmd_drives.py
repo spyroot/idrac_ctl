@@ -8,7 +8,8 @@ from idrac_ctl import CommandResult, find_ids
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 
 
-class DrivesQuery(IDracManager, scm_type=ApiRequestType.Drives,
+class DrivesQuery(IDracManager,
+                  scm_type=ApiRequestType.Drives,
                   name='drives_query',
                   metaclass=Singleton):
     """iDRACs REST API fetch storage information.

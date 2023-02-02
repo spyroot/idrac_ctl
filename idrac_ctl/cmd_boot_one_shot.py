@@ -17,8 +17,8 @@ import warnings
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, UnexpectedResponse
-from idrac_ctl.cmd_exceptions import InvalidArgument
+from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.cmd_exceptions import InvalidArgument, UnexpectedResponse
 
 
 class BootOneShot(IDracManager,
@@ -45,9 +45,9 @@ class BootOneShot(IDracManager,
                                 default="Cd",
                                 help="boot device Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard etc")
 
-        cmd_parser.add_argument('--power_on', required=False, type=bool,
-                                default=False,
-                                help="will power on a chassis if in a power-down state.")
+        cmd_parser.add_argument('--power_on', action='store_true',
+                                required=False, dest="do_power_on",
+                                help="will power on a chassis., if current state in power-down.")
 
         cmd_parser.add_argument('--uefi_target', required=False, type=str,
                                 default=None,
@@ -65,7 +65,7 @@ class BootOneShot(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_reboot: Optional[bool] = False,
-                power_on: Optional[bool] = False,
+                do_power_on: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Query information for particular boot source device from idrac.
         Example python idrac_ctl.py get_boot_source --dev "HardDisk.List.1-1"
@@ -73,7 +73,7 @@ class BootOneShot(IDracManager,
         VenHw(986D1755-B9D0-4F8D-A0DA-D1DB18672045)
 
         :param do_reboot:  will reboot host
-        :param power_on: will power on server.
+        :param do_power_on: will power on server.
         :param uefi_target:
         :param device:  get the list of supported device.
                         For example None, Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard,UefiHttp
@@ -93,9 +93,11 @@ class BootOneShot(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        if power_on:
+        # power on first
+        if do_power_on:
             current_boot = self.sync_invoke(
-                ApiRequestType.ChassisReset, "current_boot_query", reset_type="On"
+                ApiRequestType.ChassisReset,
+                "current_boot_query", reset_type="On"
             )
 
         current_boot = self.sync_invoke(
@@ -110,8 +112,8 @@ class BootOneShot(IDracManager,
             current_boot = self.sync_invoke(
                 ApiRequestType.BootOptions, "boot_sources_query"
             )
-            self.default_json_printer(self, current_boot.extra)
-            uefi_devs = [d['UefiDevicePath'] for d in current_boot.extra['Members'] if 'UefiDevicePath' in d]
+            uefi_devs = [d['UefiDevicePath'] for d
+                         in current_boot.extra['Members'] if 'UefiDevicePath' in d]
             if uefi_target not in uefi_devs:
                 raise InvalidArgument(f"Invalid uefi device path {uefi_target},"
                                       f" supported uefi devices {boot_device}")

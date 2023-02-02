@@ -64,8 +64,10 @@ class VirtualMediaEject(IDracManager,
             headers.update(self.json_content_type)
 
         new_api = False
-        virtual_media = self.sync_invoke(ApiRequestType.VirtualMediaGet,
-                                         "virtual_disk_query")
+        virtual_media = self.sync_invoke(
+            ApiRequestType.VirtualMediaGet,
+            "virtual_disk_query"
+        )
         if self.version_api():
             new_api = True
 

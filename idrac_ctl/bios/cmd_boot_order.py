@@ -8,8 +8,9 @@ import warnings
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton, UnexpectedResponse
+from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl import CommandResult
+from idrac_ctl.cmd_exceptions import UnexpectedResponse
 
 
 class ChangeBootOrder(IDracManager,
@@ -94,7 +95,6 @@ class ChangeBootOrder(IDracManager,
                                    do_async=do_async,
                                    do_expanded=False)
 
-        self.default_json_printer(cmd_rest.data)
         current_boot_mode = cmd_rest.data['Attributes']['SetBootOrderEn']
         print("Current boot mode", current_boot_mode)
 

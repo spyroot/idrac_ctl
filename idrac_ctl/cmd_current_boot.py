@@ -19,7 +19,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class GetCurrentBoot(IDracManager, scm_type=ApiRequestType.CurrentBoot,
+class GetCurrentBoot(IDracManager,
+                     scm_type=ApiRequestType.CurrentBoot,
                      name='current_boot_query',
                      metaclass=Singleton):
     """

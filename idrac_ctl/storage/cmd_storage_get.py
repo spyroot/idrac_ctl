@@ -24,7 +24,8 @@ from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 
 
-class StorageView(IDracManager, scm_type=ApiRequestType.StorageViewQuery,
+class StorageView(IDracManager,
+                  scm_type=ApiRequestType.StorageViewQuery,
                   name='storage_get',
                   metaclass=Singleton):
     """iDRACs REST API fetch storage information.

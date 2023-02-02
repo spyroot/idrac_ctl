@@ -10,8 +10,9 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl import CommandResult, InvalidArgument
-from idrac_ctl import FailedDiscoverAction, PostRequestFailed
+from idrac_ctl import CommandResult
+from idrac_ctl.cmd_exceptions import FailedDiscoverAction, PostRequestFailed, UnsupportedAction
+from idrac_ctl.cmd_exceptions import InvalidArgument
 
 
 class ChassisReset(IDracManager,
@@ -37,7 +38,7 @@ class ChassisReset(IDracManager,
                                 default="On", type=str,
                                 help="On, ForceOff. On will change power state on.")
 
-        help_text = "command reset chassis"
+        help_text = "command change power state of a chassis"
         return cmd_parser, "chassis-reset", help_text
 
     def execute(self,
@@ -61,9 +62,9 @@ class ChassisReset(IDracManager,
         chassis_data = self.sync_invoke(
             ApiRequestType.ChassisQuery, "chassis_service_query", do_expanded=True
         )
-        self.default_json_printer(chassis_data.data)
+
         if 'Reset' not in chassis_data.discovered:
-            raise UnsupportedAction("failed discover reset action")
+            raise UnsupportedAction("Failed to discover the reset chassis action")
 
         redfish_action = chassis_data.discovered['Reset']
         target_api = redfish_action.target

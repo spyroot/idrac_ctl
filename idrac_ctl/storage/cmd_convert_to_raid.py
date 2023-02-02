@@ -18,7 +18,8 @@ from idrac_ctl import CommandResult, find_ids
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 
 
-class ConvertToRaid(IDracManager, scm_type=ApiRequestType.ConvertToRaid,
+class ConvertToRaid(IDracManager,
+                    scm_type=ApiRequestType.ConvertToRaid,
                     name='convert_none_raid',
                     metaclass=Singleton):
     """iDRACs REST API convert none raid disk to raid
