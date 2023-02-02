@@ -73,13 +73,13 @@ python idrac_ctl.py insert_virtual_media --uri_path http://my_ip/ubuntu-22.04.1-
 Author Mus spyroot@gmail.com
 """
 import argparse
-import json
 import warnings
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult, InvalidArgument
+from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from idrac_ctl.cmd_exceptions import InvalidArgument
 
 
 class VirtualMediaInsert(IDracManager,
@@ -147,8 +147,10 @@ class VirtualMediaInsert(IDracManager,
             headers.update(self.json_content_type)
 
         new_api = False
-        virtual_media = self.sync_invoke(ApiRequestType.VirtualMediaGet,
-                                         "virtual_disk_query")
+        virtual_media = self.sync_invoke(
+            ApiRequestType.VirtualMediaGet,
+            "virtual_disk_query"
+        )
         if self.version_api():
             new_api = True
             # this for a future issue if old API doesn't work
@@ -173,8 +175,8 @@ class VirtualMediaInsert(IDracManager,
             raise InvalidArgument(f"Image {inserted['image']} "
                                   f"already inserted. Eject media first.")
 
-        eject_rest = [a['InsertMedia'].target for a in actions][-1]
-        r = f"https://{self.idrac_ip}{eject_rest}"
+        target = [a['InsertMedia'].target for a in actions][-1]
+        # r = f"https://{self.idrac_ip}{target}"
 
         payload = {
             'Image': uri_path,
@@ -188,6 +190,15 @@ class VirtualMediaInsert(IDracManager,
             if value is None:
                 del payload[key]
 
-        response = self.api_post_call(r, json.dumps(payload), headers)
-        ok = self.default_post_success(self, response, expected=204)
-        return CommandResult(self.api_success_msg(ok), None, None)
+        api_result = self.base_post(
+            target, payload=payload, do_async=do_async,
+            expected_status=204, verbose=verbose
+        )
+
+        if api_result.data['Status']:
+            resp = self.parse_task_id(api_result)
+            api_result.data.update(resp)
+
+        # response = self.api_post_call(r, json.dumps(payload), headers)
+        # ok = self.default_post_success(self, response, expected=204)
+        return api_result

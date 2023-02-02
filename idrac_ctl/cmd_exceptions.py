@@ -16,3 +16,35 @@ class NoPendingValues(Exception):
 
 class UnsupportedAction(Exception):
     pass
+
+
+class PostRequestFailed(Exception):
+    pass
+
+
+
+class AuthenticationFailed(Exception):
+    pass
+
+
+class ResourceNotFound(Exception):
+    pass
+
+
+class MissingResource(Exception):
+    pass
+
+
+class UnexpectedResponse(Exception):
+    pass
+
+
+class PatchRequestFailed(Exception):
+    pass
+
+class DeleteRequestFailed(Exception):
+    pass
+
+
+class UnsupportedAction(Exception):
+    pass

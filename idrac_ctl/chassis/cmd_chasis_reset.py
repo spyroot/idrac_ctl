@@ -9,7 +9,6 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from build.lib.base.cmd_exceptions import UnsupportedAction
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl import CommandResult, InvalidArgument
 from idrac_ctl import FailedDiscoverAction, PostRequestFailed

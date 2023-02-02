@@ -35,42 +35,18 @@ import re
 
 from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from idrac_ctl.cmd_utils import save_if_needed
+from .cmd_exceptions import AuthenticationFailed
+from .cmd_exceptions import PostRequestFailed
+from .cmd_exceptions import MissingResource
+from .cmd_exceptions import UnexpectedResponse
+from .cmd_exceptions import ResourceNotFound
+from .cmd_exceptions import PatchRequestFailed
+from .cmd_exceptions import DeleteRequestFailed
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
                                        ("data", "discovered", "extra"))
 
-
-class AuthenticationFailed(Exception):
-    pass
-
-
-class ResourceNotFound(Exception):
-    pass
-
-
-class MissingResource(Exception):
-    pass
-
-
-class UnexpectedResponse(Exception):
-    pass
-
-
-class PatchRequestFailed(Exception):
-    pass
-
-
-class PostRequestFailed(Exception):
-    pass
-
-
-class DeleteRequestFailed(Exception):
-    pass
-
-
-class UnsupportedAction(Exception):
-    pass
 
 
 class IDracManager:
@@ -951,10 +927,8 @@ class IDracManager:
                 ok, response = loop.run_until_complete(
                     self.async_post_until_complete(r, json.dumps(pd), headers)
                 )
-
         except PostRequestFailed as pf:
-            print("Error:", pf)
-            pass
+            print("Error:", str(pf))
 
         return CommandResult(self.api_success_msg(ok), None, response)
 
@@ -1058,8 +1032,9 @@ class IDracManager:
         try:
             if response is not None:
                 response_dict = str(response.__dict__)
-                job_id = re.search("JID_.+?,", response_dict).group()
-                return job_id
+                if response_dict is not None and len(response_dict) > 0:
+                    job_id = re.search("JID_.+?,", response_dict).group()
+                    return job_id
         except AttributeError as attr_err:
             warnings.warn(f"failed parse respond error {attr_err}")
         except Exception as err:

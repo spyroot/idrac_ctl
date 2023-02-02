@@ -29,8 +29,9 @@ from pygments.formatters.terminal256 import Terminal256Formatter
 
 from idrac_ctl.cmd_utils import save_if_needed
 from idrac_ctl.shared import RedfishAction, RedfishActionEncoder
-from idrac_ctl.cmd_exceptions import InvalidArgument, FailedDiscoverAction, UnsupportedAction
-from idrac_ctl.idrac_manager import AuthenticationFailed, IDracManager, ResourceNotFound
+from idrac_ctl.cmd_exceptions import InvalidArgument, FailedDiscoverAction, \
+    UnsupportedAction, AuthenticationFailed, ResourceNotFound
+from idrac_ctl.idrac_manager import  IDracManager
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 
 try:
@@ -121,7 +122,9 @@ def json_printer(json_data,
 
             if footer is not None:
                 print(footer)
-
+    except AttributeError as attr_err:
+        log_verbose(cmd_args, attr_err)
+        return
     except requests.exceptions.JSONDecodeError as rjde:
         log_verbose(cmd_args, rjde)
         return
@@ -300,7 +303,7 @@ def idrac_main_ctl():
         main(args, cmd_dict)
     except AuthenticationFailed as af:
         print(f"Error: {af}")
-    except urllib3.connection.HTTPSConnection as http_error:
+    except requests.exceptions.ConnectionError as http_error:
         print(f"Error: {http_error}")
 
 
