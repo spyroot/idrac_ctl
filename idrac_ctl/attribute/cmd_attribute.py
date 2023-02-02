@@ -19,7 +19,8 @@ from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_utils import save_if_needed, find_ids
 
 
-class AttributesQuery(IDracManager, scm_type=ApiRequestType.AttributesQuery,
+class AttributesQuery(IDracManager,
+                      scm_type=ApiRequestType.AttributesQuery,
                       name='attribute_inventory',
                       metaclass=Singleton):
     """iDRAC Attribute Query Command, fetch attribute data, caller can save to a file
