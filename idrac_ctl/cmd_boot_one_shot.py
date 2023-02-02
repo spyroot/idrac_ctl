@@ -93,15 +93,17 @@ class BootOneShot(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        # power on first
+        # power on first if a client requested.
         if do_power_on:
             current_boot = self.sync_invoke(
                 ApiRequestType.ChassisReset,
-                "current_boot_query", reset_type="On"
+                "chassis_service_query",
+                reset_type="On"
             )
 
         current_boot = self.sync_invoke(
-            ApiRequestType.CurrentBoot, "current_boot_query"
+            ApiRequestType.CurrentBoot,
+            "current_boot_query"
         )
         boot_device = current_boot.data['BootSourceOverrideTarget@Redfish.AllowableValues']
         if device not in boot_device:

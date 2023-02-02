@@ -22,7 +22,6 @@ class PostRequestFailed(Exception):
     pass
 
 
-
 class AuthenticationFailed(Exception):
     pass
 
@@ -42,9 +41,7 @@ class UnexpectedResponse(Exception):
 class PatchRequestFailed(Exception):
     pass
 
+
 class DeleteRequestFailed(Exception):
     pass
 
-
-class UnsupportedAction(Exception):
-    pass

@@ -72,6 +72,7 @@ class ApiRequestType(Enum):
     DellOemDetach = auto()
     TaskGet = auto()
 
+    # idrac manager
     ManagerQuery = auto()
     ManagerReset = auto()
 
@@ -153,3 +154,13 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class HTTPMethod(Enum):
+    """Base HTTP methods.
+    """
+    GET = auto()
+    POST = auto()
+    PUSH = auto()
+    PATCH = auto()
+    DELETE = auto()

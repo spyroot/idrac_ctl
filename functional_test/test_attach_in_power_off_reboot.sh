@@ -1,5 +1,5 @@
 #!/bin/bash
-#!/bin/bash
+source cluster.env
 # power down / wait / attach media / ask for reboot in power down state.
 IDRAC_REMOTE_HTTP="10.241.7.99"
 python ../idrac_ctl.py eject_vm

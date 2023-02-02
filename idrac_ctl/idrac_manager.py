@@ -42,11 +42,11 @@ from .cmd_exceptions import UnexpectedResponse
 from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import PatchRequestFailed
 from .cmd_exceptions import DeleteRequestFailed
+from .cmd_exceptions import UnsupportedAction
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
                                        ("data", "discovered", "extra"))
-
 
 
 class IDracManager:
@@ -137,12 +137,15 @@ class IDracManager:
     @classmethod
     def invoke(cls, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
         """Main interface uses to invoke a command.
-        :param api_call:
-        :param name:
-        :param kwargs:
+        :param api_call: api request type is enum for each cmd.
+        :param name: a name is key for a given api request type.
+                      So we can register under same type sub-commands.
+        :param kwargs: args passed to command.
         :return:
         """
         z = cls._registry[api_call]
+        if name not in z:
+            raise UnsupportedAction(f"Unknown {name} command.")
         disp = z[name]
         _idrac_ip = kwargs.pop("idrac_ip")
         _username = kwargs.pop("username")
@@ -155,13 +158,15 @@ class IDracManager:
 
     async def async_invoke(cls, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
         """Main interface uses to invoke a command.
-        :param api_call:
+        :param api_call: api request type is enum for each cmd.
         :param name:
         :param kwargs:
         :return:
         """
         z = cls._registry[api_call]
         disp = z[name]
+        if name not in z:
+            raise UnsupportedAction(f"Unknown {name} command.")
         _idrac_ip = kwargs.pop("idrac_ip")
         _username = kwargs.pop("username")
         _password = kwargs.pop("password")
