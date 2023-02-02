@@ -12,7 +12,6 @@ caller can save to a file and consume asynchronously or synchronously.
 Author Mus spyroot@gmail.com
 """
 import json
-import warnings
 
 from abc import abstractmethod
 from typing import Optional
@@ -97,7 +96,7 @@ class BootOneShot(IDracManager,
         if do_power_on:
             current_boot = self.sync_invoke(
                 ApiRequestType.ChassisReset,
-                "chassis_service_query",
+                "reboot",
                 reset_type="On"
             )
 
@@ -146,7 +145,7 @@ class BootOneShot(IDracManager,
                 data = self.fetch_job(job_id)
                 api_result.update(data)
         except UnexpectedResponse as ur:
-            warnings.warn(str(ur))
+            self.logger.critical(ur, exc_info=True)
             pass
 
         if do_reboot:

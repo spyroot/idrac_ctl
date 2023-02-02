@@ -11,7 +11,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class QueryIDRAC(IDracManager, scm_type=ApiRequestType.QueryIdrac,
+class QueryIDRAC(IDracManager,
+                 scm_type=ApiRequestType.QueryIdrac,
                  name='query_idrac',
                  metaclass=Singleton):
     """A command query iDRAC resource based on a resource path.

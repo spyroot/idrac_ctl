@@ -18,7 +18,7 @@ from typing import Optional, Dict
 import requests
 import urllib3
 from pygments import highlight
-# import logging
+import logging
 
 try:
     from pygments.lexers.data import JsonLexer
@@ -41,12 +41,16 @@ try:
 except ImportError as ir:
     warnings.warn("Failed import urllib3")
 
-# logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s '
-#                            '[%(filename)s:%(lineno)d] %(message)s',
-#                     datefmt='%Y-%m-%d:%H:%M:%S',
-#                     level=logging.DEBUG)
-#
-# logger = logging.getLogger(__name__)
+
+logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s '
+                           '[%(filename)s:%(lineno)d] %(message)s',
+                    datefmt='%Y-%m-%d:%H:%M:%S',
+                    level=logging.ERROR)
+
+logger = logging.getLogger(__name__)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.ERROR)
+logger.addHandler(console_handler)
 
 
 def formatter(prog):
@@ -242,6 +246,7 @@ def create_cmd_tree(arg_parser, debug=False) -> Dict:
 def idrac_main_ctl():
     """
     """
+    logger.setLevel(logging.ERROR)
     parser = argparse.ArgumentParser(prog="idrac_ctl", add_help=True,
                                      description='''iDrac command line tools. |n
                                      It a standalone command line tool provide option to interact with  |n 
@@ -285,6 +290,8 @@ def idrac_main_ctl():
 
     cmd_dict = create_cmd_tree(parser)
     args = parser.parse_args()
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
 
     if args.idrac_ip is None or len(args.idrac_ip) == 0:
         print("Please indicate the idrac ip. "

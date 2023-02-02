@@ -23,7 +23,6 @@ import argparse
 import asyncio
 import collections
 import functools
-import warnings
 
 import requests
 import json
@@ -32,6 +31,7 @@ from tqdm import tqdm
 from abc import abstractmethod
 from typing import Optional, Tuple, Dict, Any
 import re
+import logging
 
 from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from idrac_ctl.cmd_utils import save_if_needed
@@ -47,6 +47,8 @@ from .cmd_exceptions import UnsupportedAction
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
                                        ("data", "discovered", "extra"))
+
+module_logger = logging.getLogger('idrac_ctl.idrac_manager')
 
 
 class IDracManager:
@@ -75,6 +77,9 @@ class IDracManager:
         self._password = idrac_password
         self._is_verify_cert = insecure
         self._x_auth = x_auth
+
+        self.logger = logging.getLogger(__name__)
+
         self.content_type = {'Content-Type': 'application/json; charset=utf-8'}
         self.json_content_type = {'Content-Type': 'application/json; charset=utf-8'}
 
@@ -301,9 +306,8 @@ class IDracManager:
                                 pbar.update(n=inc)
                             time.sleep(sleep_time)
                 else:
-                    print("unexpected status code", resp.status_code)
+                    self.logger.error("unexpected status code", resp.status_code)
                     time.sleep(sleep_time)
-                    print("Unknown status code")
 
         return resp_data
 
@@ -829,12 +833,13 @@ class IDracManager:
         :return: CommandResult and if filename provide will save to a file.
         """
         if verbose:
-            print(f"cmd args"
-                  f"data_type: {data_type} "
-                  f"resource:{resource} "
-                  f"do_async:{do_async} "
-                  f"filename:{filename}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.info(
+                f"cmd args"
+                f"data_type: {data_type} "
+                f"resource:{resource} "
+                f"do_async:{do_async} "
+                f"filename:{filename}")
+            self.logger.info(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":
@@ -890,7 +895,7 @@ class IDracManager:
                 loop = asyncio.get_event_loop()
                 ok, response = loop.run_until_complete(self.api_async_patch_until_complete(r, json.dumps(pd), headers))
         except PatchRequestFailed as pf:
-            print("Error:", pf)
+            self.logger.critical(pf, exc_info=True)
             pass
 
         return CommandResult(self.api_success_msg(ok), None, response)
@@ -937,7 +942,7 @@ class IDracManager:
                     self.async_post_until_complete(r, json.dumps(pd), headers)
                 )
         except PostRequestFailed as pf:
-            print("Error:", str(pf))
+            self.logger.critical(pf, exc_info=True)
 
         return CommandResult(self.api_success_msg(ok), None, response)
 
@@ -963,15 +968,16 @@ class IDracManager:
         if isinstance(cmd_result.data, dict) and 'PowerState' in cmd_result.data:
             pd_state = cmd_result.data[power_state_attr]
             if pd_state == 'On':
-                cmd_result = self.sync_invoke(ApiRequestType.RebootHost,
-                                              "reboot",
-                                              reset_type=default_reboot_type)
+                cmd_result = self.sync_invoke(
+                    ApiRequestType.RebootHost, "reboot",
+                    reset_type=default_reboot_type
+                )
                 if 'Status' in cmd_result.data:
                     result_data.update({"Reboot": cmd_result.data['Status']})
             else:
-                warnings.warn(f"Can't reboot a host , chassis power state {pd_state}")
+                self.logger.info(f"Can't reboot a host, chassis power state in {pd_state} state.")
         else:
-            warnings.warn(f"Failed fetch chassis power state")
+            self.logger.info(f"Failed to fetch chassis power state")
 
         return result_data
 
@@ -1046,24 +1052,23 @@ class IDracManager:
                     if job_id is not None:
                         job_id = job_id.group(0)
                     return job_id
-        except AttributeError as attr_err:
-            warnings.warn(f"failed parse respond error {attr_err}")
-        except Exception as err:
-            warnings.warn(f"failed parse respond error {err}")
+        except AttributeError as _:
             pass
 
         return None
 
     @staticmethod
     def job_id_from_header(response: requests.models.Response) -> str:
-        """Returns job id from response header.
-        :param response:
-        :return:
+        """Returns job id from the response header.
+        :param response: a response that should have job
+        id information in the header.
+        :return: job id
         :raise UnexpectedResponse if header not present.
         """
         resp_hdr = response.headers
         if 'Location' not in resp_hdr:
-            raise UnexpectedResponse("rest api failed.")
+            raise UnexpectedResponse("There is no location in the "
+                                     "response header. (not all api create job id)")
 
         location = response.headers['Location']
         job_id = location.split("/")[-1]
@@ -1073,7 +1078,7 @@ class IDracManager:
     def schedule_job(reboot_type: ScheduleJobType,
                      start_time: Optional[str],
                      duration_time: Optional[int]) -> dict:
-        """
+        """Schedule a job.
         :param reboot_type: reboot types.
         :param start_time: start time for a job
         :param duration_time: duration for a job
@@ -1125,12 +1130,17 @@ class IDracManager:
         job_id = None
         try:
             job_id = self.job_id_from_header(resp)
+            logging.debug(f"idrac api returned {job_id} in the header.")
         except UnexpectedResponse as ur:
-            pass
+            logging.debug(ur, exc_info=False)
 
-        # try to get from response
-        if job_id is None:
-            job_id = self.job_id_from_respond(resp)
+        try:
+            # try to get from the response , it an optional check.
+            if job_id is None:
+                job_id = self.job_id_from_respond(resp)
+                logging.debug(f"idrac api returned {job_id} in the header.")
+        except UnexpectedResponse as _:
+            pass
 
         if job_id is not None:
             data = self.fetch_job(job_id)
