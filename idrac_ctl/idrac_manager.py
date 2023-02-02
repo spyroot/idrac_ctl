@@ -81,6 +81,9 @@ class IDracManager:
         # run time
         self.action_targets = None
         self.api_endpoints = None
+        self._post_success_responses = [200, 201, 202, 203, 204]
+        self._patch_success_responses = [200, 201, 202, 203, 204]
+        self._delete_success_responses = [200, 201, 202, 203, 204]
 
     @property
     def idrac_ip(self):
@@ -369,7 +372,6 @@ class IDracManager:
         else:
             json_raw = json.dumps(json_data,
                                   sort_keys=sort, indent=indents)
-
         print(json_raw)
 
     @staticmethod
@@ -693,7 +695,8 @@ class IDracManager:
         return err_msg
 
     @staticmethod
-    def default_patch_success(cls, response: requests.models.Response,
+    def default_patch_success(cls,
+                              response: requests.models.Response,
                               expected: Optional[int] = 200) -> bool:
         """Default HTTP patch success handler
         Default handler to check patch request respond.
@@ -707,7 +710,8 @@ class IDracManager:
         if response.status_code == expected:
             return True
 
-        if response.status_code == 200 or response.status_code == 202:
+        if response.status_code == 200 \
+                or response.status_code == 202 or response.status_code == 204:
             return True
         else:
             err_msg = IDracManager.parse_error(response)
@@ -1025,7 +1029,7 @@ class IDracManager:
 
     @staticmethod
     def job_id_from_respond(response: requests.models.Response) -> Any | None:
-        """parse job id from a respond.
+        """Parses job id from a HTTP respond.
         :param response:
         :return:
         """
@@ -1033,7 +1037,9 @@ class IDracManager:
             if response is not None:
                 response_dict = str(response.__dict__)
                 if response_dict is not None and len(response_dict) > 0:
-                    job_id = re.search("JID_.+?,", response_dict).group()
+                    job_id = re.search("JID_.+?,", response_dict)
+                    if job_id is not None:
+                        job_id = job_id.group(0)
                     return job_id
         except AttributeError as attr_err:
             warnings.warn(f"failed parse respond error {attr_err}")
@@ -1093,7 +1099,7 @@ class IDracManager:
         return pd
 
     def parse_task_id(self, data):
-        """Parse data and fetch job id.
+        """Parse input data and try to get job id from the header or response.
         :param data:
         :return:
         """

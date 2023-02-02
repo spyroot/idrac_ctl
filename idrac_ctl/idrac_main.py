@@ -31,7 +31,7 @@ from idrac_ctl.cmd_utils import save_if_needed
 from idrac_ctl.shared import RedfishAction, RedfishActionEncoder
 from idrac_ctl.cmd_exceptions import InvalidArgument, FailedDiscoverAction, \
     UnsupportedAction, AuthenticationFailed, ResourceNotFound
-from idrac_ctl.idrac_manager import  IDracManager
+from idrac_ctl.idrac_manager import IDracManager
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 
 try:
