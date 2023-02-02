@@ -1,6 +1,6 @@
 """iDRAC reset a chassis power state.
 
-python idrac_ctl.py chassis-reset --reset_type ForceOff
+ idrac_ctl chassis-reset --reset_type ForceOff
 
 Author Mus spyroot@gmail.com
 """
@@ -9,6 +9,7 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
+from build.lib.base.cmd_exceptions import UnsupportedAction
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl import CommandResult, InvalidArgument
 from idrac_ctl import FailedDiscoverAction, PostRequestFailed
@@ -59,10 +60,13 @@ class ChassisReset(IDracManager,
             headers.update(self.json_content_type)
 
         chassis_data = self.sync_invoke(
-            ApiRequestType.ChassisQuery, "chassis_service_query"
+            ApiRequestType.ChassisQuery, "chassis_service_query", do_expanded=True
         )
-        redfish_action = chassis_data.discovered['Reset']
+        self.default_json_printer(chassis_data.data)
+        if 'Reset' not in chassis_data.discovered:
+            raise UnsupportedAction("failed discover reset action")
 
+        redfish_action = chassis_data.discovered['Reset']
         target_api = redfish_action.target
         args = redfish_action.args
         args_options = args['ResetType']
