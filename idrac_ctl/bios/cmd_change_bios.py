@@ -42,14 +42,14 @@ class BiosChangeSettings(IDracManager,
         cmd_parser.add_argument(
             '--attr_name',
             help="attribute name or list. Example --attr_name MemTest,EmbSata",
-            type=str, required=True, dest="attr_name", metavar="attribute name",
+            type=str, required=False, dest="attr_name", metavar="attribute name",
             default=None
         )
 
         cmd_parser.add_argument(
             '--attr_value',
             help="attribute name or list. Example --attr_values Disabled,RaidMode",
-            type=str, required=True, dest="attr_value", metavar="attribute value",
+            type=str, required=False, dest="attr_value", metavar="attribute value",
             default=None
         )
 
@@ -95,6 +95,13 @@ class BiosChangeSettings(IDracManager,
             required=False, dest="do_commit", default=False,
             help="by default bios change created in pending state, "
                  "hence we can cancel, otherwise pass --commit or -c"
+        )
+
+        cmd_parser.add_argument(
+            '--from_spec',
+            help="Read json spec for new bios attributes",
+            type=str, required=True, dest="from_spec", metavar="file name",
+            default=None
         )
 
         help_text = "command change bios values"
@@ -155,6 +162,7 @@ class BiosChangeSettings(IDracManager,
                 do_commit: Optional[bool] = False,
                 start_date: Optional[str] = "",
                 start_time: Optional[str] = "",
+                from_spec: Optional[str] = "",
                 default_duration: Optional[int] = 600,
                 **kwargs) -> CommandResult:
         """Executes command to change bios settings.
@@ -168,6 +176,7 @@ class BiosChangeSettings(IDracManager,
         :param attr_name: attribute name or list of values
         :param do_async: note async will subscribe to an event loop.
         :param filename: if filename indicate call will save a bios setting to a file.
+        :param from_spec: read bios changes from a spec file
         :param verbose: enables verbose output
         :param data_type: json or xml
         :param start_time:
@@ -183,9 +192,17 @@ class BiosChangeSettings(IDracManager,
         registry = cmd_result.data['RegistryEntries']
         attribute_data = registry['Attributes']
 
-        payload = self.crete_bios_config(
-            attribute_data, attr_name, attr_value
-        )
+        # we read either from a file or form args
+        # comma seperated.
+        if from_spec is not None and len(from_spec) > 0:
+            with open(from_spec) as user_file:
+                file_contents = user_file.read()
+            payload = json.loads(file_contents)
+        else:
+            payload = self.crete_bios_config(
+                attribute_data, attr_name, attr_value
+            )
+
         if apply.strip() == "auto-boot":
             start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
             base_payload = self.schedule_job(
@@ -206,9 +223,9 @@ class BiosChangeSettings(IDracManager,
                 start_time=None, duration_time=None
             )
 
-        base_payload.update(payload)
+        payload.update(base_payload)
         if verbose:
-            print(f"payload: {base_payload}")
+            self.logger.info(f"payload: {base_payload}")
 
         if do_show:
             return CommandResult(json.dumps(payload), None, None)

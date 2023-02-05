@@ -116,15 +116,21 @@ class RebootHost(IDracManager,
                                   f"{allowed_reset_types}")
 
         r = f"https://{self.idrac_ip}{target}"
+        payload = {
+            'ResetType': reset_type
+        }
 
-        payload = {'ResetType': reset_type}
         if not do_async:
-            response = self.api_post_call(r, json.dumps(payload), headers)
+            response = self.api_post_call(
+                r, json.dumps(payload), headers
+            )
             ok = self.default_post_success(self, response)
         else:
             loop = asyncio.get_event_loop()
             ok, response = loop.run_until_complete(
-                self.async_post_until_complete(r, json.dumps(payload), headers)
+                self.async_post_until_complete(
+                    r, json.dumps(payload), headers
+                )
             )
 
         try:
@@ -132,7 +138,6 @@ class RebootHost(IDracManager,
             if job_id is not None:
                 self.fetch_job(job_id)
         except UnexpectedResponse as ur:
-            warnings.warn(str(ur))
-            pass
+            self.logger.error(ur)
 
         return CommandResult(self.api_success_msg(ok), None, None)

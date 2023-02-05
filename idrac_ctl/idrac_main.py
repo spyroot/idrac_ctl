@@ -58,7 +58,7 @@ def formatter(prog):
 
 
 class info:
-    version = '1.0.5'
+    version = '1.0.7'
     description = 'iDRAC command line tools.'
     author = 'Mus'
     author_email = 'spyroot@gmail.com'

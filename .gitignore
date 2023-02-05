@@ -1,5 +1,6 @@
 /scripts/
 build_push.sh
+env_test.sh
 
 *.th
 *__pycache__*

@@ -17,7 +17,6 @@ class JobApply(IDracManager,
                metaclass=Singleton):
     """A command query job_service_query.
     """
-
     def __init__(self, *args, **kwargs):
         super(JobApply, self).__init__(*args, **kwargs)
 
