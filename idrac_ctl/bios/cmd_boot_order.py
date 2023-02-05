@@ -96,7 +96,7 @@ class ChangeBootOrder(IDracManager,
                                    do_expanded=False)
 
         current_boot_mode = cmd_rest.data['Attributes']['SetBootOrderEn']
-        print("Current boot mode", current_boot_mode)
+        self.logger.info("Current boot mode", current_boot_mode)
 
         if boot_order is not None:
             boot_order = boot_order.strip().split(",")

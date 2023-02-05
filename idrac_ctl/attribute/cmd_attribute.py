@@ -39,25 +39,30 @@ class AttributesQuery(IDracManager,
         """
         cmd_arg = argparse.ArgumentParser(add_help=False)
 
-        cmd_arg.add_argument('--async', action='store_true', required=False, dest="do_async",
-                             default=False, help="Will create a task and will not wait.")
+        cmd_arg.add_argument(
+            '--async', action='store_true', required=False, dest="do_async",
+            default=False, help="Will create a task and will not wait.")
 
-        cmd_arg.add_argument('--deep', action='store_true', required=False, dest="do_deep",
-                             default=False, help="deep walk. will make a separate "
-                                                 "REST call for each rest api.")
+        cmd_arg.add_argument(
+            '--deep', action='store_true', required=False, dest="do_deep",
+            default=False, help="deep walk. will make a separate "
+                                "REST call for each rest api.")
 
-        cmd_arg.add_argument('--attr_only', action='store_true', default=False,
-                             required=False, dest='attr_only',
-                             help="will show only attributes.")
+        cmd_arg.add_argument(
+            '--attr_only', action='store_true', default=False,
+            required=False, dest='attr_only',
+            help="will show only attributes.")
 
-        cmd_arg.add_argument('--filter', required=False, type=str, dest="attr_filter",
-                             help="Filter on bios attribute information. "
-                                  "Example --filter ProcCStates , "
-                                  "will filter and and show C-State.")
+        cmd_arg.add_argument(
+            '--filter', required=False, type=str, dest="attr_filter",
+            help="Filter on bios attribute information. "
+                 "Example --filter ProcCStates , "
+                 "will filter and and show C-State.")
 
-        cmd_arg.add_argument('-f', '--filename', required=False, type=str,
-                             default="",
-                             help="filename if we need to save a respond to a file.")
+        cmd_arg.add_argument(
+            '-f', '--filename', required=False, type=str,
+            default="",
+            help="filename if we need to save a respond to a file.")
 
         help_text = "command fetch the attribute view"
         return cmd_arg, "attr", help_text
@@ -92,7 +97,9 @@ class AttributesQuery(IDracManager,
             self.default_error_handler(response)
         else:
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+            response = loop.run_until_complete(
+                self.api_async_get_until_complete(r, headers)
+            )
 
         data = response.json()
 
@@ -101,8 +108,11 @@ class AttributesQuery(IDracManager,
         extra_actions = find_ids(data, "@odata.id")
         extra_data = None
         if do_deep:
-            extra_data = [self.api_get_call(f"https://{self.idrac_ip}{a}", headers).json()
-                          for a in extra_actions]
+            extra_data = [
+                self.api_get_call(
+                    f"https://{self.idrac_ip}{a}", headers).json()
+                for a in extra_actions
+            ]
 
         save_if_needed(filename, data)
         return CommandResult(data, None, extra_data)

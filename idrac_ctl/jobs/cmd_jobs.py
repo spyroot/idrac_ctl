@@ -20,7 +20,8 @@ from datetime import datetime
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
+class JobList(IDracManager,
+              scm_type=ApiRequestType.Jobs,
               name='jobs_sources_query',
               metaclass=Singleton):
     """Command handler for list of jobs
@@ -37,53 +38,98 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true',
-                                required=False, dest="do_async",
-                                default=False,
-                                help="Will create a task and will not wait.")
+        cmd_parser.add_argument(
+            '--async', action='store_true',
+            required=False, dest="do_async",
+            default=False,
+            help="Will create a task and will not wait."
+        )
 
-        cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                                default="",
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser.add_argument(
+            '-e', '--expanded', action='store_true',
+            required=False, dest="do_expanded",
+            default=False,
+            help="expanded request for deeper view."
+        )
 
-        cmd_parser.add_argument('--scheduled', action='store_true',
-                                required=False, dest="filter_scheduled",
-                                default=False,
-                                help="return only scheduled.")
+        cmd_parser.add_argument(
+            '-f', '--filename', required=False, type=str,
+            default="",
+            help="filename if we need to save a respond to a file."
+        )
 
-        cmd_parser.add_argument('--completed', action='store_true',
-                                required=False, dest="filter_completed",
-                                default=False,
-                                help="return only completed.")
+        cmd_parser.add_argument(
+            '--scheduled', action='store_true',
+            required=False, dest="filter_scheduled",
+            default=False,
+            help="return only scheduled."
+        )
 
-        cmd_parser.add_argument('--reboot_completed', action='store_true',
-                                required=False, dest="reboot_completed",
-                                default=False,
-                                help="returns only completed after reboot.")
+        cmd_parser.add_argument(
+            '--completed', action='store_true',
+            required=False, dest="filter_completed",
+            default=False,
+            help="return only completed."
+        )
 
-        cmd_parser.add_argument('--running', action='store_true',
-                                required=False, dest="running",
-                                default=False,
-                                help="returns only completed after reboot.")
+        cmd_parser.add_argument(
+            '--reboot_completed', action='store_true',
+            required=False, dest="reboot_completed",
+            default=False,
+            help="returns only completed after reboot."
+        )
 
-        cmd_parser.add_argument('--reboot_pending', action='store_true',
-                                required=False, dest="reboot_pending",
-                                default=False,
-                                help="returns only reboot pending jobs.")
+        cmd_parser.add_argument(
+            '--running', action='store_true',
+            required=False, dest="running",
+            default=False,
+            help="returns only completed after reboot."
+        )
 
-        cmd_parser.add_argument('--failed', action='store_true',
-                                required=False, dest="failed",
-                                default=False,
-                                help="returns only failed jobs.")
+        cmd_parser.add_argument(
+            '--reboot_pending', action='store_true',
+            required=False, dest="reboot_pending",
+            default=False,
+            help="returns only reboot pending jobs."
+        )
 
-        cmd_parser.add_argument('--sort_by_time', action='store_true',
-                                required=False, dest="sort_by_time",
-                                default=True,
-                                help="Sort jobs by time. First entry the last job.")
+        cmd_parser.add_argument(
+            '--failed', action='store_true',
+            required=False, dest="failed",
+            default=False,
+            help="returns only failed jobs."
+        )
+
+        cmd_parser.add_argument(
+            '--sort_by_time', action='store_true',
+            required=False, dest="sort_by_time",
+            default=True,
+            help="Sort jobs by time. First entry the last job."
+        )
+
+        cmd_parser.add_argument(
+            '--job_type',  required=False,
+            default="", type=str,
+            help="filter by job type. (Example bios_config, firmware_update)"
+        )
 
         # RebootCompleted
         help_text = "command fetch a list of jobs"
         return cmd_parser, "jobs", help_text
+
+    @staticmethod
+    def resolve_job_type(jb_type: str):
+        """
+
+        """
+        if jb_type == "bios_config":
+            return "BIOSConfiguration"
+        elif jb_type == "firmware_update":
+            return "BIOSConfiguration"
+        elif jb_type == "reboot_no_force":
+            return "RebootNoForce"
+        else:
+            ValueError("Unknown job type")
 
     def execute(self,
                 filename: [str] = None,
@@ -96,8 +142,11 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                 sort_by_time: Optional[bool] = True,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
-                do_async: Optional[bool] = False, **kwargs) -> CommandResult:
-        """List idrac jobs.
+                do_async: Optional[bool] = False,
+                do_expanded: Optional[bool] = False,
+                job_type: Optional[str] = "",
+                **kwargs) -> CommandResult:
+        """Command return list idrac jobs
 
         :param failed: retrieve failed jobs
         :param sort_by_time:  sort by start time
@@ -107,9 +156,11 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
         :param filter_scheduled: retrieve scheduled jobs
         :param filter_completed:  retrieve completed
         :param do_async: make async request.
-        :param verbose:
+        :param verbose: enable verbose
         :param filename: if filename indicate call will save a bios setting to a file.
         :param data_type: json or xml
+        :param do_expanded: returns expanded result for API call
+        :param job_type: filter on job_type
         :return: CommandResult and if filename provide will save to a file.
         """
         headers = {}
@@ -156,8 +207,12 @@ class JobList(IDracManager, scm_type=ApiRequestType.Jobs,
                 member_data = [filtered_data]
             filtered_data = sorted(
                 member_data, reverse=True, key=lambda
-                x: datetime.fromisoformat(x['StartTime']).timestamp()
+                    x: datetime.fromisoformat(x['StartTime']).timestamp()
                 if 'ActualRunningStartTime' in x else None
             )
+        job_type = self.resolve_job_type(job_type)
 
+        if job_type is not None and len(job_type) > 0:
+            filtered_data = [d for d in filtered_data if d['JobType'] == job_type]
+            # BIOSConfiguration
         return CommandResult(filtered_data, None, None)

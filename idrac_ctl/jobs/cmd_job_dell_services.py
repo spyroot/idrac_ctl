@@ -27,7 +27,7 @@ class JobDellServices(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = cls.base_parser()
+        cmd_parser = cls.base_parser(is_expanded=True)
         help_text = "command query jobs services"
         return cmd_parser, "jobs-dell-service", help_text
 

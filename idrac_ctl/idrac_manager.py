@@ -61,7 +61,8 @@ class IDracManager:
                  idrac_username: Optional[str] = "root",
                  idrac_password: Optional[str] = "",
                  insecure: Optional[bool] = False,
-                 x_auth: Optional[str] = None):
+                 x_auth: Optional[str] = None,
+                 is_debug: Optional[bool] = False):
         """Default constructor for idrac requires credentials.
            By default, iDRAC Manager uses json to serialize a data to callee
            and uses json content type.
@@ -77,6 +78,7 @@ class IDracManager:
         self._password = idrac_password
         self._is_verify_cert = insecure
         self._x_auth = x_auth
+        self._is_debug = is_debug
 
         self.logger = logging.getLogger(__name__)
 
@@ -140,7 +142,9 @@ class IDracManager:
         return dict(cls._registry)
 
     @classmethod
-    def invoke(cls, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
+    def invoke(cls,
+               api_call: ApiRequestType,
+               name: str, **kwargs) -> CommandResult:
         """Main interface uses to invoke a command.
         :param api_call: api request type is enum for each cmd.
         :param name: a name is key for a given api request type.
@@ -156,9 +160,11 @@ class IDracManager:
         _username = kwargs.pop("username")
         _password = kwargs.pop("password")
 
-        inst = disp(idrac_ip=_idrac_ip,
-                    idrac_username=_username,
-                    idrac_password=_password)
+        inst = disp(
+            idrac_ip=_idrac_ip,
+            idrac_username=_username,
+            idrac_password=_password
+        )
         return inst.execute(**kwargs)
 
     async def async_invoke(cls, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
@@ -176,9 +182,11 @@ class IDracManager:
         _username = kwargs.pop("username")
         _password = kwargs.pop("password")
 
-        inst = disp(idrac_ip=_idrac_ip,
-                    idrac_username=_username,
-                    idrac_password=_password)
+        inst = disp(
+            idrac_ip=_idrac_ip,
+            idrac_username=_username,
+            idrac_password=_password
+        )
         return inst.execute(**kwargs)
 
     async def api_async_get_call(self, loop, r, hdr: Dict):
@@ -194,15 +202,19 @@ class IDracManager:
             headers.update(hdr)
 
         if self.x_auth is not None:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.get, r,
-                                                          verify=self._is_verify_cert,
-                                                          headers=headers))
+            return loop.run_in_executor(
+                None, functools.partial(requests.get, r,
+                                        verify=self._is_verify_cert,
+                                        headers=headers)
+            )
         else:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.get, r,
-                                                          verify=self._is_verify_cert,
-                                                          auth=(self._username, self._password)))
+            return loop.run_in_executor(
+                None, functools.partial(
+                    requests.get, r,
+                    verify=self._is_verify_cert,
+                    auth=(self._username, self._password)
+                )
+            )
 
     async def api_async_get_until_complete(self, r, hdr: Dict, loop=None):
         """
@@ -217,7 +229,9 @@ class IDracManager:
         await self.async_default_error_handler(await response)
         return await response
 
-    def api_get_call(self, r, hdr: Dict) -> requests.models.Response:
+    def api_get_call(self,
+                     r: str,
+                     hdr: Dict) -> requests.models.Response:
         """Make api request either with x-auth authentication header or idrac_ctl.
         :param r:  request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
@@ -230,10 +244,14 @@ class IDracManager:
 
         if self.x_auth is not None:
             headers.update({'X-Auth-Token': self.x_auth})
-            return requests.get(r, verify=self._is_verify_cert, headers=headers)
+            return requests.get(
+                r, verify=self._is_verify_cert, headers=headers
+            )
         else:
-            return requests.get(r, verify=self._is_verify_cert,
-                                auth=(self._username, self._password))
+            return requests.get(
+                r, verify=self._is_verify_cert,
+                auth=(self._username, self._password)
+            )
 
     def api_delete_call(self, r, hdr: Dict):
         """Make api request for delete method.
@@ -250,11 +268,14 @@ class IDracManager:
             headers.update({'X-Auth-Token': self.x_auth})
             return requests.delete(r,
                                    verify=self._is_verify_cert,
-                                   headers=headers)
+                                   headers=headers
+                                   )
         else:
-            return requests.delete(r, verify=self._is_verify_cert,
-                                   auth=(self._username, self._password),
-                                   headers=headers)
+            return requests.delete(
+                r, verify=self._is_verify_cert,
+                auth=(self._username, self._password),
+                headers=headers
+            )
 
     def sync_invoke(self, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
         """Synchronous invocation of target command
@@ -263,9 +284,13 @@ class IDracManager:
         :param kwargs: Args passed to a command.
         :return: Return result depends on actual command.
         """
-        kwargs.update({"idrac_ip": self._idrac_ip,
-                       "username": self._username,
-                       "password": self._password})
+        kwargs.update(
+            {
+                "idrac_ip": self._idrac_ip,
+                "username": self._username,
+                "password": self._password
+            }
+        )
         return self.invoke(api_call, name, **kwargs)
 
     def fetch_job(self,
@@ -320,10 +345,14 @@ class IDracManager:
         if response.status_code >= 200 or response.status_code < 300:
             return True
         if response.status_code == 401:
-            raise AuthenticationFailed("Authentication failed.")
+            raise AuthenticationFailed(
+                "Authentication failed."
+            )
         if response.status_code != 200:
-            raise UnexpectedResponse(f"Failed acquire result. "
-                                     f"Status code {response.status_code}")
+            raise UnexpectedResponse(
+                f"Failed acquire result. "
+                f"Status code {response.status_code}"
+            )
 
     @staticmethod
     def default_error_handler(response) -> bool:
@@ -376,11 +405,13 @@ class IDracManager:
             json_data = json_data.json()
 
         if isinstance(json_data, str):
-            json_raw = json.dumps(json.loads(json_data),
-                                  sort_keys=sort, indent=indents)
+            json_raw = json.dumps(
+                json.loads(json_data), sort_keys=sort, indent=indents
+            )
         else:
-            json_raw = json.dumps(json_data,
-                                  sort_keys=sort, indent=indents)
+            json_raw = json.dumps(
+                json_data, sort_keys=sort, indent=indents
+            )
         print(json_raw)
 
     @staticmethod
@@ -506,7 +537,10 @@ class IDracManager:
                                  if attr_filter.lower() in attr.lower())
         return json_data
 
-    def api_post_call(self, req: str, payload: str, hdr: dict) -> requests.models.Response:
+    def api_post_call(self,
+                      req: str,
+                      payload: str,
+                      hdr: dict) -> requests.models.Response:
         """Make api post request.
         :param req: path to a path request
         :param payload:  json payload
@@ -520,16 +554,19 @@ class IDracManager:
 
         if self.x_auth is not None:
             headers.update({'X-Auth-Token': self.x_auth})
-            return requests.post(req,
-                                 data=payload,
-                                 verify=self._is_verify_cert,
-                                 headers=headers)
+            return requests.post(
+                req,
+                data=payload,
+                verify=self._is_verify_cert,
+                headers=headers
+            )
         else:
-            return requests.post(req,
-                                 data=payload,
-                                 verify=self._is_verify_cert,
-                                 headers=headers,
-                                 auth=(self._username, self._password))
+            return requests.post(
+                req, data=payload,
+                verify=self._is_verify_cert,
+                headers=headers,
+                auth=(self._username, self._password)
+            )
 
     async def api_async_post_call(self, loop, req: str, payload: str, hdr: Dict):
         """Make post api request either with x-auth authentication header or idrac_ctl.
@@ -545,24 +582,29 @@ class IDracManager:
             headers.update(hdr)
 
         if self.x_auth is not None:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.post,
-                                                          req,
-                                                          data=payload,
-                                                          verify=self._is_verify_cert,
-                                                          headers=headers))
+            return loop.run_in_executor(
+                None, functools.partial(
+                    requests.post, req,
+                    data=payload,
+                    verify=self._is_verify_cert,
+                    headers=headers
+                )
+            )
         else:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.post,
-                                                          req,
-                                                          data=payload,
-                                                          headers=headers,
-                                                          verify=self._is_verify_cert,
-                                                          auth=(self._username, self._password)))
+            return loop.run_in_executor(
+                None, functools.partial(
+                    requests.post, req,
+                    data=payload,
+                    headers=headers,
+                    verify=self._is_verify_cert,
+                    auth=(self._username, self._password)
+                )
+            )
 
-    async def api_async_patch_until_complete(self, r: str,
-                                             payload: str, hdr: Dict, loop=None) \
-            -> Tuple[requests.models.Response, bool]:
+    async def api_async_patch_until_complete(
+            self, r: str,
+            payload: str,
+            hdr: Dict, loop=None) -> Tuple[requests.models.Response, bool]:
         """Make async patch api request until completion , it issues post with x-auth
         authentication header or idrac_ctl. Caller can use this in asyncio routine.
 
@@ -578,9 +620,11 @@ class IDracManager:
         ok = await self.async_default_patch_success(await response)
         return await response, ok
 
-    async def async_post_until_complete(self, r: str,
-                                        payload: str, hdr: Dict, loop=None) \
-            -> Tuple[requests.models.Response, bool]:
+    async def async_post_until_complete(
+            self, r: str,
+            payload: str,
+            hdr: Dict,
+            loop=None) -> Tuple[requests.models.Response, bool]:
         """Make async post api request until completion , it issues post with x-auth
         authentication header or idrac_ctl. Caller can use this in asyncio routine.
 
@@ -596,7 +640,10 @@ class IDracManager:
         ok = await self.async_default_post_success(await response)
         return await response, ok
 
-    def api_patch_call(self, req: str, payload: str, hdr: dict) -> requests.models.Response:
+    def api_patch_call(self,
+                       req: str,
+                       payload: str,
+                       hdr: dict) -> requests.models.Response:
         """Make api patch request.
         :param req: path to a path request
         :param payload: json payload
@@ -637,22 +684,23 @@ class IDracManager:
             headers.update(hdr)
 
         if self.x_auth is not None:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.patch,
-                                                          req,
-                                                          data=payload,
-                                                          verify=self._is_verify_cert,
-                                                          headers=headers))
+            return loop.run_in_executor(
+                None, functools.partial(requests.patch, req,
+                                        data=payload,
+                                        verify=self._is_verify_cert,
+                                        headers=headers)
+            )
         else:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.patch,
-                                                          req,
-                                                          data=payload,
-                                                          verify=self._is_verify_cert,
-                                                          headers=headers,
-                                                          auth=(self._username, self._password)))
+            return loop.run_in_executor(
+                None, functools.partial(
+                    requests.patch, req, data=payload,
+                    verify=self._is_verify_cert, headers=headers,
+                    auth=(self._username, self._password)
+                )
+            )
 
-    async def api_async_delete_call(self, loop, req, payload: str, hdr: Dict):
+    async def api_async_delete_call(self, loop,
+                                    req, payload: str, hdr: Dict):
         """Make async delete api request either with
         x-auth authentication header or idrac_ctl.
 
@@ -668,20 +716,21 @@ class IDracManager:
             headers.update(hdr)
 
         if self.x_auth is not None:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.delete,
-                                                          req,
-                                                          data=payload,
-                                                          verify=self._is_verify_cert,
-                                                          headers=headers))
+            return loop.run_in_executor(
+                None, functools.partial(
+                    requests.delete, req, data=payload,
+                    verify=self._is_verify_cert,
+                    headers=headers)
+            )
         else:
-            return loop.run_in_executor(None,
-                                        functools.partial(requests.delete,
-                                                          req,
-                                                          data=payload,
-                                                          verify=self._is_verify_cert,
-                                                          headers=headers,
-                                                          auth=(self._username, self._password)))
+            return loop.run_in_executor(
+                None, functools.partial(
+                    requests.delete, req, data=payload,
+                    verify=self._is_verify_cert,
+                    headers=headers,
+                    auth=(self._username, self._password)
+                )
+            )
 
     @staticmethod
     def parse_error(error_response: requests.models.Response):
@@ -724,11 +773,14 @@ class IDracManager:
             return True
         else:
             err_msg = IDracManager.parse_error(response)
-            raise PatchRequestFailed(f"{err_msg}\nHTTP Status code: "
-                                     f"{response.status_code}")
+            raise PatchRequestFailed(
+                f"{err_msg}\nHTTP Status code: "
+                f"{response.status_code}"
+            )
 
     @staticmethod
-    def default_post_success(cls, response: requests.models.Response,
+    def default_post_success(cls,
+                             response: requests.models.Response,
                              expected: Optional[int] = 204) -> bool:
         """Default post success handler,  Check for status code.
         and raise exception.  Default handler to check post
@@ -749,8 +801,10 @@ class IDracManager:
             return True
         else:
             err_msg = IDracManager.parse_error(response)
-            raise PostRequestFailed(f"{err_msg}\nHTTP Status code: "
-                                    f"{response.status_code}")
+            raise PostRequestFailed(
+                f"{err_msg}\nHTTP Status code: "
+                f"{response.status_code}"
+            )
 
     @staticmethod
     def default_delete_success(response: requests.models.Response,
@@ -773,8 +827,10 @@ class IDracManager:
             return True
         else:
             err_msg = IDracManager.parse_error(response)
-            raise DeleteRequestFailed(f"{err_msg}\nHTTP Status code: "
-                                      f"{response.status_code}")
+            raise DeleteRequestFailed(
+                f"{err_msg}\nHTTP Status code: "
+                f"{response.status_code}"
+            )
 
     def api_async_del_until_complete(self, r, headers):
         pass
@@ -820,6 +876,7 @@ class IDracManager:
                    do_expanded: Optional[bool] = False,
                    data_type: Optional[str] = "json",
                    verbose: Optional[bool] = False,
+                   key: Optional[str] = None,
                    **kwargs) -> CommandResult:
         """command will give the status of the Drivers and ISO Image
         that has been exposed to host.
@@ -830,6 +887,7 @@ class IDracManager:
         :param filename: if filename indicate call will save a bios setting to a file.
         :param verbose: enables verbose output
         :param data_type: json or xml
+        :param key: Optional json key
         :return: CommandResult and if filename provide will save to a file.
         """
         if verbose:
@@ -855,9 +913,16 @@ class IDracManager:
             self.default_error_handler(response)
         else:
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+            response = loop.run_until_complete(
+                self.api_async_get_until_complete(
+                    r, headers
+                )
+            )
 
         data = response.json()
+        if key is not None and len(key) > 0 and key in data:
+            data = data[key]
+
         save_if_needed(filename, data)
         return CommandResult(data, None, None)
 
@@ -889,13 +954,25 @@ class IDracManager:
         try:
             r = f"https://{self.idrac_ip}{resource}"
             if not do_async:
-                response = self.api_patch_call(r, json.dumps(pd), headers)
-                ok = self.default_patch_success(self, response, expected=expected_status)
+                if self._is_debug:
+                    self.logger.debug(json.dumps(pd))
+                response = self.api_patch_call(
+                    r, json.dumps(pd), headers
+                )
+                ok = self.default_patch_success(
+                    self, response, expected=expected_status
+                )
             else:
                 loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(self.api_async_patch_until_complete(r, json.dumps(pd), headers))
+                ok, response = loop.run_until_complete(
+                    self.api_async_patch_until_complete(
+                        r, json.dumps(pd), headers
+                    )
+                )
         except PatchRequestFailed as pf:
-            self.logger.critical(pf, exc_info=True)
+            self.logger.critical(
+                pf, exc_info=self._is_debug
+            )
             pass
 
         return CommandResult(self.api_success_msg(ok), None, response)
@@ -935,14 +1012,20 @@ class IDracManager:
                     print(f"received status code {response.status_code}")
                     print(f"received status code {response.headers}")
                     print(f"received {response.raw}")
-                ok = self.default_post_success(self, response, expected=expected_status)
+                ok = self.default_post_success(
+                    self, response, expected=expected_status
+                )
             else:
                 loop = asyncio.get_event_loop()
                 ok, response = loop.run_until_complete(
-                    self.async_post_until_complete(r, json.dumps(pd), headers)
+                    self.async_post_until_complete(
+                        r, json.dumps(pd), headers
+                    )
                 )
         except PostRequestFailed as pf:
-            self.logger.critical(pf, exc_info=True)
+            self.logger.critical(
+                pf, exc_info=self._is_debug
+            )
 
         return CommandResult(self.api_success_msg(ok), None, response)
 
@@ -961,9 +1044,11 @@ class IDracManager:
         :return: return a dict stora if operation succeed..
         """
         result_data = {}
-        cmd_result = self.sync_invoke(ApiRequestType.ChassisQuery,
-                                      "chassis_service_query",
-                                      data_filter=power_state_attr)
+        cmd_result = self.sync_invoke(
+            ApiRequestType.ChassisQuery,
+            "chassis_service_query",
+            data_filter=power_state_attr
+        )
 
         if isinstance(cmd_result.data, dict) and 'PowerState' in cmd_result.data:
             pd_state = cmd_result.data[power_state_attr]
@@ -973,13 +1058,56 @@ class IDracManager:
                     reset_type=default_reboot_type
                 )
                 if 'Status' in cmd_result.data:
-                    result_data.update({"Reboot": cmd_result.data['Status']})
+                    result_data.update(
+                        {
+                            "Reboot": cmd_result.data['Status']
+                        }
+                    )
             else:
-                self.logger.info(f"Can't reboot a host, chassis power state in {pd_state} state.")
+                self.logger.info(
+                    f"Can't reboot a host, "
+                    f"chassis power state in {pd_state} state."
+                )
         else:
-            self.logger.info(f"Failed to fetch chassis power state")
+            self.logger.info(
+                f"Failed to fetch chassis power state")
 
         return result_data
+
+    def idrac_firmware(self):
+        """Shared method return idrac firmware
+        """
+        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="FirmwareVersion")
+
+    def idrac_last_reset(self):
+        """Shared method return idrac last reset time"""
+        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="LastResetTime")
+
+    def idrac_current_time(self):
+        """Shared method return idrac current time"""
+        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="DateTime")
+
+    def idrac_time_offset(self):
+        """Shared method return idrac current time"""
+        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="DateTimeLocalOffset")
+
+    def idrac_manage_chassis(self):
+        """Shared method return idrac managed chassis list as json"""
+        links = self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="Links")
+        if links.data is not None and 'ManagerForChassis' in links.data:
+            return links.data['ManagerForChassis']
+        return links
+
+    def idrac_manage_servers(self):
+        """Shared method return idrac managed servers list as json"""
+        links = self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="Links")
+        if links.data is not None and 'ManagerForServers' in links.data:
+            return links.data['ManagerForServers']
+        return links
+
+    def idrac_id(self):
+        """Shared method return idrac current time"""
+        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="Id")
 
     @staticmethod
     def base_parser(is_async: Optional[bool] = True,
@@ -994,52 +1122,76 @@ class IDracManager:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
         if is_async:
-            cmd_parser.add_argument('-a', '--async', action='store_true',
-                                    required=False, dest="do_async",
-                                    default=False, help="will use async call.")
+            cmd_parser.add_argument(
+                '-a', '--async', action='store_true',
+                required=False, dest="do_async",
+                default=False,
+                help="will use async call."
+            )
 
         if is_expanded:
-            cmd_parser.add_argument('-e', '--expanded', action='store_true',
-                                    required=False, dest="do_expanded",
-                                    default=False,
-                                    help="expanded request for deeper view.")
+            cmd_parser.add_argument(
+                '-e', '--expanded', action='store_true',
+                required=False, dest="do_expanded",
+                default=False,
+                help="expanded request for deeper view."
+            )
         if is_file_save:
-            cmd_parser.add_argument('-f', '--filename', required=False, default="",
-                                    type=str,
-                                    help="filename if we need to save a respond to a file.")
+            cmd_parser.add_argument(
+                '-f', '--filename', required=False, default="",
+                type=str,
+                help="filename if we need to save a respond to a file."
+            )
 
         if is_reboot:
-            cmd_parser.add_argument('-r', '--reboot', action='store_true',
-                                    required=False, dest="do_reboot",
-                                    default=False, help="will reboot a host.")
+            cmd_parser.add_argument(
+                '-r', '--reboot', action='store_true',
+                required=False, dest="do_reboot",
+                default=False,
+                help="will reboot a host.")
 
         # this optional args for remote share CIFS/NFS/HTTP etc.
         if is_remote_share:
-            cmd_parser.add_argument('--ip_addr', required=True,
-                                    type=str, default=None,
-                                    help="ip address for CIFS|NFS.")
-            cmd_parser.add_argument('--share_type', required=False,
-                                    type=str, default="CIFS",
-                                    help="share type CIFS|NFS.")
-            cmd_parser.add_argument('--share_name', required=True,
-                                    type=str, default=None,
-                                    help="share name.")
-            cmd_parser.add_argument('--remote_image', required=True,
-                                    type=str, default=None,
-                                    help="remote image. Example my_iso. ")
-            cmd_parser.add_argument('--remote_username', required=False,
-                                    type=str, default="vmware",
-                                    help="remote username if required.")
-            cmd_parser.add_argument('--remote_password', required=False,
-                                    type=str, default="123456",
-                                    help="password if required.")
-            cmd_parser.add_argument('--remote_workgroup', required=False,
-                                    type=str, default="",
-                                    help="group name if required.")
+            cmd_parser.add_argument(
+                '--ip_addr', required=True,
+                type=str, default=None,
+                help="ip address for CIFS|NFS."
+            )
+            cmd_parser.add_argument(
+                '--share_type', required=False,
+                type=str, default="CIFS",
+                help="share type CIFS|NFS."
+            )
+            cmd_parser.add_argument(
+                '--share_name', required=True,
+                type=str, default=None,
+                help="share name."
+            )
+            cmd_parser.add_argument(
+                '--remote_image', required=True,
+                type=str, default=None,
+                help="remote image. Example my_iso. "
+            )
+            cmd_parser.add_argument(
+                '--remote_username', required=False,
+                type=str, default="vmware",
+                help="remote username if required."
+            )
+            cmd_parser.add_argument(
+                '--remote_password', required=False,
+                type=str, default="123456",
+                help="password if required."
+            )
+            cmd_parser.add_argument(
+                '--remote_workgroup', required=False,
+                type=str, default="",
+                help="group name if required."
+            )
         return cmd_parser
 
     @staticmethod
-    def job_id_from_respond(response: requests.models.Response) -> Any | None:
+    def job_id_from_respond(
+            response: requests.models.Response) -> Any | None:
         """Parses job id from a HTTP respond.
         :param response:
         :return:
@@ -1058,7 +1210,8 @@ class IDracManager:
         return None
 
     @staticmethod
-    def job_id_from_header(response: requests.models.Response) -> str:
+    def job_id_from_header(
+            response: requests.models.Response) -> str:
         """Returns job id from the response header.
         :param response: a response that should have job
         id information in the header.
@@ -1067,17 +1220,20 @@ class IDracManager:
         """
         resp_hdr = response.headers
         if 'Location' not in resp_hdr:
-            raise UnexpectedResponse("There is no location in the "
-                                     "response header. (not all api create job id)")
+            raise UnexpectedResponse(
+                "There is no location in the response header. "
+                "(not all api create job id)"
+            )
 
         location = response.headers['Location']
         job_id = location.split("/")[-1]
         return job_id
 
     @staticmethod
-    def schedule_job(reboot_type: ScheduleJobType,
-                     start_time: Optional[str],
-                     duration_time: Optional[int]) -> dict:
+    def schedule_job(
+            reboot_type: ScheduleJobType,
+            start_time: Optional[str],
+            duration_time: Optional[int]) -> dict:
         """Schedule a job.
         :param reboot_type: reboot types.
         :param start_time: start time for a job
@@ -1101,11 +1257,19 @@ class IDracManager:
                 }
             }
         elif reboot_type == ScheduleJobType.OnReset:
-            pd = {"@Redfish.SettingsApplyTime": {"ApplyTime": "OnReset"}}
-
+            pd = {
+                "@Redfish.SettingsApplyTime": {
+                    "ApplyTime": "OnReset"
+                }
+            }
+        elif reboot_type == ScheduleJobType.Immediate:
+            pd = {
+                "@Redfish.SettingsApplyTime": {
+                    "ApplyTime": "Immediate"
+                }
+            }
         else:
-            raise ValueError("Invalid reboot type.")
-
+            raise ValueError("Invalid settings apply time.")
         return pd
 
     def parse_task_id(self, data):
@@ -1130,9 +1294,12 @@ class IDracManager:
         job_id = None
         try:
             job_id = self.job_id_from_header(resp)
-            logging.debug(f"idrac api returned {job_id} in the header.")
+            logging.debug(
+                f"idrac api returned {job_id} in the header."
+            )
+            return job_id
         except UnexpectedResponse as ur:
-            logging.debug(ur, exc_info=False)
+            logging.debug(ur, exc_info=self._is_debug)
 
         try:
             # try to get from the response , it an optional check.

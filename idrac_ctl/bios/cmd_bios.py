@@ -34,7 +34,8 @@ from idrac_ctl.cmd_utils import save_if_needed, find_ids
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 
 
-class BiosQuery(IDracManager, scm_type=ApiRequestType.BiosQuery,
+class BiosQuery(IDracManager,
+                scm_type=ApiRequestType.BiosQuery,
                 name='bios_inventory',
                 metaclass=Singleton):
     """Bios Query Command, fetch bios data, caller can save to a file

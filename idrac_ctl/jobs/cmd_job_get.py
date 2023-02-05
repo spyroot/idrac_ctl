@@ -14,7 +14,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
-class JobGet(IDracManager, scm_type=ApiRequestType.JobGet,
+class JobGet(IDracManager,
+             scm_type=ApiRequestType.JobGet,
              name='job_query',
              metaclass=Singleton):
     """Command gets a job from iDRAC
@@ -31,15 +32,23 @@ class JobGet(IDracManager, scm_type=ApiRequestType.JobGet,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
-                                default=False, help="Will create a task and will not wait.")
+        cmd_parser.add_argument(
+            '--async', action='store_true',
+            required=False, dest="do_async", default=False,
+            help="Will create a task and will not wait."
+        )
 
-        cmd_parser.add_argument('-j', '--job_id', required=True, dest="job_id", type=str,
-                                default=None, help="Job id. Example JID_744718373591")
+        cmd_parser.add_argument(
+            '-j', '--job_id',
+            required=True, dest="job_id", type=str, default=None,
+            help="Job id. Example JID_744718373591"
+        )
 
-        cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                                default="",
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser.add_argument(
+            '-f', '--filename',
+            required=False, type=str, default="",
+            help="filename if we need to save a respond to a file."
+        )
 
         help_text = "command fetch a job"
         return cmd_parser, "job", help_text

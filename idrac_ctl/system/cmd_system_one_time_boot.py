@@ -143,6 +143,6 @@ class ImportOneTimeBoot(IDracManager,
                 reboot_result = self.reboot()
                 data.update(reboot_result)
         except PostRequestFailed as prf:
-            print(prf)
+            self.logger.error(prf)
 
         return CommandResult(data, None, None)

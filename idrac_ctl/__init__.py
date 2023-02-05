@@ -5,18 +5,22 @@ from .system.cmd_system_config import *
 from .system.cmd_system_import import *
 
 from .cmd_boot import *
-from .bios.cmd_boot_order import *
-from .bios.bios_registry import *
-from .bios.cmd_change_bios import *
-
 from .dell_lc.cmd_dell_lc_api import *
 from .dell_lc.cmd_dell_lc_rs import *
 from .dell_lc.cmd_dell_lc_services import *
 
 from .compute.cmd_power_state import *
 from idrac_ctl.raid.cmd_raid_service import *
+
+# bios commands
 from .bios.cmd_bios import *
 from .bios.cmd_bios_clear_pending import *
+from .bios.cmd_bios_pending import *
+from .bios.cmd_boot_order import *
+from .bios.bios_registry import *
+from .bios.cmd_change_bios import *
+from .bios.cmd_bios_reset_default import *
+
 from .attribute.cmd_attribute import *
 from .attribute.cmd_attribute_clear_pending import *
 from .boot_source.cmd_boot_source_enable import *
@@ -25,6 +29,8 @@ from .boot_source.cmd_boot_source_get import *
 from .boot_source.cmd_boot_options import *
 from .boot_source.cmd_boot_settings import *
 from .boot_source.cmd_clear_pending import *
+
+# jobs command
 from .jobs.cmd_jobs import *
 from .jobs.cmd_job_get import *
 from .jobs.cmd_job_services import *
@@ -32,6 +38,7 @@ from .jobs.cmd_job_watch import *
 from .jobs.cmd_job_del import *
 from .jobs.cmd_job_dell_services import *
 from .jobs.cmd_job_delete_all import *
+from .jobs.cmd_job_apply import *
 
 # firmwares cmds
 from .firmware.cmd_firmware import *

@@ -16,7 +16,8 @@ from idrac_ctl.cmd_exceptions import FailedDiscoverAction
 from idrac_ctl.idrac_manager import PostRequestFailed
 
 
-class BiosClearPending(IDracManager, scm_type=ApiRequestType.BiosClearPending,
+class BiosClearPending(IDracManager,
+                       scm_type=ApiRequestType.BiosClearPending,
                        name='clear_pending',
                        metaclass=Singleton):
     """
@@ -62,7 +63,8 @@ class BiosClearPending(IDracManager, scm_type=ApiRequestType.BiosClearPending,
         cmd_result = self.sync_invoke(ApiRequestType.BiosQuery,
                                       "bios_inventory", do_deep=True)
         api_target = None
-        if cmd_result.discovered is not None and 'ClearPending' in cmd_result.discovered:
+        if cmd_result.discovered is not None and \
+                'ClearPending' in cmd_result.discovered:
             api_target = cmd_result.discovered['ClearPending'].target
 
         if api_target is None:
@@ -81,7 +83,6 @@ class BiosClearPending(IDracManager, scm_type=ApiRequestType.BiosClearPending,
             api_req_result = {"Status": ok}
 
         except PostRequestFailed as pf:
-            print("Error:", pf)
-            pass
+            self.logger.error(pf)
 
         return CommandResult(api_req_result, None, None)

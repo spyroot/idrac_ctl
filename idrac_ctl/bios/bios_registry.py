@@ -32,32 +32,37 @@ class BiosRegistry(IDracManager,
         :return:
         """
         cmd_parser = cls.base_parser()
-        cmd_parser.add_argument('--registry_only',
-                                action='store_true',
-                                required=False, dest="is_registry_only",
-                                default=True,
-                                help="return only registry")
+        cmd_parser.add_argument(
+            '--registry_only',
+            action='store_true',
+            required=False, dest="is_registry_only",
+            default=True,
+            help="return only registry")
 
-        cmd_parser.add_argument('--attr_only',
-                                action='store_true',
-                                required=False, dest="is_attr_only",
-                                default=False,
-                                help="return only attribute")
+        cmd_parser.add_argument(
+            '--attr_only',
+            action='store_true',
+            required=False, dest="is_attr_only",
+            default=False,
+            help="return only attribute")
 
-        cmd_parser.add_argument('--attr_name', type=str,
-                                required=False, dest="attr_name",
-                                default=None,
-                                help="attribute name or list. Example --attr_name SystemServiceTag,OldSetupPassword")
+        cmd_parser.add_argument(
+            '--attr_name', type=str,
+            required=False, dest="attr_name",
+            default=None,
+            help="attribute name or list. Example --attr_name SystemServiceTag,OldSetupPassword")
 
-        cmd_parser.add_argument('--attr_list', action='store_true',
-                                required=False, dest="attr_list",
-                                default=False,
-                                help="return list of all attribute names.")
+        cmd_parser.add_argument(
+            '--attr_list', action='store_true',
+            required=False, dest="attr_list",
+            default=False,
+            help="return list of all attribute names.")
 
-        cmd_parser.add_argument('--filter-read_only', action='store_true',
-                                required=False, dest="no_read_only",
-                                default=False,
-                                help="will filter out all read-only.")
+        cmd_parser.add_argument(
+            '--filter-read_only', action='store_true',
+            required=False, dest="no_read_only",
+            default=False,
+            help="will filter out all read-only.")
 
         help_text = "command query bios registry"
         return cmd_parser, "bios-registry", help_text

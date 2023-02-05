@@ -15,7 +15,8 @@ from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, sa
 from idrac_ctl.idrac_manager import DeleteRequestFailed
 
 
-class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
+class JobDel(IDracManager,
+             scm_type=ApiRequestType.JobDel,
              name='job_del',
              metaclass=Singleton):
     """Command gets a job from iDRAC
@@ -32,15 +33,18 @@ class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
-                                default=False, help="Will create a task and will not wait.")
+        cmd_parser.add_argument(
+            '--async', action='store_true', required=False, dest="do_async",
+            default=False, help="Will create a task and will not wait.")
 
-        cmd_parser.add_argument('-j', '--job_id', required=True, dest="job_id", type=str,
-                                default=None, help="Job id. Example JID_744718373591")
+        cmd_parser.add_argument(
+            '-j', '--job_id', required=True, dest="job_id", type=str,
+            default=None, help="Job id. Example JID_744718373591")
 
-        cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                                default="",
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser.add_argument(
+            '-f', '--filename', required=False, type=str,
+            default="",
+            help="filename if we need to save a respond to a file.")
 
         help_text = "command delete a job"
         return cmd_parser, "job-rm", help_text
@@ -81,7 +85,9 @@ class JobDel(IDracManager, scm_type=ApiRequestType.JobDel,
                 ok = self.default_delete_success(response)
             else:
                 loop = asyncio.get_event_loop()
-                response = loop.run_until_complete(self.api_async_del_until_complete(r, headers))
+                response = loop.run_until_complete(
+                    self.api_async_del_until_complete(r, headers)
+                )
                 data = response.json()
                 save_if_needed(filename, data)
         except DeleteRequestFailed as drq:

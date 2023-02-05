@@ -9,6 +9,8 @@ from json import JSONEncoder
 class ApiRequestType(Enum):
     """Each commands enum.
     """
+    JobApply = auto()
+    BiosQueryPending = auto()
     ConvertToRaid = auto()
     ConvertNoneRaid = ()
     Drives = auto()
@@ -76,6 +78,8 @@ class ApiRequestType(Enum):
     ManagerQuery = auto()
     ManagerReset = auto()
 
+    BiosResetDefault = auto()
+
 
 class ScheduleJobType(Enum):
     """Each commands enum.
@@ -83,6 +87,7 @@ class ScheduleJobType(Enum):
     NoReboot = auto()
     AutoReboot = auto()
     OnReset = auto()
+    Immediate = auto()
 
 
 class RedfishActionEncoder(JSONEncoder):

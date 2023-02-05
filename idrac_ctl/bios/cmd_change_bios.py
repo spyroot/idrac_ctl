@@ -9,6 +9,7 @@ python idrac_ctl.py bios-registry --attr_list --attr_name SystemServiceTag,OldSe
 
 Author Mus spyroot@gmail.com
 """
+import json
 import warnings
 from abc import abstractmethod
 from typing import Optional
@@ -20,7 +21,8 @@ from idrac_ctl.shared import ScheduleJobType
 from datetime import datetime
 
 
-class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSettings,
+class BiosChangeSettings(IDracManager,
+                         scm_type=ApiRequestType.BiosChangeSettings,
                          name='bios_change_settings',
                          metaclass=Singleton):
     """A command changes bios settings
@@ -37,37 +39,63 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
         :return:
         """
         cmd_parser = cls.base_parser(is_reboot=True, is_expanded=False)
-        cmd_parser.add_argument('--attr_name', type=str,
-                                required=True, dest="attr_name", metavar="attribute name",
-                                default=None,
-                                help="attribute name or list. Example --attr_name MemTest,EmbSata")
+        cmd_parser.add_argument(
+            '--attr_name',
+            help="attribute name or list. Example --attr_name MemTest,EmbSata",
+            type=str, required=True, dest="attr_name", metavar="attribute name",
+            default=None
+        )
 
-        cmd_parser.add_argument('--attr_value', type=str,
-                                required=True, dest="attr_value", metavar="attribute value",
-                                default=None,
-                                help="attribute name or list. Example --attr_values Disabled,RaidMode")
+        cmd_parser.add_argument(
+            '--attr_value',
+            help="attribute name or list. Example --attr_values Disabled,RaidMode",
+            type=str, required=True, dest="attr_value", metavar="attribute value",
+            default=None
+        )
 
-        cmd_parser.add_argument('apply', choices=['on-reset', 'auto-boot', 'maintenance'],
-                                default="on-reset",
-                                help="choose when to apply change.")
+        cmd_parser.add_argument(
+            'apply',
+            help="choose when to apply change.",
+            choices=['on-reset', 'auto-boot', 'maintenance'],
+            default="on-reset")
 
-        cmd_parser.add_argument("--start_date",
-                                help="The start of maintenance window format YYYY-MM-DD",
-                                required=False,
-                                dest="start_date", metavar="start date",
-                                type=str)
+        cmd_parser.add_argument(
+            "--start_date",
+            help="The start of maintenance window format YYYY-MM-DD",
+            required=False,
+            dest="start_date", metavar="start date",
+            type=str
+        )
 
-        cmd_parser.add_argument("--start_time",
-                                help="The start of maintenance window format HH:MM:SS",
-                                required=False, default="00:00:00",
-                                dest="start_time", metavar="start time",
-                                type=str)
+        cmd_parser.add_argument(
+            "--start_time",
+            help="The start of maintenance window format HH:MM:SS",
+            required=False, default="00:00:00",
+            dest="start_time", metavar="start time",
+            type=str
+        )
 
-        cmd_parser.add_argument('--duration', type=int, required=False,
-                                dest="default_duration",
-                                metavar="duration",
-                                default=600,
-                                help="maximum duration for a maintenance window from a start time")
+        cmd_parser.add_argument(
+            '--duration',
+            help="maximum duration for a maintenance window from a start time",
+            type=int, required=False,
+            dest="default_duration",
+            metavar="duration",
+            default=600
+        )
+
+        cmd_parser.add_argument(
+            '--show', action='store_true',
+            required=False, dest="do_show", default=False,
+            help="will only show and will not apply any changes.."
+        )
+
+        cmd_parser.add_argument(
+            '-c', '--commit', action='store_true',
+            required=False, dest="do_commit", default=False,
+            help="by default bios change created in pending state, "
+                 "hence we can cancel, otherwise pass --commit or -c"
+        )
 
         help_text = "command change bios values"
         return cmd_parser, "bios-change", help_text
@@ -76,11 +104,10 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
     def crete_bios_config(current_config, attr_name, attr_val) -> dict:
         """Create new config for a bios.
         :param current_config:
-        :param attr_name:
-        :param attr_val:
-        :return:
+        :param attr_name: bios attribute name
+        :param attr_val: bios attribute value
+        :return: a dict
         """
-
         bios_payload = {
             "Attributes": {
             }
@@ -124,6 +151,8 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_reboot: Optional[bool] = False,
+                do_show: Optional[bool] = False,
+                do_commit: Optional[bool] = False,
                 start_date: Optional[str] = "",
                 start_time: Optional[str] = "",
                 default_duration: Optional[int] = 600,
@@ -133,6 +162,8 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
         :param do_reboot:
         :param default_duration:
         :param apply:
+        :param do_show: will only show final spec but will not apply any changes.
+        :param do_commit: by default value are in pending state.
         :param attr_value:  attribute value or list of values
         :param attr_name: attribute name or list of values
         :param do_async: note async will subscribe to an event loop.
@@ -144,36 +175,49 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
         :return: CommandResult and if filename provide will save to a file.
         """
         target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/BiosRegistry"
-        cmd_result = self.base_query(target_api,
-                                     filename=filename,
-                                     do_async=do_async,
-                                     do_expanded=False)
+        cmd_result = self.base_query(
+            target_api, filename=filename,
+            do_async=do_async, do_expanded=False
+        )
 
         registry = cmd_result.data['RegistryEntries']
         attribute_data = registry['Attributes']
 
-        payload = self.crete_bios_config(attribute_data, attr_name, attr_value)
+        payload = self.crete_bios_config(
+            attribute_data, attr_name, attr_value
+        )
         if apply.strip() == "auto-boot":
             start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
-            base_payload = self.schedule_job(ScheduleJobType.AutoReboot,
-                                             start_time=str(start_timestamp),
-                                             duration_time=default_duration)
+            base_payload = self.schedule_job(
+                ScheduleJobType.AutoReboot,
+                start_time=str(start_timestamp),
+                duration_time=default_duration
+            )
         elif apply.strip() == "maintenance":
             start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
-            base_payload = self.schedule_job(ScheduleJobType.NoReboot,
-                                             start_time=str(start_timestamp),
-                                             duration_time=default_duration)
+            base_payload = self.schedule_job(
+                ScheduleJobType.NoReboot,
+                start_time=str(start_timestamp),
+                duration_time=default_duration
+            )
         else:
-            base_payload = self.schedule_job(ScheduleJobType.OnReset,
-                                             start_time=None, duration_time=None)
+            base_payload = self.schedule_job(
+                ScheduleJobType.OnReset,
+                start_time=None, duration_time=None
+            )
 
         base_payload.update(payload)
         if verbose:
             print(f"payload: {base_payload}")
 
+        if do_show:
+            return CommandResult(json.dumps(payload), None, None)
+
         target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
-        api_result = self.base_patch(target_api, payload=payload,
-                                     do_async=do_async, expected_status=200)
+        api_result = self.base_patch(
+            target_api, payload=payload,
+            do_async=do_async, expected_status=200
+        )
         if verbose:
             resp = api_result.extra
             print(f"api_result.data: hdr {resp.headers}")
@@ -191,30 +235,43 @@ class BiosChangeSettings(IDracManager, scm_type=ApiRequestType.BiosChangeSetting
                         self.default_json_printer(json_data)
 
                     job_id = self.job_id_from_header(resp)
+                    # we got job id, no apply required.
                     if job_id is not None:
                         data = self.fetch_job(job_id)
                         if isinstance(api_result.data, dict):
                             result_data.update(data)
+                    else:
+                        cmd_result = self.sync_invoke(
+                            ApiRequestType.JobApply,
+                            "job_apply",
+                            do_reboot=do_reboot,
+                            do_watch=True,
+                        )
+                        # if we applied and rebooted no need second reboot.
+                        do_reboot = False
+                        return cmd_result
             except UnexpectedResponse as ur:
-                warnings.warn(str(ur))
-                pass
+                self.logger.error(ur)
 
         if do_reboot:
-            cmd_result = self.sync_invoke(ApiRequestType.ChassisQuery,
-                                          "chassis_service_query",
-                                          data_filter="PowerState")
+            cmd_result = self.sync_invoke(
+                ApiRequestType.ChassisQuery,
+                "chassis_service_query",
+                data_filter="PowerState"
+            )
 
             if isinstance(cmd_result.data, dict) and 'PowerState' in cmd_result.data:
                 pd_state = cmd_result.data['PowerState']
                 if pd_state == 'On':
-                    cmd_result = self.sync_invoke(ApiRequestType.RebootHost,
-                                                  "reboot",
-                                                  reset_type="ForceRestart")
+                    cmd_result = self.sync_invoke(
+                        ApiRequestType.RebootHost,
+                        "reboot", reset_type="ForceRestart"
+                    )
                     if 'Status' in cmd_result.data:
                         result_data.update({"Reboot": cmd_result.data['Status']})
                 else:
-                    warnings.warn(f"Can't reboot a host , chassis power state {pd_state}")
+                    self.logger.warn(f"Can't reboot a host, chassis power state {pd_state}")
             else:
-                warnings.warn(f"Failed fetch chassis power state")
+                self.logger.warn(f"Failed fetch chassis power state")
 
         return CommandResult({}, None, None)

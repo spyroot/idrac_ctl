@@ -14,7 +14,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, save_if_needed, CommandResult
 
 
-class FirmwareInventoryQuery(IDracManager, scm_type=ApiRequestType.FirmwareInventoryQuery,
+class FirmwareInventoryQuery(IDracManager,
+                             scm_type=ApiRequestType.FirmwareInventoryQuery,
                              name='firmware_inv_query',
                              metaclass=Singleton):
     """

@@ -112,7 +112,7 @@ def json_printer(json_data,
                                   cls=RedfishActionEncoder)
 
         if len(json_raw) > 0:
-            if header is not None:
+            if header is not None and cmd_args.json_only is False:
                 print(header)
 
             if colorized:
@@ -146,7 +146,8 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
     redfish_api = IDracManager(idrac_ip=cmd_args.idrac_ip,
                                idrac_username=cmd_args.idrac_username,
                                idrac_password=cmd_args.idrac_password,
-                               insecure=cmd_args.insecure)
+                               insecure=cmd_args.insecure,
+                               is_debug=cmd_args.debug)
 
     _ = redfish_api.check_api_version()
 
@@ -281,6 +282,8 @@ def idrac_main_ctl():
                         help="disables rest action data stdout output.")
     parser.add_argument('--json', action='store_true', required=False, default=True,
                         help="by default we use json to output to console.")
+    parser.add_argument('--json_only', action='store_true', required=False, default=False,
+                        help="by default we use different section. --json_only will output only json.")
     parser.add_argument('--no-stdout', '--no_stdout', action='store_true', required=False, default=False,
                         help="by default we use stdout output.")
     parser.add_argument('-f', '--filename', required=False, type=str,
@@ -294,16 +297,25 @@ def idrac_main_ctl():
         logger.setLevel(logging.DEBUG)
 
     if args.idrac_ip is None or len(args.idrac_ip) == 0:
-        print("Please indicate the idrac ip. "
-              "--idrac_ip or set IDRAC_IP environment.")
+        print(
+            "Please indicate the idrac ip. "
+            "--idrac_ip or set IDRAC_IP environment variable. "
+            "(export IDRAC_IP=ip_address"
+        )
         sys.exit(1)
     if args.idrac_username is None or len(args.idrac_username) == 0:
-        print("Please indicate the idrac username. "
-              "--idrac_username or set IDRAC_USERNAME environment.")
+        print(
+            "Please indicate the idrac username."
+            "--idrac_username or set IDRAC_USERNAME environment variable. "
+            "(export IDRAC_USERNAME=ip_address"
+        )
         sys.exit(1)
     if args.idrac_password is None or len(args.idrac_password) == 0:
-        print("Please indicate the idrac password. "
-              "--idrac_password or set IDRAC_PASSWORD environment.")
+        print(
+            "Please indicate the idrac password. "
+            "--idrac_password or set IDRAC_PASSWORD environment."
+            "(export IDRAC_PASSWORD=ip_address"
+        )
         sys.exit(1)
 
     try:

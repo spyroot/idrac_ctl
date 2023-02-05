@@ -9,7 +9,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class JobServices(IDracManager, scm_type=ApiRequestType.JobServices,
+class JobServices(IDracManager,
+                  scm_type=ApiRequestType.JobServices,
                   name='job_service_query',
                   metaclass=Singleton):
     """A command query job_service_query.
