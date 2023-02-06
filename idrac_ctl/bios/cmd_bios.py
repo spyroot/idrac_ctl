@@ -32,6 +32,7 @@ from idrac_ctl import IDracManager, Singleton
 from idrac_ctl import ApiRequestType, CommandResult
 from idrac_ctl.cmd_utils import save_if_needed, find_ids
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
 
 
 class BiosQuery(IDracManager,
@@ -52,40 +53,45 @@ class BiosQuery(IDracManager,
         :return:
         """
         if parent is not None:
-            cmd_arg = argparse.ArgumentParser(add_help=False,
-                                              parents=[parent],
-                                              description="query iDRAC bios information",
-                                              formatter_class=CustomArgumentDefaultsHelpFormatter)
+            cmd_arg = BiosSubcommand(
+                add_help=False,
+                parents=[parent],
+                description="query iDRAC bios information",
+                formatter_class=CustomArgumentDefaultsHelpFormatter
+            )
         else:
-            cmd_arg = argparse.ArgumentParser(add_help=False,
-                                              description="query iDRAC bios information",
-                                              formatter_class=CustomArgumentDefaultsHelpFormatter)
+            cmd_arg = BiosSubcommand(
+                add_help=False,
+                description="query iDRAC bios information",
+                formatter_class=CustomArgumentDefaultsHelpFormatter
+            )
 
-        # prog = None,
-        # usage = None,
-        # description = None,
+        cmd_arg.add_argument(
+            '--async', required=False, default=False,
+            action='store_true', dest="do_async",
+            help="Will use asyncio.")
 
-        cmd_arg.add_argument('--async', required=False, default=False,
-                             action='store_true', dest="do_async",
-                             help="Will use asyncio.")
+        cmd_arg.add_argument(
+            '--attr_only', required=False, default=False,
+            action='store_true', dest='attr_only',
+            help="Will only show attributes.")
 
-        cmd_arg.add_argument('--attr_only', required=False, default=False,
-                             action='store_true', dest='attr_only',
-                             help="Will only show attributes.")
+        cmd_arg.add_argument(
+            '--filter', required=False, type=str, dest="attr_filter",
+            metavar="BIOS_ATTRIBUTE",
+            help="will filter on bios attribute information. "
+                 "Example --filter ProcCStates , "
+                 "will filter and and show C-State.")
 
-        cmd_arg.add_argument('--filter', required=False, type=str, dest="attr_filter",
-                             metavar="BIOS_ATTRIBUTE",
-                             help="will filter on bios attribute information. "
-                                  "Example --filter ProcCStates , "
-                                  "will filter and and show C-State.")
+        cmd_arg.add_argument(
+            '--deep', default=False, required=False, action='store_true',
+            dest="do_deep", help="deep walk. will make a separate "
+                                 "rest api call for each discovered api.")
 
-        cmd_arg.add_argument('--deep', default=False, required=False, action='store_true',
-                             dest="do_deep", help="deep walk. will make a separate "
-                                                  "rest api call for each discovered api.")
-
-        cmd_arg.add_argument('-f', '--filename', required=False, default="",
-                             type=str,
-                             help="filename if we need to save a respond to a file.")
+        cmd_arg.add_argument(
+            '-f', '--filename', required=False, default="",
+            type=str,
+            help="filename if we need to save a respond to a file.")
 
         help_text = "command fetch the bios information"
         return cmd_arg, "bios", help_text
@@ -113,16 +119,18 @@ class BiosQuery(IDracManager,
         idrac_api = "/redfish/v1/Systems/System.Embedded.1/Bios"
 
         if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"do_deep:{do_deep} do_async:{do_async} "
-                  f"attr_filter:{attr_filter}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(
+                f"cmd args data_type: {data_type} "
+                f"do_deep:{do_deep} do_async:{do_async} "
+                f"attr_filter:{attr_filter}")
+            self.logger.debug(
+                f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        r: str = f"https://{self.idrac_ip}{idrac_api}"
+        r: str = f"{self._default_method}{self.idrac_ip}{idrac_api}"
         if not do_async:
             response = self.api_get_call(r, headers)
             self.default_error_handler(response)

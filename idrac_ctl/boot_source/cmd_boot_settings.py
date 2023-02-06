@@ -14,7 +14,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
-class BootSettings(IDracManager, scm_type=ApiRequestType.BootSettingsQuery,
+class BootSettings(IDracManager,
+                   scm_type=ApiRequestType.BootSettingsQuery,
                    name='boot_settings_query',
                    metaclass=Singleton):
     """
@@ -32,13 +33,15 @@ class BootSettings(IDracManager, scm_type=ApiRequestType.BootSettingsQuery,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', default=False,  action='store_true',
-                                required=False, dest="do_async",
-                                help="Will create a task and will not wait.")
+        cmd_parser.add_argument(
+            '--async', default=False, action='store_true',
+            required=False, dest="do_async",
+            help="Will create a task and will not wait.")
 
-        cmd_parser.add_argument('-f', '--filename', required=False,
-                                default="", type=str,
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser.add_argument(
+            '-f', '--filename', required=False,
+            default="", type=str,
+            help="filename if we need to save a respond to a file.")
 
         help_text = "command fetch the boot setting and pending"
         return cmd_parser, "boot-settings", help_text

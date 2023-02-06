@@ -1,22 +1,34 @@
 """iDRAC query bios registry
 
-Command provides raw query bios registry.
-python idrac_ctl.py bios-registry --attr_name SystemServiceTag,OldSetupPassword
+Command provides capability to change bios settings
+from JSON spec or via command line via --attr_name and comma separate list
+of BIOS options and --attr_value.
 
-Will return SystemServiceTag,OldSetupPassword and list of all attributes.
+Example:
 
-python idrac_ctl.py bios-registry --attr_list --attr_name SystemServiceTag,OldSetupPassword
+idrac_ctl bios-change --from_spec ./test.spec.json --show on-reset
+
+{
+        "Attributes": {
+                "MemFrequency": "MaxPerf",
+                        "MemTest": "Disabled",
+                        "OsWatchdogTimer": "Disabled",
+                        "ProcCStates": "Disabled",
+                        "SriovGlobalEnable": "Enabled"
+        }
+}
 
 Author Mus spyroot@gmail.com
 """
 import json
-import warnings
 from abc import abstractmethod
 from typing import Optional
 
 import requests
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, UnexpectedResponse, InvalidArgument
+from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.cmd_exceptions import InvalidJsonSpec, InvalidArgument, UnexpectedResponse, MissingMandatoryArguments
 from idrac_ctl.shared import ScheduleJobType
 from datetime import datetime
 
@@ -39,14 +51,19 @@ class BiosChangeSettings(IDracManager,
         :return:
         """
         cmd_parser = cls.base_parser(is_reboot=True, is_expanded=False)
-        cmd_parser.add_argument(
+
+        bios_group = cmd_parser.add_argument_group('bios', '# BIOS attribute options')
+        mt_group = cmd_parser.add_argument_group('maintenance', '# Maintenance related options')
+        spec_from_group = cmd_parser.add_argument_group('json', '# JSON from a spec options')
+
+        bios_group.add_argument(
             '--attr_name',
             help="attribute name or list. Example --attr_name MemTest,EmbSata",
             type=str, required=False, dest="attr_name", metavar="attribute name",
             default=None
         )
 
-        cmd_parser.add_argument(
+        bios_group.add_argument(
             '--attr_value',
             help="attribute name or list. Example --attr_values Disabled,RaidMode",
             type=str, required=False, dest="attr_value", metavar="attribute value",
@@ -55,27 +72,35 @@ class BiosChangeSettings(IDracManager,
 
         cmd_parser.add_argument(
             'apply',
-            help="choose when to apply change.",
+            help='''choose when to apply a change.
+            maintenance will create a future task,
+            on-reset will apply on next rest.
+            ''',
             choices=['on-reset', 'auto-boot', 'maintenance'],
             default="on-reset")
 
-        cmd_parser.add_argument(
+        mt_group.add_argument(
             "--start_date",
-            help="The start of maintenance window format YYYY-MM-DD",
+            help='''The start of maintenance window format YYYY-MM-DD
+            This will create a future task.
+            ''',
             required=False,
             dest="start_date", metavar="start date",
             type=str
         )
 
-        cmd_parser.add_argument(
+        mt_group.add_argument(
             "--start_time",
-            help="The start of maintenance window format HH:MM:SS",
+            help='''
+            The start of maintenance window format HH:MM:SS \n
+            This will create a future task.
+            ''',
             required=False, default="00:00:00",
             dest="start_time", metavar="start time",
             type=str
         )
 
-        cmd_parser.add_argument(
+        mt_group.add_argument(
             '--duration',
             help="maximum duration for a maintenance window from a start time",
             type=int, required=False,
@@ -97,14 +122,14 @@ class BiosChangeSettings(IDracManager,
                  "hence we can cancel, otherwise pass --commit or -c"
         )
 
-        cmd_parser.add_argument(
-            '--from_spec',
-            help="Read json spec for new bios attributes",
+        spec_from_group.add_argument(
+            '-s', '--from_spec',
+            help="Read json spec for new bios attributes,  (Example --from_spec new_bios.json)",
             type=str, required=True, dest="from_spec", metavar="file name",
             default=None
         )
 
-        help_text = "command change bios values"
+        help_text = "command change bios configuration attributes"
         return cmd_parser, "bios-change", help_text
 
     @staticmethod
@@ -148,6 +173,21 @@ class BiosChangeSettings(IDracManager,
                     bios_payload['Attributes'][k] = int(v)
 
         return bios_payload
+
+    def validate_future_job(self, start_date: str, start_time: str):
+        """Executes command to change bios settings.
+
+       :param start_date: start date for a job
+       :param start_time: a start time for a job
+       :raise: MissingMandatoryArguments if mandatory args missing.
+       """
+        if start_date is None or len(start_date):
+            raise MissingMandatoryArguments("Maintenance job requires a start date.")
+        if start_time is None or len(start_time):
+            raise MissingMandatoryArguments("Maintenance job requires a start time.")
+
+        idrac_current_time = self.idrac_current_time()
+        print(idrac_current_time)
 
     def execute(self,
                 attr_name: Optional[str] = None,
@@ -194,14 +234,19 @@ class BiosChangeSettings(IDracManager,
 
         # we read either from a file or form args
         # comma seperated.
-        if from_spec is not None and len(from_spec) > 0:
-            with open(from_spec) as user_file:
-                file_contents = user_file.read()
-            payload = json.loads(file_contents)
-        else:
-            payload = self.crete_bios_config(
-                attribute_data, attr_name, attr_value
-            )
+        try:
+            if from_spec is not None and len(from_spec) > 0:
+                with open(from_spec) as user_file:
+                    file_contents = user_file.read()
+                payload = json.loads(file_contents)
+            else:
+                payload = self.crete_bios_config(
+                    attribute_data, attr_name, attr_value
+                )
+        except json.decoder.JSONDecodeError as jde:
+            raise InvalidJsonSpec(
+                "It looks like your JSON spec is invalid. "
+                "JSONlint the file and check..".format(str(jde)))
 
         if apply.strip() == "auto-boot":
             start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
@@ -211,6 +256,7 @@ class BiosChangeSettings(IDracManager,
                 duration_time=default_duration
             )
         elif apply.strip() == "maintenance":
+            self.validate_future_job(start_date, start_time)
             start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
             base_payload = self.schedule_job(
                 ScheduleJobType.NoReboot,

@@ -115,7 +115,7 @@ main command          list of idrac_ctl commands
 
 From a system we can view all compute system action and attributes.
 ```bash
-python idrac_ctl.py system
+idrac_ctl system
 ```
 trimmed output
 
@@ -147,6 +147,44 @@ trimmed output
 If you pass for the same command --deep flag, it will recursively walk for each action 
 and collect a unified view.
 
+## Basic BIOS manipulation.
+
+For example, we want to disable the memory test, disable the os watch timer, disable the C state, 
+and enable SRIOV.  Create a spec file and run. Note that many BIOS changes require a host reset. 
+Therefore, if you have pending changes, these changes must either be applied or reset. Similarly,
+when you apply, change must be applied.
+
+You can pass --commit --reboot, where commit will commit, i.e., apply change --reboot post-commit.
+
+Example change bios from JSON spec.
+```bash
+idrac_ctl bios-change --from_spec ./my_test.spec.json on-reset
+```
+
+```json
+{
+        "Attributes": {
+                "MemFrequency": "MaxPerf",
+                        "MemTest": "Disabled",
+                        "OsWatchdogTimer": "Disabled",
+                        "ProcCStates": "Disabled",
+                        "SriovGlobalEnable": "Enabled"
+        }
+}
+```
+
+Example change bios from JSON spec, commit and reboot.
+
+```bash
+idrac_ctl bios-change --from_spec ./my_test.spec.json --show on-reset --commit --reboot
+```
+
+Example --show the flag. It will generate the final spec command will generate.
+
+```bash
+idrac_ctl bios-change --from_spec ./my_test.spec.json --show on-reset
+```
+
 ## More advanced example. 
 
 Let say we need boot one shot from ISO file from HTTP link and start
@@ -154,7 +192,7 @@ unattended kickstart installation.
 
 First, check if any virtual media is already attached and check the device id.
 ```bash
-python idrac_ctl.py get_virtual_media
+idrac_ctl get_virtual_media
 ```
 
 If you need to eject virtual media
@@ -165,12 +203,12 @@ python idrac_ctl.py eject_virtual_media --device_id 1
 Now insert virtual media. If you fancy you can start local HTTP listener 
 and pass your IP.
 ```bash
-python idrac_ctl.py insert_virtual_media --uri_path http://10.241.7.99/ubuntu-22.04.1-desktop-amd64.iso --device_id 1
+idrac_ctl insert_virtual_media --uri_path http://10.241.7.99/ubuntu-22.04.1-desktop-amd64.iso --device_id 1
 ```
 
 Confirm that virtual media inserted
 ```bash
-python idrac_ctl.py get_virtual_media
+idrac_ctl get_virtual_media
 ```
 
 We see image attached from get_virtual_media
@@ -214,7 +252,7 @@ Set BIOS boot in one shot. In this setting on reboot, we will boot from CD-ROM w
 BIOS will boot OS from the default location. i.e., whatever is first on the list.
 
 ```bash
-python idrac_ctl.py boot_one_shot --device Cd
+idrac_ctl boot_one_shot --device Cd
 # note Cd is default anyway
 # --uefi_target if we need indicate UEFI device id.
 ```
@@ -230,7 +268,7 @@ Note in my example, we didn't use UEFI.   If you need to use UEFI.
 First, get UEFI ids
 
 ```bash
-python idrac_ctl.py boot_source
+idrac_ctl boot_source
 ```
 
 Each device has a UefiDevicePath key. You can pass this key to insert media action 
@@ -253,7 +291,7 @@ if you need to boot from UEFI.
 
 Note 
 ```bash
-idrac_ctl.py boot_one_shot --uefi_target
+idrac_ctl boot_one_shot --uefi_target
 ```
 
 ## Export/Import system configuration
@@ -264,19 +302,19 @@ In this setting, each request to iDRAC send asynchronously, and we don't want re
 for job completion.
 
 ```bash
-python idrac_ctl.py system-export --filename system.json
-python idrac_ctl.py system-import --config system.json
+idrac_ctl system-export --filename system.json
+idrac_ctl system-import --config system.json
 ```
 
 If we don't need to wait, we can pass --async. It will create a job, but it will not wait 
 for a job to complete.
 
 ```bash
-python idrac_ctl.py export --filename system.json
+idrac_ctl export --filename system.json
 ```
 
 ```bash
-python idrac_ctl.py export --filename system.json --async
+idrac_ctl export --filename system.json --async
 ```
 
 This command will output job_id that we can use with job --job_id to get a job status
@@ -290,7 +328,7 @@ This command will output job_id that we can use with job --job_id to get a job s
 You can later fetch a result of job.
 
 ```bash
-python idrac_ctl.py  job --job_id JID_745386566338
+idrac_ctl  job --job_id JID_745386566338
 
 ```
 
@@ -318,13 +356,13 @@ sudo systemctl restart smbd
 Now we can mount.  Note in my case I use default username vmware and password 123456.
 
 ```bash
-python idrac_ctl.py oem-attach --ip_addr $CIFS_SERVER --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
+idrac_ctl oem-attach --ip_addr $CIFS_SERVER --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
 ```
 
 Now we can check status.
 
 ```bash
-python idrac_ctl.py oem-attach-status
+idrac_ctl oem-attach-status
 {
     "DriversAttachStatus": "NotAttached",
     "ISOAttachStatus": "Attached"
@@ -352,13 +390,13 @@ Note many values we can't change. Keep attention to the read-only flag.
 Also, note if a reboot is required or not.
 
 ```bash
-python idrac_ctl.py bios-registry --attr_list
+idrac_ctl bios-registry --attr_list
 ```
 
 For example attribute PowerCycleRequest.
 
 ```bash
-python idrac_ctl.py bios-registry --attr_name PowerCycleRequest
+idrac_ctl bios-registry --attr_name PowerCycleRequest
 ```
 
 ```json
@@ -396,13 +434,13 @@ We can also query for a BIOS attributes that we can change.
 Save result to a file and find value that you need change.
 
 ```bash
-python idrac_ctl.py bios-registry --filter-read_only -f bios.json
+idrac_ctl bios-registry --filter-read_only -f bios.json
 ```
 
 In my case I disable Mem Test and enabled MmioAbove4Gb
 
 ```bash
-python idrac_ctl.py bios-change  --attr_name MemTest,MmioAbove4Gb --attr_value Disabled,Enabled
+idrac_ctl bios-change  --attr_name MemTest,MmioAbove4Gb --attr_value Disabled,Enabled
 ```
 
 

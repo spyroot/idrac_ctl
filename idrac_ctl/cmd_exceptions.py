@@ -2,8 +2,21 @@ class InvalidArgument(Exception):
     pass
 
 
+class InvalidJsonSpec(Exception):
+    """Must raise in case json spec is invalid.
+    """
+    pass
+
+
+class MissingMandatoryArguments(Exception):
+    """Must raise in case argument missing.
+    """
+    pass
+
+
 class FailedDiscoverAction(Exception):
-    """Must raise if failed discover action.
+    """Must raise if requested action failed to discover.
+    i.e. old IDRAC version for example.
     """
     pass
 
@@ -44,4 +57,3 @@ class PatchRequestFailed(Exception):
 
 class DeleteRequestFailed(Exception):
     pass
-

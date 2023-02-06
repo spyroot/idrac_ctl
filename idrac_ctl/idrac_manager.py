@@ -33,6 +33,7 @@ from typing import Optional, Tuple, Dict, Any
 import re
 import logging
 
+from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType
 from idrac_ctl.cmd_utils import save_if_needed
 from .cmd_exceptions import AuthenticationFailed
@@ -79,7 +80,7 @@ class IDracManager:
         self._is_verify_cert = insecure
         self._x_auth = x_auth
         self._is_debug = is_debug
-
+        self._default_method = "https://"
         self.logger = logging.getLogger(__name__)
 
         self.content_type = {'Content-Type': 'application/json; charset=utf-8'}
@@ -308,7 +309,7 @@ class IDracManager:
         percent_done = 0
         with tqdm(total=100) as pbar:
             while True:
-                resp = self.api_get_call(f"https://{self.idrac_ip}/redfish/v1/"
+                resp = self.api_get_call(f"{self._default_method}{self.idrac_ip}/redfish/v1/"
                                          f"TaskService/Tasks/{job_id}", hdr={})
                 if resp.status_code == 401:
                     AuthenticationFailed("Authentication failed.")
@@ -376,7 +377,7 @@ class IDracManager:
         """
         headers = {}
         headers.update(self.json_content_type)
-        r = f"https://{self._idrac_ip}/redfish/v1/Dell/Managers" \
+        r = f"{self._default_method}{self._idrac_ip}/redfish/v1/Dell/Managers" \
             f"/iDRAC.Embedded.1/DellLCService"
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
@@ -508,7 +509,7 @@ class IDracManager:
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
-        r = f"https://{self.idrac_ip}/redfish/v1/Managers" \
+        r = f"{self._default_method}{self.idrac_ip}/redfish/v1/Managers" \
             f"/iDRAC.Embedded.1?$select=FirmwareVersion"
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
@@ -904,9 +905,9 @@ class IDracManager:
             headers.update(self.json_content_type)
 
         if do_expanded:
-            r = f"https://{self.idrac_ip}{resource}{self.expanded()}"
+            r = f"{self._default_method}{self.idrac_ip}{resource}{self.expanded()}"
         else:
-            r = f"https://{self.idrac_ip}{resource}"
+            r = f"{self._default_method}{self.idrac_ip}{resource}"
 
         if not do_async:
             response = self.api_get_call(r, headers)
@@ -952,7 +953,7 @@ class IDracManager:
         ok = False
         response = None
         try:
-            r = f"https://{self.idrac_ip}{resource}"
+            r = f"{self._default_method}{self.idrac_ip}{resource}"
             if not do_async:
                 if self._is_debug:
                     self.logger.debug(json.dumps(pd))
@@ -1005,7 +1006,7 @@ class IDracManager:
         ok = False
         response = None
         try:
-            r = f"https://{self.idrac_ip}{resource}"
+            r = f"{self._default_method}{self.idrac_ip}{resource}"
             if not do_async:
                 response = self.api_post_call(r, json.dumps(pd), headers)
                 if verbose:
@@ -1120,7 +1121,11 @@ class IDracManager:
         and args.
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False)
+        cmd_parser = argparse.ArgumentParser(add_help=False, formatter_class=CustomArgumentDefaultsHelpFormatter)
+
+        output_parser = cmd_parser.add_argument_group('output', 'Output related options')
+        chassis_parser = cmd_parser.add_argument_group('chassis', 'Chassis state options')
+
         if is_async:
             cmd_parser.add_argument(
                 '-a', '--async', action='store_true',
@@ -1130,21 +1135,21 @@ class IDracManager:
             )
 
         if is_expanded:
-            cmd_parser.add_argument(
+            output_parser.add_argument(
                 '-e', '--expanded', action='store_true',
                 required=False, dest="do_expanded",
                 default=False,
-                help="expanded request for deeper view."
+                help="expanded view, depend. it allows viewing more detail IDRAC data."
             )
         if is_file_save:
-            cmd_parser.add_argument(
+            output_parser.add_argument(
                 '-f', '--filename', required=False, default="",
                 type=str,
-                help="filename if we need to save a respond to a file."
+                help="filename, if we need to save a respond to a file."
             )
 
         if is_reboot:
-            cmd_parser.add_argument(
+            chassis_parser.add_argument(
                 '-r', '--reboot', action='store_true',
                 required=False, dest="do_reboot",
                 default=False,

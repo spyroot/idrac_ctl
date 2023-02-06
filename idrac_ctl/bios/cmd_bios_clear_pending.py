@@ -14,6 +14,7 @@ from typing import Optional
 from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
 from idrac_ctl.cmd_exceptions import FailedDiscoverAction
 from idrac_ctl.idrac_manager import PostRequestFailed
+from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
 
 
 class BiosClearPending(IDracManager,
@@ -35,7 +36,7 @@ class BiosClearPending(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False)
+        cmd_parser = BiosSubcommand(add_help=False)
 
         cmd_parser.add_argument('--async', default=False, required=False,
                                 action='store_true', dest="do_async",
