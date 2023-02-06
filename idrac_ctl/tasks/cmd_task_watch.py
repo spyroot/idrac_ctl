@@ -46,8 +46,8 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
                                 default="",
                                 help="filename if we need to save a respond to a file.")
 
-        help_text = "command fetch task. "
-        return cmd_parser, "task", help_text
+        help_text = "command watch task progress."
+        return cmd_parser, "task-watch", help_text
 
     def execute(self,
                 job_id: str,
@@ -57,22 +57,7 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
                 do_async: Optional[bool] = False,
                 **kwargs
                 ) -> CommandResult:
-        """Exports system configuration from idrac
-
-        Default, Clone, Replace
-        Default, IncludeReadOnly, IncludePasswordHashValues
-        ShareParameters
-
-        Share parameters and values
-        - IP address of the network share
-        - Name of network share
-        - File name for the SCP
-        - CIFS, NFS, HTTP, HTTPS
-        - Username to log on to the share — for CIFS share only.
-        - Password to log on to the share — for CIFS share only.
-        - Workgroup name to log on to the share
-        - Can be the component name or an FQDN. The default value is ALL.
-
+        """watch current task.
         :param job_id:
         :param do_async:
         :param data_type:
@@ -82,9 +67,10 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
         """
 
         if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"do_async:{do_async} job_id:{job_id}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.info(
+                f"cmd args data_type: {data_type} "
+                f"do_async:{do_async} job_id:{job_id}")
+            self.logger.info(f"the rest of args: {kwargs}")
 
         data = self.sync_invoke(
             ApiRequestType.ChassisQuery,

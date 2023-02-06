@@ -2,6 +2,12 @@ class InvalidArgument(Exception):
     pass
 
 
+class UncommittedPendingChanges(Exception):
+    """Must raise if state has Uncommitted changes.
+    """
+    pass
+
+
 class InvalidJsonSpec(Exception):
     """Must raise in case json spec is invalid.
     """

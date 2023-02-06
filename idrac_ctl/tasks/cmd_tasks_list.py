@@ -9,7 +9,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class TasksList(IDracManager, scm_type=ApiRequestType.TasksList,
+class TasksList(IDracManager,
+                scm_type=ApiRequestType.TasksList,
                 name='chassis_service_query',
                 metaclass=Singleton):
     """A command query job_service_query.
@@ -27,7 +28,7 @@ class TasksList(IDracManager, scm_type=ApiRequestType.TasksList,
         """
         cmd_parser = cls.base_parser()
         help_text = "command fetch tasks list"
-        return cmd_parser, "tasks-list", help_text
+        return cmd_parser, "tasks", help_text
 
     def execute(self,
                 filename: Optional[str] = None,

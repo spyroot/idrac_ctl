@@ -1,11 +1,14 @@
 """iDRAC query bios registry
 
 Command provides raw query bios registry.
-python idrac_ctl.py bios-registry --attr_name SystemServiceTag,OldSetupPassword
+idrac_ctl bios-registry --attr_name SystemServiceTag,OldSetupPassword
 
 Will return SystemServiceTag,OldSetupPassword and list of all attributes.
 
-python idrac_ctl.py bios-registry --attr_list --attr_name SystemServiceTag,OldSetupPassword
+If we only need get values for particular options.
+idrac_ctl --nocolor -d bios-registry --attr_name EnergyPerformanceBias --option_only
+
+idrac_ctl bios-registry --attr_list --attr_name SystemServiceTag,OldSetupPassword
 
 Author Mus spyroot@gmail.com
 """
@@ -50,7 +53,8 @@ class BiosRegistry(IDracManager,
             '--attr_name', type=str,
             required=False, dest="attr_name",
             default=None,
-            help="attribute name or list. Example --attr_name SystemServiceTag,OldSetupPassword")
+            help="attribute name or list. "
+                 "(Example --attr_name SystemServiceTag,OldSetupPassword)")
 
         cmd_parser.add_argument(
             '--attr_list', action='store_true',
@@ -59,12 +63,19 @@ class BiosRegistry(IDracManager,
             help="return list of all attribute names.")
 
         cmd_parser.add_argument(
-            '--filter-read_only', action='store_true',
-            required=False, dest="no_read_only",
+            '--option_only', action='store_true',
+            required=False, dest="is_value_only",
             default=False,
-            help="will filter out all read-only.")
+            help="will only output for given attribute value choices. Example: "
+                 "(bios-registry --attr_name EnergyPerformanceBias --option_only)"
+        )
 
-        help_text = "command query bios registry"
+        cmd_parser.add_argument(
+            '--noreadonly', action='store_true',
+            required=False, dest="no_read_only", default=False,
+            help="will filter out from output all read-only attributes.")
+
+        help_text = "command query bios registry attributes"
         return cmd_parser, "bios-registry", help_text
 
     def execute(self,
@@ -78,6 +89,7 @@ class BiosRegistry(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
+                is_value_only: Optional[bool] = True,
                 **kwargs) -> CommandResult:
         """Executes query bios registry.
 
@@ -88,6 +100,7 @@ class BiosRegistry(IDracManager,
         :param is_attr_only: will return all attributes
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
+        :param is_value_only:  will only return value , choices that attribute can take.
         :param filename: if filename indicate call will save a bios setting to a file.
         :param verbose: enables verbose output
         :param data_type: json or xml
@@ -105,22 +118,17 @@ class BiosRegistry(IDracManager,
         registry = cmd_result.data['RegistryEntries']
         data = registry['Attributes']
 
-        if attr_list:
-            if isinstance(data, list):
-                attribute_names = [d['AttributeName'] for d in data]
+        if attr_list and isinstance(data, list):
+            attribute_names = [d['AttributeName'] for d in data]
 
         if attr_name is not None and len(attr_name) > 0:
-            if "," in attr_name:
-                attr_names = attr_name.split(",")
-            else:
-                attr_names = [attr_name]
+            attr_names = attr_name.split(",") if "," in attr_name else [attr_name]
 
             # filter by attribute name
             if isinstance(data, list):
                 for n in attr_names:
                     for entry in data:
                         if entry['AttributeName'] == n:
-                            # entry_dict.update(entry)
                             filtered_result.append(entry)
                             break
                 data = filtered_result
@@ -134,6 +142,7 @@ class BiosRegistry(IDracManager,
                 data = registry['Attributes']
 
         filtered_read_only = []
+        # filter out all
         if no_read_only:
             if 'RegistryEntries' in data:
                 source_data = registry['RegistryEntries']['Attributes']
@@ -152,5 +161,9 @@ class BiosRegistry(IDracManager,
             data = filtered_read_only
 
         save_if_needed(filename, data)
+
+        # filter only value choices
+        if is_value_only:
+            data = [entry['Value'] for entry in data if isinstance(entry, dict) and 'Value' in entry][0]
 
         return CommandResult(data, None, attribute_names)

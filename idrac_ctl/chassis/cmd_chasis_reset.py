@@ -78,7 +78,7 @@ class ChassisReset(IDracManager,
             FailedDiscoverAction("Failed discover reset chassis actions.")
 
         payload = {'ResetType': reset_type}
-        r = f"https://{self.idrac_ip}{target_api}"
+        r = f"{self._default_method}{self.idrac_ip}{target_api}"
 
         ok = False
         try:
@@ -90,8 +90,13 @@ class ChassisReset(IDracManager,
                 ok, response = loop.run_until_complete(
                     self.async_post_until_complete(r, json.dumps(payload), headers)
                 )
+
+                job_id = self.parse_task_id(response)
+                self.logger.info(f"job id: {job_id}")
+                if len(job_id) > 0:
+                    self.fetch_job(job_id)
+
         except PostRequestFailed as prf:
-            print(prf)
-            pass
+            self.logger.error(prf)
 
         return CommandResult(self.api_success_msg(ok), None, None)

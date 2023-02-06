@@ -35,6 +35,7 @@ from idrac_ctl.cmd_exceptions import UnsupportedAction
 from idrac_ctl.cmd_exceptions import InvalidArgument, FailedDiscoverAction
 from idrac_ctl.cmd_exceptions import AuthenticationFailed, ResourceNotFound
 from idrac_ctl.cmd_exceptions import InvalidJsonSpec, MissingMandatoryArguments
+from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
 from idrac_ctl.idrac_manager import IDracManager
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl import version
@@ -266,6 +267,10 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         console_error_printer(f"Error:{mmr}")
     except FileNotFoundError as fne:
         console_error_printer(f"Error:{fne}")
+    except UncommittedPendingChanges as upc:
+        console_error_printer(f"Error:{upc}")
+
+
 
 
 def create_cmd_tree(arg_parser, debug=False) -> Dict:

@@ -1039,29 +1039,32 @@ class IDracManager:
         return {"Status": status}
 
     def reboot(self,
-               power_state_attr="PowerState",
-               default_reboot_type="ForceRestart") -> dict:
-        """Check if power state is on , reboots a host.
+               do_watch: Optional[bool] = False,
+               power_state_attr: Optional[str] = "PowerState",
+               default_reboot_type: Optional[str] = "ForceRestart") -> dict:
+        """Check if power state is on, reboots a host.
         :return: return a dict stora if operation succeed..
         """
         result_data = {}
-        cmd_result = self.sync_invoke(
+
+        # state of chassis
+        cmd_chassis = self.sync_invoke(
             ApiRequestType.ChassisQuery,
             "chassis_service_query",
             data_filter=power_state_attr
         )
 
-        if isinstance(cmd_result.data, dict) and 'PowerState' in cmd_result.data:
-            pd_state = cmd_result.data[power_state_attr]
+        if isinstance(cmd_chassis.data, dict) and 'PowerState' in cmd_chassis.data:
+            pd_state = cmd_chassis.data[power_state_attr]
             if pd_state == 'On':
-                cmd_result = self.sync_invoke(
+                cmd_reboot = self.sync_invoke(
                     ApiRequestType.RebootHost, "reboot",
                     reset_type=default_reboot_type
                 )
-                if 'Status' in cmd_result.data:
+                if 'Status' in cmd_reboot.data:
                     result_data.update(
                         {
-                            "Reboot": cmd_result.data['Status']
+                            "Reboot": cmd_reboot.data['Status']
                         }
                     )
             else:

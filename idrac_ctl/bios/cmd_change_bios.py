@@ -26,9 +26,12 @@ from typing import Optional
 
 import requests
 
-from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.cmd_exceptions import InvalidJsonSpec, InvalidArgument, UnexpectedResponse, MissingMandatoryArguments
+from idrac_ctl.cmd_exceptions import InvalidJsonSpec
+from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
+from idrac_ctl.cmd_exceptions import InvalidArgument
+from idrac_ctl.cmd_exceptions import UnexpectedResponse
+from idrac_ctl.cmd_exceptions import MissingMandatoryArguments
 from idrac_ctl.shared import ScheduleJobType
 from datetime import datetime
 
@@ -122,6 +125,13 @@ class BiosChangeSettings(IDracManager,
                  "hence we can cancel, otherwise pass --commit or -c"
         )
 
+        cmd_parser.add_argument(
+            '--commit_pending', action='store_true',
+            required=False,  default=False,
+            help="if idrac already container pending value, this option "
+                 "will commit change and reboot host")
+
+
         spec_from_group.add_argument(
             '-s', '--from_spec',
             help="Read json spec for new bios attributes,  (Example --from_spec new_bios.json)",
@@ -189,6 +199,34 @@ class BiosChangeSettings(IDracManager,
         idrac_current_time = self.idrac_current_time()
         print(idrac_current_time)
 
+    def do_reboot(self, result_data):
+        """Reboot
+        """
+        cmd_power_state = self.sync_invoke(
+            ApiRequestType.ChassisQuery,
+            "chassis_service_query",
+            data_filter="PowerState"
+        )
+
+        if isinstance(cmd_power_state.data, dict) and 'PowerState' in cmd_power_state.data:
+            pd_state = cmd_power_state.data['PowerState']
+            if pd_state == 'On':
+                # if state up, reboot
+                cmd_reboot = self.sync_invoke(
+                    ApiRequestType.RebootHost,
+                    "reboot", reset_type="ForceRestart"
+                )
+                if 'Status' in cmd_reboot.data:
+                    result_data.update(
+                        {
+                            "Reboot": cmd_reboot.data['Status']
+                        }
+                    )
+            else:
+                self.logger.warn(f"Can't reboot a host, chassis power state {pd_state}")
+        else:
+            self.logger.warn(f"Failed fetch chassis power state")
+
     def execute(self,
                 attr_name: Optional[str] = None,
                 attr_value: Optional[str] = None,
@@ -200,6 +238,7 @@ class BiosChangeSettings(IDracManager,
                 do_reboot: Optional[bool] = False,
                 do_show: Optional[bool] = False,
                 do_commit: Optional[bool] = False,
+                commit_pending: Optional[bool] = False,
                 start_date: Optional[str] = "",
                 start_time: Optional[str] = "",
                 from_spec: Optional[str] = "",
@@ -217,6 +256,7 @@ class BiosChangeSettings(IDracManager,
         :param do_async: note async will subscribe to an event loop.
         :param filename: if filename indicate call will save a bios setting to a file.
         :param from_spec: read bios changes from a spec file
+        :param commit_pending:  this command will first commit all pending changes before do new change.
         :param verbose: enables verbose output
         :param data_type: json or xml
         :param start_time:
@@ -276,6 +316,19 @@ class BiosChangeSettings(IDracManager,
         if do_show:
             return CommandResult(json.dumps(payload), None, None)
 
+        cmd_pending = self.sync_invoke(
+            ApiRequestType.BiosQueryPending, "bios_query_pending",
+        )
+
+        if len(cmd_pending.data) > 0:
+            if commit_pending:
+                cmd_apply = self.sync_invoke(
+                    ApiRequestType.JobApply, "job_apply", do_reboot=True, setting="bios",
+                )
+                print("Applied change", cmd_apply.data)
+            else:
+                raise UncommittedPendingChanges("Bios container pending changes. Please apply first.")
+
         target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
         api_result = self.base_patch(
             target_api, payload=payload,
@@ -316,25 +369,8 @@ class BiosChangeSettings(IDracManager,
             except UnexpectedResponse as ur:
                 self.logger.error(ur)
 
+        #
         if do_reboot:
-            cmd_result = self.sync_invoke(
-                ApiRequestType.ChassisQuery,
-                "chassis_service_query",
-                data_filter="PowerState"
-            )
-
-            if isinstance(cmd_result.data, dict) and 'PowerState' in cmd_result.data:
-                pd_state = cmd_result.data['PowerState']
-                if pd_state == 'On':
-                    cmd_result = self.sync_invoke(
-                        ApiRequestType.RebootHost,
-                        "reboot", reset_type="ForceRestart"
-                    )
-                    if 'Status' in cmd_result.data:
-                        result_data.update({"Reboot": cmd_result.data['Status']})
-                else:
-                    self.logger.warn(f"Can't reboot a host, chassis power state {pd_state}")
-            else:
-                self.logger.warn(f"Failed fetch chassis power state")
+            self.do_reboot(result_data)
 
         return CommandResult({}, None, None)

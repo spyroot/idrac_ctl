@@ -5,13 +5,13 @@ back as caller as JSON, YAML, and XML. In addition, it automatically
 registers to the command line ctl tool. Similarly to the rest command caller can save
 to a file and consume asynchronously or synchronously.
 
-python idrac_ctl.py --json bios --filter SystemModelName
-python idrac_ctl.py --json bios --filter --filter systemmodelname
-python idrac_ctl.py --json bios --filter ProcCStates
+idrac_ctl --json bios --filter SystemModelName
+idrac_ctl --json bios --filter --filter systemmodelname
+idrac_ctl --json bios --filter ProcCStates
 
 Filter by multiple attributes, note you search done case in sensitive
 
-python idrac_ctl.py --json bios --filter systemmodelname,ProcCStates
+idrac_ctl --json bios --filter systemmodelname,ProcCStates
 {
     "ProcCStates": "Disabled",
     "systemmodelname": "PowerEdge R740"
@@ -24,7 +24,6 @@ On time boot
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 import asyncio
 from abc import abstractmethod
 from typing import Optional
@@ -136,7 +135,9 @@ class BiosQuery(IDracManager,
             self.default_error_handler(response)
         else:
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+            response = loop.run_until_complete(
+                self.api_async_get_until_complete(r, headers)
+            )
 
         data = response.json()
         # list of action for bios
@@ -155,14 +156,15 @@ class BiosQuery(IDracManager,
             api_links = find_ids(data, "@odata.id")
             api_links = [u for u in api_links if idrac_api != u]
             for api_link in api_links:
-                r = f"https://{self.idrac_ip}{api_link}"
+                r = f"{self._default_method}{self.idrac_ip}{api_link}"
                 if not do_async:
                     response = self.api_get_call(r, headers)
                     self.default_error_handler(response)
                 else:
                     loop = asyncio.get_event_loop()
-                    response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
-
+                    response = loop.run_until_complete(
+                        self.api_async_get_until_complete(r, headers)
+                    )
                 extra_data_dict[api_link] = response.json()
 
         for d in extra_data_dict.values():

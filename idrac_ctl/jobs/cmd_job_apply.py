@@ -1,7 +1,6 @@
 """iDRAC query chassis services
 
 Command provide option to trigger and apply current pending jobs.
-
 Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
@@ -82,7 +81,7 @@ class JobApply(IDracManager,
                 if do_watch:
                     # if we need watch for a job, we first reboot and watch and wait.
                     if do_reboot:
-                        self.reboot()
+                        self.reboot(do_watch)
                     self.fetch_job(job_id)
         except UnexpectedResponse as un:
             self.logger.error(un)

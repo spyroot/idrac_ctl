@@ -10,7 +10,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class TasksGet(IDracManager, scm_type=ApiRequestType.TaskGet,
+class TasksGet(IDracManager,
+               scm_type=ApiRequestType.TaskGet,
                name='chassis_service_query',
                metaclass=Singleton):
     """A command query job_service_query.
@@ -30,7 +31,7 @@ class TasksGet(IDracManager, scm_type=ApiRequestType.TaskGet,
         cmd_parser.add_argument('-t' '--task_id', required=True, dest="task_id", type=str,
                                 default=None, help="Job id. Example JID_744718373591")
 
-        help_text = "command fetch task"
+        help_text = "command fetch current task"
         return cmd_parser, "task-get", help_text
 
     def execute(self,

@@ -1,17 +1,17 @@
 # check if you have anything already attached.
-python idrac_ctl.py oem-net-ios-status
+python idrac_ctl oem-net-ios-status
 
 #
-python idrac_ctl.py oem-attach-status
+python idrac_ctl oem-attach-status
 
 # note if connected you need disconnect
-python idrac_ctl.py oem-disconnect
+python idrac_ctl oem-disconnect
 
 #
 python idrac_ctl.py oem-attach --ip_addr "$CIFS_SERVER" --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
 
 #
-python idrac_ctl.py oem-net-ios-status
+python idrac_ctl oem-net-ios-status
 
 #{  Note HostBootedFromISO flag
 #    "HostAttachedStatus": "Attached",
@@ -23,13 +23,13 @@ python idrac_ctl.py oem-net-ios-status
 #    "UserName": "vmware"
 #}
 
-python idrac_ctl.py oem-boot-netios --ip_addr "$CIFS_SERVER" --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
+python idrac_ctl oem-boot-netios --ip_addr "$CIFS_SERVER" --share_name sambashare --remote_image ubuntu-22.04.1-desktop-amd64.iso
 
 # we can get status
-python idrac_ctl.py oem-net-iso-task
+python idrac_ctl oem-net-iso-task
 
 # task
-python idrac_ctl.py oem-net-iso-task
+python idrac_ctl oem-net-iso-task
 #[
 #    {
 #        "@odata.context": "/redfish/v1/$metadata#Task.Task",

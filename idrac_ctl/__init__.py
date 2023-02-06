@@ -45,7 +45,6 @@ from .firmware.cmd_firmware import *
 from .firmware.cmd_firmware_inv import *
 
 from .pci.cmd_pci import *
-from .cmd_get_task import *
 
 # manager cmds
 from .manager.cmd_manager import *
@@ -83,8 +82,10 @@ from .delloem.delloem_boot_netios import *
 from .delloem.delloem_os_deployment import *
 
 
+# tasks
 from .tasks.cmd_tasks_list import *
 from .tasks.cmd_tasks_get import *
+from tasks.cmd_task_watch import *
 
 from .volumes.cmd_initilize import *
 from .volumes.cmd_volumes import *
