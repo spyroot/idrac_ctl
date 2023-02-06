@@ -85,7 +85,7 @@ from .delloem.delloem_os_deployment import *
 # tasks
 from .tasks.cmd_tasks_list import *
 from .tasks.cmd_tasks_get import *
-from tasks.cmd_task_watch import *
+from .tasks.cmd_task_watch import *
 
 from .volumes.cmd_initilize import *
 from .volumes.cmd_volumes import *
