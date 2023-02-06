@@ -65,6 +65,8 @@ class BiosQueryPending(IDracManager,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
+        if cmd_result.error is not None:
+            return cmd_result
 
         if cmd_result.data is not None and 'Attributes' in cmd_result.data:
             attr_data = cmd_result.data['Attributes']

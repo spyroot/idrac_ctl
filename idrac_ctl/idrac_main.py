@@ -254,6 +254,7 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
             json_printer(command_result.data, cmd_args, colorized=cmd_args.nocolor)
             if isinstance(command_result.error, JsonHttpError):
                 console_error_printer(command_result.error.json_error)
+            return
 
         processed_data = process_respond(cmd_args, command_result)
         if json_printer:
