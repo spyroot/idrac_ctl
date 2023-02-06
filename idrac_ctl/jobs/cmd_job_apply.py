@@ -73,6 +73,9 @@ class JobApply(IDracManager,
             pd = {}
 
         cmd_result = self.base_post(target_api, pd, do_async=do_async)
+        if cmd_result.error is not None:
+            return cmd_result
+
         job_id = ""
         try:
             if cmd_result.data is not None and cmd_result.data['Status']:

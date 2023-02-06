@@ -953,12 +953,14 @@ class IDracManager:
             pd = payload
 
         ok = False
+        err = None
         response = None
         try:
             r = f"{self._default_method}{self.idrac_ip}{resource}"
             if not do_async:
                 if self._is_debug:
                     self.logger.debug(json.dumps(pd))
+
                 response = self.api_patch_call(
                     r, json.dumps(pd), headers
                 )
@@ -976,9 +978,9 @@ class IDracManager:
             self.logger.critical(
                 pf, exc_info=self._is_debug
             )
-            pass
+            err = pf
 
-        return CommandResult(self.api_success_msg(ok), None, response, None)
+        return CommandResult(self.api_success_msg(ok), None, response, err)
 
     def base_post(self,
                   resource: str,
@@ -1006,15 +1008,16 @@ class IDracManager:
             pd = payload
 
         ok = False
+        err = None
         response = None
         try:
             r = f"{self._default_method}{self.idrac_ip}{resource}"
             if not do_async:
                 response = self.api_post_call(r, json.dumps(pd), headers)
                 if verbose:
-                    print(f"received status code {response.status_code}")
-                    print(f"received status code {response.headers}")
-                    print(f"received {response.raw}")
+                    self.logger.debug(f"received status code {response.status_code}")
+                    self.logger.debug(f"received status code {response.headers}")
+                    self.logger.debug(f"received {response.raw}")
                 ok = self.default_post_success(
                     self, response, expected=expected_status
                 )
@@ -1029,8 +1032,8 @@ class IDracManager:
             self.logger.critical(
                 pf, exc_info=self._is_debug
             )
-
-        return CommandResult(self.api_success_msg(ok), None, response, None)
+            err = pf
+        return CommandResult(self.api_success_msg(ok), None, response, err)
 
     @staticmethod
     def api_success_msg(status: bool) -> Dict:
