@@ -91,7 +91,7 @@ class AttributesQuery(IDracManager,
             headers.update(self.json_content_type)
 
         t = "/redfish/v1/Managers/System.Embedded.1/Attributes"
-        r = f"https://{self.idrac_ip}{t}"
+        r = f"{self._default_method}{self.idrac_ip}{t}"
         if not do_async:
             response = self.api_get_call(r, headers)
             self.default_error_handler(response)
@@ -110,7 +110,7 @@ class AttributesQuery(IDracManager,
         if do_deep:
             extra_data = [
                 self.api_get_call(
-                    f"https://{self.idrac_ip}{a}", headers).json()
+                    f"{self._default_method}{self.idrac_ip}{a}", headers).json()
                 for a in extra_actions
             ]
 

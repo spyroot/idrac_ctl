@@ -198,7 +198,7 @@ class BiosChangeSettings(IDracManager,
         idrac_current_time = self.idrac_current_time()
         print(idrac_current_time)
 
-    def do_reboot(self, result_data):
+    def do_reboot(self, result_data) -> CommandResult:
         """Reboot
         """
         cmd_power_state = self.sync_invoke(
@@ -207,6 +207,10 @@ class BiosChangeSettings(IDracManager,
             data_filter="PowerState"
         )
 
+        if cmd_power_state.error is not None:
+            return cmd_power_state
+
+        cmd_reboot = None
         if isinstance(cmd_power_state.data, dict) and 'PowerState' in cmd_power_state.data:
             pd_state = cmd_power_state.data['PowerState']
             if pd_state == 'On':
@@ -215,6 +219,7 @@ class BiosChangeSettings(IDracManager,
                     ApiRequestType.RebootHost,
                     "reboot", reset_type="ForceRestart"
                 )
+
                 if 'Status' in cmd_reboot.data:
                     result_data.update(
                         {
@@ -222,9 +227,11 @@ class BiosChangeSettings(IDracManager,
                         }
                     )
             else:
-                self.logger.warn(f"Can't reboot a host, chassis power state {pd_state}")
+                self.logger.info(f"Can't reboot a host, chassis power state {pd_state}")
         else:
-            self.logger.warn(f"Failed fetch chassis power state")
+            self.logger.info(f"Failed fetch chassis power state")
+
+        return cmd_reboot
 
     def execute(self,
                 attr_name: Optional[str] = None,
@@ -357,29 +364,23 @@ class BiosChangeSettings(IDracManager,
                         data = self.fetch_job(job_id)
                         if isinstance(api_result.data, dict):
                             result_data.update(data)
+
                     # commit
                     if do_commit:
+                        # we commit with reboot
                         cmd_apply = self.sync_invoke(
                             ApiRequestType.JobApply,
                             "job_apply",
                             do_reboot=do_reboot,
                             do_watch=True,
                         )
-                    else:
-                        cmd_apply = self.sync_invoke(
-                            ApiRequestType.JobApply,
-                            "job_apply",
-                            do_reboot=do_reboot,
-                            do_watch=True,
-                        )
-                        # if we applied and rebooted no need second reboot.
-                        do_reboot = False
-                        return cmd_result
+                        if cmd_apply.error is not None:
+                            return cmd_apply
             except UnexpectedResponse as ur:
                 self.logger.error(ur)
 
         #
         if do_reboot:
-            self.do_reboot(result_data)
+            reboot_result = self.do_reboot(result_data)
 
-        return CommandResult({}, None, None, None)
+        return CommandResult(reboot_result, None, None, None)

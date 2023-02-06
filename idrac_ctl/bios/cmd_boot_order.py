@@ -90,12 +90,14 @@ class ChangeBootOrder(IDracManager,
         :raise FailedDiscoverAction
         """
         target_api = "/redfish/v1/Systems/System.Embedded.1/Bios"
-        cmd_rest = self.base_query(target_api,
-                                   filename=filename,
-                                   do_async=do_async,
-                                   do_expanded=False)
+        cmd_query = self.base_query(
+            target_api, filename=filename,
+            do_async=do_async, do_expanded=False
+        )
+        if cmd_query.error is not None:
+            return cmd_query
 
-        current_boot_mode = cmd_rest.data['Attributes']['SetBootOrderEn']
+        current_boot_mode = cmd_query.data['Attributes']['SetBootOrderEn']
         self.logger.info("Current boot mode", current_boot_mode)
 
         if boot_order is not None:
@@ -108,20 +110,21 @@ class ChangeBootOrder(IDracManager,
         }
 
         target_patch_api = "/redfish/v1/Systems/System.Embedded.1"
-        api_result = self.base_patch(target_patch_api, payload=payload,
-                                     do_async=do_async, expected_status=202)
-        result = api_result.data
-        if api_result is not None and api_result.extra is not None:
-            resp = api_result.extra
-            data = api_result.extra.json()
-            self.default_json_printer(data)
-            try:
-                job_id = self.job_id_from_header(resp)
-                if job_id is not None:
-                    data = self.fetch_job(job_id)
-                    result = data
-            except UnexpectedResponse as ur:
-                warnings.warn(str(ur))
-                pass
+        api_result = self.base_patch(
+            target_patch_api, payload=payload,
+            do_async=do_async, expected_status=202)
 
-        return CommandResult(result, None, None, None)
+        if api_result.error is not None:
+            return api_result
+
+        if api_result.extra is not None:
+            resp = api_result.extra
+            try:
+                job_id = self.parse_task_id(resp)
+                if job_id is not None:
+                    api_result.data = self.fetch_job(job_id)
+            except UnexpectedResponse as ur:
+                self.logger.error(ur)
+                api_result.error = ur
+
+        return api_result

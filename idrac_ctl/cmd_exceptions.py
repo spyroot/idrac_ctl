@@ -37,10 +37,6 @@ class UnsupportedAction(Exception):
     pass
 
 
-class PostRequestFailed(Exception):
-    pass
-
-
 class AuthenticationFailed(Exception):
     pass
 
@@ -57,9 +53,19 @@ class UnexpectedResponse(Exception):
     pass
 
 
-class PatchRequestFailed(Exception):
+class JsonHttpError(Exception):
+    def __init__(self, *args, **kwargs):
+        super(JsonHttpError, self).__init__(args, kwargs)
+        self.json_error = kwargs.get('json_error')
+
+
+class PatchRequestFailed(JsonHttpError):
     pass
 
 
-class DeleteRequestFailed(Exception):
+class DeleteRequestFailed(JsonHttpError):
+    pass
+
+
+class PostRequestFailed(JsonHttpError):
     pass

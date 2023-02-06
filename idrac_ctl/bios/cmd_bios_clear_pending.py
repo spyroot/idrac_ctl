@@ -60,8 +60,13 @@ class BiosClearPending(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        cmd_result = self.sync_invoke(ApiRequestType.BiosQuery,
-                                      "bios_inventory", do_deep=True)
+        cmd_result = self.sync_invoke(
+            ApiRequestType.BiosQuery,
+            "bios_inventory", do_deep=True
+        )
+        if cmd_result.error is not None:
+            return cmd_result
+
         api_target = None
         if cmd_result.discovered is not None and \
                 'ClearPending' in cmd_result.discovered:
@@ -72,24 +77,19 @@ class BiosClearPending(IDracManager,
                 "Failed discover clear pending bios action.")
 
         err = None
+        ok = False
         try:
-            pd = {}
-            r = f"https://{self.idrac_ip}{api_target}"
+            r = f"{self._default_method}{self.idrac_ip}{api_target}"
             if not do_async:
-                response = self.api_post_call(r, json.dumps(pd), headers)
+                response = self.api_post_call(r, json.dumps({}), headers)
                 ok = self.default_post_success(self, response, expected=200)
             else:
                 loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
-
-            api_req_result = {"Status": ok}
-
+                ok, response = loop.run_until_complete(
+                    self.async_post_until_complete(r, json.dumps({}), headers)
+                )
         except PostRequestFailed as pf:
             err = pf
-            api_req_result = {
-                "Status": False,
-                "Error": str(pf)
-            }
             self.logger.error(pf)
 
-        return CommandResult(api_req_result, None, None, err)
+        return CommandResult(self.api_success_msg(ok), None, None, err)

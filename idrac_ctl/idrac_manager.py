@@ -368,7 +368,7 @@ class IDracManager:
         if response.status_code == 401:
             raise AuthenticationFailed("Authentication failed.")
         if response.status_code == 404:
-            error_msg = IDracManager.parse_error(response)
+            error_msg, json_error = IDracManager.parse_error(response)
             raise ResourceNotFound(error_msg)
         if response.status_code != 200:
             raise UnexpectedResponse(f"Failed acquire result. Status code {response.status_code}")
@@ -736,24 +736,26 @@ class IDracManager:
             )
 
     @staticmethod
-    def parse_error(error_response: requests.models.Response):
+    def parse_error(error_response: requests.models.Response)-> Tuple[str, str]:
         """Default Parser for error msg from
         JSON error response based on iDRAC.
         :param error_response:
         :return:
         """
         err_msg = "Default error."
+        messages = [""]
         err_resp = error_response.json()
         if 'error' in err_resp:
             err_data = err_resp['error']
             if 'message' in err_data:
                 err_msg = err_resp['error']['message']
             if '@Message.ExtendedInfo' in err_data:
+                messages = [m['Message'] for m in err_data['@Message.ExtendedInfo'] if 'Message' in m]
                 extended_err = err_data['@Message.ExtendedInfo'][-1]
                 err_msg = [f"{k}: {v}" for k, v in extended_err.items() if "@" not in k]
                 err_msg = "\n".join(err_msg)
 
-        return err_msg
+        return err_msg, " ".join(messages)
 
     @staticmethod
     def default_patch_success(cls,
@@ -775,11 +777,12 @@ class IDracManager:
                 or response.status_code == 202 or response.status_code == 204:
             return True
         else:
-            err_msg = IDracManager.parse_error(response)
-            raise PatchRequestFailed(
+            err_msg, json_error = IDracManager.parse_error(response)
+            e = PatchRequestFailed(
                 f"{err_msg}\nHTTP Status code: "
-                f"{response.status_code}"
+                f"{response.status_code}", json_error=json_error
             )
+            e.error_msg = json_error
 
     @staticmethod
     def default_post_success(cls,
@@ -803,10 +806,10 @@ class IDracManager:
                 or response.status_code == 204:
             return True
         else:
-            err_msg = IDracManager.parse_error(response)
+            err_msg, json_error = IDracManager.parse_error(response)
             raise PostRequestFailed(
                 f"{err_msg}\nHTTP Status code: "
-                f"{response.status_code}"
+                f"{response.status_code}", json_error=json_error
             )
 
     @staticmethod
@@ -829,10 +832,10 @@ class IDracManager:
                 or response.status_code == 204:
             return True
         else:
-            err_msg = IDracManager.parse_error(response)
+            err_msg, json_error = IDracManager.parse_error(response)
             raise DeleteRequestFailed(
                 f"{err_msg}\nHTTP Status code: "
-                f"{response.status_code}"
+                f"{response.status_code}", json_error=json_error
             )
 
     def api_async_del_until_complete(self, r, headers):
@@ -1029,10 +1032,9 @@ class IDracManager:
                     )
                 )
         except PostRequestFailed as pf:
-            self.logger.critical(
-                pf, exc_info=self._is_debug
-            )
             err = pf
+            self.logger.critical(pf, exc_info=self._is_debug)
+
         return CommandResult(self.api_success_msg(ok), None, response, err)
 
     @staticmethod

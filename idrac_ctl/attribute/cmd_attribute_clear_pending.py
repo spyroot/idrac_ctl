@@ -59,6 +59,9 @@ class AttributeClearPending(IDracManager,
         target = None
         attributes_cmd = self.sync_invoke(ApiRequestType.AttributesQuery,
                                           "attribute_inventory", do_deep=True)
+        if attributes_cmd.error is not None:
+            return attributes_cmd
+
         if isinstance(attributes_cmd.extra, list):
             for extra in attributes_cmd.extra:
                 if 'Actions' in extra:
@@ -69,20 +72,21 @@ class AttributeClearPending(IDracManager,
         if target is None:
             raise FailedDiscoverAction("Failed discover clear pending attribute action.")
 
-        api_req_result = {}
+        err = None
+        ok = False
         try:
             pd = {}
-            r = f"https://{self.idrac_ip}{target}"
+            r = f"{self._default_method}{self.idrac_ip}{target}"
             if not do_async:
                 response = self.api_post_call(r, json.dumps(pd), headers)
                 ok = self.default_post_success(self, response, expected=200)
             else:
                 loop = asyncio.get_event_loop()
-                ok = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
-
-            api_req_result = {"Status": ok}
+                ok = loop.run_until_complete(
+                    self.async_post_until_complete(r, json.dumps(pd), headers)
+                )
         except PostRequestFailed as pf:
-            print("Error:", pf)
-            pass
+            self.logger.error(pf)
+            err = pf
 
-        return CommandResult(api_req_result, None, None, None)
+        return CommandResult(self.api_success_msg(ok), None, None, err)
