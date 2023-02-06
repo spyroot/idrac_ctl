@@ -110,6 +110,6 @@ class ConvertToRaid(IDracManager,
             cmd_result = self.base_post(target_api, payload, do_async=do_async)
             resp = self.parse_task_id(cmd_result)
             cmd_result.data.update(resp)
-            return CommandResult(cmd_result.data, None, None)
+            return CommandResult(cmd_result.data, None, None, None)
 
         return CommandResult({"Status": "all disk are none raid"}, None, None, None)

@@ -56,8 +56,8 @@ class ManagerReset(IDracManager,
                 do_async: Optional[bool] = False,
                 do_graceful: Optional[bool] = True,
                 **kwargs) -> CommandResult:
-        """Reset reboot IDRAC manager services.
-        :param do_async will not wait.
+        """Reset reboot IDRAC manager services
+        :param do_async will not wait
         :param do_graceful
         :param verbose:
         :param do_deep:

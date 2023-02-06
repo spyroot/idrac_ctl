@@ -36,6 +36,7 @@ class RebootHost(IDracManager,
         }
     },
     """
+
     def __init__(self, *args, **kwargs):
         super(RebootHost, self).__init__(*args, **kwargs)
 
@@ -93,20 +94,21 @@ class RebootHost(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        system_state = self.sync_invoke(ApiRequestType.SystemQuery, "system_query")
+        system_state = self.sync_invoke(
+            ApiRequestType.SystemQuery, "system_query"
+        )
+
         system_actions = system_state.data['Actions']
         allowed_reset_types = []
 
-        default_target = "/redfish/v1/Systems/System.Embedded.1" \
-                         "/Actions/ComputerSystem.Reset"
+        target = "/redfish/v1/Systems/System.Embedded.1" \
+                 "/Actions/ComputerSystem.Reset"
 
         if '#ComputerSystem.Reset' in system_actions:
             ra = system_actions['#ComputerSystem.Reset']
             allowed_reset_types = ra['ResetType@Redfish.AllowableValues']
             if 'target' in ra:
                 target = ra['target']
-        else:
-            target = default_target
 
         if reset_type not in allowed_reset_types:
             raise InvalidArgument(f"Invalid reset type"
@@ -119,6 +121,7 @@ class RebootHost(IDracManager,
             'ResetType': reset_type
         }
 
+        err = None
         if not do_async:
             response = self.api_post_call(
                 r, json.dumps(payload), headers
@@ -131,7 +134,6 @@ class RebootHost(IDracManager,
                     r, json.dumps(payload), headers
                 )
             )
-
         try:
             job_id = self.job_id_from_header(response)
             if job_id is not None:
@@ -139,4 +141,4 @@ class RebootHost(IDracManager,
         except UnexpectedResponse as ur:
             self.logger.error(ur)
 
-        return CommandResult(self.api_success_msg(ok), None, None, None)
+        return CommandResult(self.api_success_msg(ok), None, None, err)

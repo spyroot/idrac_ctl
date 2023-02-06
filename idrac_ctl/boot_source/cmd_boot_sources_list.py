@@ -85,4 +85,4 @@ class BootOptionsList(IDracManager, scm_type=ApiRequestType.BootOptions,
             data = data['Members']
             data = [d['@odata.id'] for d in data]
 
-        return CommandResult(data, None, extra)
+        return CommandResult(data, None, extra, None)

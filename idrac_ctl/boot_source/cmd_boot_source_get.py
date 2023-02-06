@@ -102,4 +102,4 @@ class EnableBootOptions(IDracManager,
                     break
 
         save_if_needed(filename, boot_data_sources)
-        return CommandResult(boot_data_sources, None, None)
+        return CommandResult(boot_data_sources, None, None, None)

@@ -108,7 +108,7 @@ class JobList(IDracManager,
         )
 
         cmd_parser.add_argument(
-            '--job_type',  required=False,
+            '--job_type', required=False,
             default="", type=str,
             help="filter by job type. (Example bios_config, firmware_update)"
         )

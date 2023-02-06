@@ -271,8 +271,6 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         console_error_printer(f"Error:{upc}")
 
 
-
-
 def create_cmd_tree(arg_parser, debug=False) -> Dict:
     """Create command tree structure.
     :return: a dict that store mapping for each command.

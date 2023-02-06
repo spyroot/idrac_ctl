@@ -78,4 +78,4 @@ class BootSourceClearPending(IDracManager, scm_type=ApiRequestType.BootSourceCle
             pass
 
         api_result = {"Status": ok}
-        return CommandResult(api_result, None, None)
+        return CommandResult(api_result, None, None, None)

@@ -94,7 +94,7 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
 
         vd_list = []
         if not data['Members']:
-            return CommandResult(None, None, None)
+            return CommandResult(None, None, None, None)
         else:
             vd_list = [i['@odata.id'].split("/")[-1] for i in data['Members']]
 

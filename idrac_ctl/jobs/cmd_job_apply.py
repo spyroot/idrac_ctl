@@ -90,4 +90,4 @@ class JobApply(IDracManager,
             }
             self.logger.error(un)
 
-        return CommandResult(cmd_result.data, None, {"job_id": job_id})
+        return CommandResult(cmd_result.data, None, {"job_id": job_id}, None)

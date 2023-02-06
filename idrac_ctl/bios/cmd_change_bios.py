@@ -127,10 +127,9 @@ class BiosChangeSettings(IDracManager,
 
         cmd_parser.add_argument(
             '--commit_pending', action='store_true',
-            required=False,  default=False,
+            required=False, default=False,
             help="if idrac already container pending value, this option "
                  "will commit change and reboot host")
-
 
         spec_from_group.add_argument(
             '-s', '--from_spec',

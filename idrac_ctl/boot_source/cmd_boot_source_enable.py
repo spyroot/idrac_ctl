@@ -108,7 +108,7 @@ class EnableBootOptions(IDracManager,
 
         if target_dev is None:
             print(f"Unknown dev. available boot source. {boot_data_sources}")
-            return CommandResult(None, None, None)
+            return CommandResult(None, None, None, None)
 
         ok = False
         json_data = {}
@@ -138,4 +138,4 @@ class EnableBootOptions(IDracManager,
 
         api_result = {"Status": ok}
         api_result.update(json_data)
-        return CommandResult(api_result, None, None)
+        return CommandResult(api_result, None, None, None)
