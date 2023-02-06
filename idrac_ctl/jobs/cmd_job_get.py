@@ -12,6 +12,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
+from idrac_ctl.shared import JobState
 
 
 class JobGet(IDracManager,
@@ -70,25 +71,6 @@ class JobGet(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"boot_source:{job_id} do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
-
-        headers = {}
-        if data_type == "json":
-            headers.update(self.json_content_type)
-
-        r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
-            f"Oem/Dell/Jobs/{job_id}?$expand=*($levels=1)"
-
-        if not do_async:
-            response = self.api_get_call(r, headers)
-            self.default_error_handler(response)
-        else:
-            loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
-        data = response.json()
-
+        data = self.get_job(job_id, do_async=do_async)
         save_if_needed(filename, data)
         return CommandResult(data, None, None, None)

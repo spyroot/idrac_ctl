@@ -38,6 +38,7 @@ from idrac_ctl.cmd_exceptions import InvalidJsonSpec, MissingMandatoryArguments
 from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
 from idrac_ctl.cmd_exceptions import JsonHttpError
 from idrac_ctl.idrac_manager import IDracManager
+from idrac_ctl.idrac_manager import MissingResource
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl import version
 
@@ -260,6 +261,8 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         if json_printer:
             json_printer(processed_data, cmd_args, colorized=cmd_args.nocolor)
 
+    except MissingResource as mr:
+        console_error_printer(f"Error: {mr}")
     except InvalidJsonSpec as ijs:
         console_error_printer(f"Error: {ijs}")
     except ResourceNotFound as rnf:

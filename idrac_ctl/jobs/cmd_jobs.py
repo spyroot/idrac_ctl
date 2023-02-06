@@ -113,6 +113,12 @@ class JobList(IDracManager,
             help="filter by job type. (Example bios_config, firmware_update)"
         )
 
+        cmd_parser.add_argument(
+            '--job_ids', required=False, action='store_true',
+            default=False,
+            help="will return only list of ids"
+        )
+
         # RebootCompleted
         help_text = "command fetch a list of jobs"
         return cmd_parser, "jobs", help_text
@@ -120,12 +126,11 @@ class JobList(IDracManager,
     @staticmethod
     def resolve_job_type(jb_type: str):
         """
-
         """
         if jb_type == "bios_config":
             return "BIOSConfiguration"
         elif jb_type == "firmware_update":
-            return "BIOSConfiguration"
+            return "FirmwareUpdate"
         elif jb_type == "reboot_no_force":
             return "RebootNoForce"
         else:
@@ -145,6 +150,7 @@ class JobList(IDracManager,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
                 job_type: Optional[str] = "",
+                job_ids: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Command return list idrac jobs
 
@@ -161,6 +167,7 @@ class JobList(IDracManager,
         :param data_type: json or xml
         :param do_expanded: returns expanded result for API call
         :param job_type: filter on job_type
+        :param job_ids: filter by job id only.
         :return: CommandResult and if filename provide will save to a file.
         """
         headers = {}
@@ -211,8 +218,10 @@ class JobList(IDracManager,
                 if 'ActualRunningStartTime' in x else None
             )
         job_type = self.resolve_job_type(job_type)
-
         if job_type is not None and len(job_type) > 0:
-            filtered_data = [d for d in filtered_data if d['JobType'] == job_type]
-            # BIOSConfiguration
+            filtered_data = [d for d in filtered_data if 'JobType' in d and d['JobType'] == job_type]
+
+        if job_ids:
+            filtered_data = [f["Id"] for f in filtered_data if "Id" in f]
+
         return CommandResult(filtered_data, None, None, None)

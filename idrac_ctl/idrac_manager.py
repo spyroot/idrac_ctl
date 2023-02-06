@@ -46,6 +46,7 @@ from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import PatchRequestFailed
 from .cmd_exceptions import DeleteRequestFailed
 from .cmd_exceptions import UnsupportedAction
+from idrac_ctl.shared import JobState
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
@@ -296,19 +297,47 @@ class IDracManager:
         )
         return self.invoke(api_call, name, **kwargs)
 
+    def get_job(self,
+                job_id: str,
+                data_type: Optional[str] = "json",
+                do_async: Optional[bool] = False) -> dict:
+        """Query information for particular job.
+        :param job_id: iDRAC job_id JID_744718373591
+        :param do_async: note async will subscribe to an event loop.
+        :param data_type: json or xml
+        :return: CommandResult and if filename provide will save to a file.
+        """
+        headers = {}
+        if data_type == "json":
+            headers.update(self.json_content_type)
+
+        r = f"/redfish/v1/Managers/iDRAC.Embedded.1/" \
+            f"Oem/Dell/Jobs/{job_id}"
+        return self.base_query(r, do_expanded=True, do_async=do_async).data
+
     def fetch_job(self,
                   job_id: str,
                   sleep_time: Optional[int] = 2,
-                  wait_for: Optional[int] = 200):
+                  wait_for: Optional[int] = 200,
+                  wait_status: Optional[bool] = True,
+                  wait_completion: Optional[bool] = True):
         """synchronous fetch a job from iDRAC and wait for completion.
         :param wait_for:  by default, we wait status code 200 based on spec.
         :param job_id: job id as it returned from a task by idrac
         :param sleep_time: sleep and wait.
+        :param wait_status: wait for http status.
+        :param wait_completion: wait for completion a task.
         :return: Nothing
         :raise AuthenticationFailed MissingResource
         """
         last_update = 0
         percent_done = 0
+        jb = self.get_job(job_id)
+        print("Job data", jb)
+        current_state = jb["JobState"]
+        if current_state == JobState.Completed.value:
+            return self.api_success_msg(True, message=f"Job {job_id} completed.")
+
         with tqdm(total=100) as pbar:
             while True:
                 resp = self.api_get_call(f"{self._default_method}{self.idrac_ip}/redfish/v1/"
@@ -316,13 +345,16 @@ class IDracManager:
                 if resp.status_code == 401:
                     AuthenticationFailed("Authentication failed.")
                 elif resp.status_code == 404:
-                    raise MissingResource("Missing resource.")
-                elif resp.status_code == wait_for:
+                    raise MissingResource(f"Task {job_id} not found.")
+
+                elif resp.status_code == wait_for and wait_status:
                     resp_data = resp.json()
                     return resp_data
                 elif resp.status_code == 202:
                     resp_data = resp.json()
                     if 'TaskStatus' in resp_data and resp_data['TaskStatus'] == 'OK':
+                        if 'JobState' in resp_data:
+                            current_state = resp_data['JobState']
                         if 'PercentComplete' in resp_data:
                             try:
                                 percent_done = int(resp_data['PercentComplete'])
@@ -333,7 +365,11 @@ class IDracManager:
                                 inc = percent_done - pbar.n
                                 pbar.update(n=inc)
                             time.sleep(sleep_time)
+                elif wait_completion and current_state == "Completed":
+                    return resp_data
                 else:
+                    if 'JobState' in resp_data:
+                        current_state = resp_data['JobState']
                     self.logger.error("unexpected status code", resp.status_code)
                     time.sleep(sleep_time)
 
@@ -736,7 +772,7 @@ class IDracManager:
             )
 
     @staticmethod
-    def parse_error(error_response: requests.models.Response)-> Tuple[str, str]:
+    def parse_error(error_response: requests.models.Response) -> Tuple[str, str]:
         """Default Parser for error msg from
         JSON error response based on iDRAC.
         :param error_response:
@@ -1038,11 +1074,19 @@ class IDracManager:
         return CommandResult(self.api_success_msg(ok), None, response, err)
 
     @staticmethod
-    def api_success_msg(status: bool) -> Dict:
-        """Default api success respond.
-        :param status:
+    def api_success_msg(status: bool, message_key: Optional[str] = "message", message=None) -> Dict:
+        """A default api success respond.
+        :param status: a status true of false
+        :param message_key: key we need add extra
+        :param message: message information data
         :return:
         """
+        if message is not None:
+            return {
+                "Status": status,
+                message_key: message
+            }
+
         return {"Status": status}
 
     def reboot(self,

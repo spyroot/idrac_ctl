@@ -12,7 +12,9 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult, UnexpectedResponse
-from idrac_ctl.cmd_exceptions import InvalidArgument
+from idrac_ctl.cmd_exceptions import InvalidArgument,MissingResource
+from idrac_ctl.shared import JobTypes
+import time
 
 
 class RebootHost(IDracManager,
@@ -73,6 +75,7 @@ class RebootHost(IDracManager,
                 boot_source_override_mode: Optional[str] = "",
                 interface_type: Optional[str] = "",
                 do_async: Optional[bool] = False,
+                sleep_time: Optional[int] = 2,
                 **kwargs
                 ) -> CommandResult:
         """
@@ -86,6 +89,7 @@ class RebootHost(IDracManager,
                                       UefiTarget, SDCard, UefiHttp"
         :param boot_source_override_enabled: "Once, Continuous, Disabled"
         :param boot_source_override_mode: UEFI, Legacy
+        :param sleep_time wait for job to start.
         :param interface_type: TCM1_0, TPM2_0, TPM1_
         :param kwargs:
         :return:
@@ -116,7 +120,7 @@ class RebootHost(IDracManager,
                                   f"supported reset types "
                                   f"{allowed_reset_types}")
 
-        r = f"https://{self.idrac_ip}{target}"
+        r = f"{self._default_method}{self.idrac_ip}{target}"
         payload = {
             'ResetType': reset_type
         }
@@ -134,11 +138,38 @@ class RebootHost(IDracManager,
                     r, json.dumps(payload), headers
                 )
             )
+
+        reboot = 1
+        while reboot != 0:
+            scheduled_jobs = self.sync_invoke(
+                ApiRequestType.Jobs, "jobs_sources_query",
+                reboot_pending=True,
+                job_type=JobTypes.REBOOT_NO_FORCE.value,
+                job_ids=True
+            )
+
+            if scheduled_jobs.error is not None:
+                return scheduled_jobs
+
+            if len(scheduled_jobs.data) == 0:
+                time.sleep(sleep_time)
+
+            try:
+                for job in scheduled_jobs.data:
+                    # reboot and wait for completion.
+                    self.logger.info(f"Reboot pending job {job}")
+                    data = self.fetch_job(job, wait_completion=True)
+                    self.default_json_printer(data)
+                    reboot -= 1
+            except MissingResource as mr:
+                time.sleep(sleep_time)
+
         try:
             job_id = self.job_id_from_header(response)
             if job_id is not None:
                 self.fetch_job(job_id)
         except UnexpectedResponse as ur:
             self.logger.error(ur)
+            err = ur
 
         return CommandResult(self.api_success_msg(ok), None, None, err)

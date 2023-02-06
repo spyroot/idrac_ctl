@@ -93,6 +93,7 @@ class ScheduleJobType(Enum):
 class RedfishActionEncoder(JSONEncoder):
     """JSON decoder used to serialize nested dicts.
     """
+
     def default(self, obj):
         return obj.__dict__
 
@@ -100,6 +101,7 @@ class RedfishActionEncoder(JSONEncoder):
 class RedfishAction:
     """Action discovery encapsulate each action to RedfishAction.
     """
+
     def __init__(self,
                  action_name: Optional[str] = "",
                  target: Optional[str] = "",
@@ -159,6 +161,55 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class BootSource(Enum):
+    Pxe = "Pxe"
+    Floppy = "Floppy"
+    CD = "CD"
+    Usb = "Usb"
+    Hdd = "Hdd"
+    Utilities = "Utilities"
+    UefiTarget = "UefiTarget"
+    BiosSetup = "BiosSetup"
+
+
+class BiosSetup(Enum):
+    Disabled = "Disabled"
+    Once = "Once"
+    Continuous = "Continuous"
+
+
+class ResetType(Enum):
+    On = "On"
+    ForceOff = "ForceOff"
+    GracefulRestart = "GracefulRestart"
+    PushPowerButton = "PushPowerButton"
+    NMI = "NMI"
+
+
+class PowerState(Enum):
+    On = "On"
+    Off = "Off"
+
+
+class JobState(Enum):
+    """IDRAC job states
+    """
+    Running = "Running"
+    RebootCompleted = "RebootCompleted"
+    Completed = "Completed"
+    Failed = "Failed"
+    RebootPending = "RebootPending"
+    Scheduled = "Scheduled"
+
+
+class JobTypes(Enum):
+    """IDRAC job types
+    """
+    BIOS_CONFIG = "bios_config"
+    FIRMWARE_UPDATE = "firmware_update"
+    REBOOT_NO_FORCE = "reboot_no_force"
 
 
 class HTTPMethod(Enum):

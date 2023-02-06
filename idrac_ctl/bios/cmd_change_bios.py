@@ -320,7 +320,7 @@ class BiosChangeSettings(IDracManager,
             self.logger.info(f"payload: {base_payload}")
 
         if do_show:
-            return CommandResult(json.dumps(payload), None, None, None)
+            return CommandResult(payload, None, None, None)
 
         cmd_pending = self.sync_invoke(
             ApiRequestType.BiosQueryPending, "bios_query_pending",

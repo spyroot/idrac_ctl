@@ -8,6 +8,7 @@ from typing import Optional
 
 from idrac_ctl.cmd_exceptions import UnexpectedResponse
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.shared import JobTypes
 
 
 class JobApply(IDracManager,
@@ -28,7 +29,7 @@ class JobApply(IDracManager,
         """
         cmd_parser = cls.base_parser(is_reboot=True)
         cmd_parser.add_argument(
-            'setting', choices=['bios', 'attribute', 'bios'],
+            'setting', choices=['bios', 'attribute', 'raid'],
             default="bios",
             help="what setting we apply a change. (bios, raid, etc)"
         )
@@ -71,6 +72,23 @@ class JobApply(IDracManager,
             }
         else:
             pd = {}
+
+        scheduled_jobs = self.sync_invoke(
+            ApiRequestType.Jobs, "jobs_sources_query",
+            filter_scheduled=True, job_type=JobTypes.BIOS_CONFIG, job_ids=True
+        )
+
+        if scheduled_jobs.error is not None:
+            return scheduled_jobs
+
+        # if we have scheduled job
+        for job in scheduled_jobs.data:
+            # reboot and wait for completion.
+            print(f"Applying job {job}")
+            self.logger.info(f"Rebooting a host to apply pending job {job}")
+            self.reboot(do_watch=True)
+            data = self.fetch_job(job, wait_completion=True)
+            self.default_json_printer(data)
 
         cmd_result = self.base_post(target_api, pd, do_async=do_async)
         if cmd_result.error is not None:
