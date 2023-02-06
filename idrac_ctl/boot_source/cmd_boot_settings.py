@@ -82,4 +82,4 @@ class BootSettings(IDracManager,
         save_if_needed(filename, data)
 
         actions = self.discover_redfish_actions(self, data)
-        return CommandResult(data, actions, None)
+        return CommandResult(data, actions, None, None)

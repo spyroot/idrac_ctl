@@ -132,4 +132,4 @@ class ExportSystemConfig(IDracManager,
         else:
             data = {"job_id": job_id}
 
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

@@ -112,4 +112,4 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
             vd_list.append(resp_data)
 
         save_if_needed(filename, data)
-        return CommandResult(vd_list, None, None)
+        return CommandResult(vd_list, None, None, None)

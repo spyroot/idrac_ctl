@@ -60,4 +60,4 @@ class DellLcQuery(IDracManager, scm_type=ApiRequestType.DellLcQuery,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
         actions = self.discover_redfish_actions(self, cmd_result.data)
-        return CommandResult(cmd_result, actions, None)
+        return CommandResult(cmd_result, actions, None, None)

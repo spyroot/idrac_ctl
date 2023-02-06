@@ -115,4 +115,4 @@ class AttributesQuery(IDracManager,
             ]
 
         save_if_needed(filename, data)
-        return CommandResult(data, None, extra_data)
+        return CommandResult(data, None, extra_data, None)

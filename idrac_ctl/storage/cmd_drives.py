@@ -91,4 +91,4 @@ class DrivesQuery(IDracManager,
         final_data.append({"disk_ids": disk_ids})
         final_data.append({"none_raid_disk_ids": none_raid_disk_ids})
         final_data.append({"raid_disk_ids": raid_disk_ids})
-        return CommandResult(final_data,  None, None)
+        return CommandResult(final_data,  None, None, None)

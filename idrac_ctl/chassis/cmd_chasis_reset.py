@@ -45,12 +45,14 @@ class ChassisReset(IDracManager,
                 reset_type: Optional[str] = "On",
                 do_async: Optional[bool] = False,
                 data_type: Optional[str] = "json",
+                do_watch: Optional[str] = True,
                 **kwargs
                 ) -> CommandResult:
         """
         :param do_async:
         :param data_type:
         :param reset_type: "On, ForceOff"
+        :param do_watch: wait and watch progress.
         :param kwargs:
         :return: return cmd result
         :raise FailedDiscoverAction
@@ -79,7 +81,6 @@ class ChassisReset(IDracManager,
 
         payload = {'ResetType': reset_type}
         r = f"{self._default_method}{self.idrac_ip}{target_api}"
-
         ok = False
         try:
             if not do_async:
@@ -91,12 +92,12 @@ class ChassisReset(IDracManager,
                     self.async_post_until_complete(r, json.dumps(payload), headers)
                 )
 
-                job_id = self.parse_task_id(response)
-                self.logger.info(f"job id: {job_id}")
-                if len(job_id) > 0:
-                    self.fetch_job(job_id)
+            job_id = self.parse_task_id(response)
+            self.logger.info(f"job id: {job_id}")
+            if len(job_id) > 0:
+                self.fetch_job(job_id)
 
         except PostRequestFailed as prf:
             self.logger.error(prf)
 
-        return CommandResult(self.api_success_msg(ok), None, None)
+        return CommandResult(self.api_success_msg(ok), None, None, None)

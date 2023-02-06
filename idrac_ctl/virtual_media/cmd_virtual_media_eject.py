@@ -99,4 +99,4 @@ class VirtualMediaEject(IDracManager,
         if self.default_post_success(self, response):
             api_result = self.api_success_msg(True)
 
-        return CommandResult(api_result, None, None)
+        return CommandResult(api_result, None, None, None)

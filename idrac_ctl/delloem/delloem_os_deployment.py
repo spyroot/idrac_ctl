@@ -56,4 +56,4 @@ class DellOemTask(IDracManager,
             action = self.discover_redfish_actions(self, cmd_result.data)
             actions.update(action)
 
-        return CommandResult(cmd_result, actions, None)
+        return CommandResult(cmd_result, actions, None, None)

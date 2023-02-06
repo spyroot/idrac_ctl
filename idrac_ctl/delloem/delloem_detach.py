@@ -47,4 +47,4 @@ class DellOemDetach(IDracManager,
 
         api_result = self.base_post(target_api,
                                     do_async=do_async, expected_status=200)
-        return CommandResult(api_result.data, None, None)
+        return CommandResult(api_result.data, None, None, None)

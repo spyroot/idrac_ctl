@@ -68,10 +68,10 @@ class BiosQueryPending(IDracManager,
 
         if cmd_result.data is not None and 'Attributes' in cmd_result.data:
             attr_data = cmd_result.data['Attributes']
-            attr_cmd = CommandResult(attr_data, None, None)
+            attr_cmd = CommandResult(attr_data, None, None, None)
             if data_filter is not None and len(data_filter) > 0:
                 if data_filter in attr_data:
-                    return CommandResult(attr_data[data_filter], None, None)
+                    return CommandResult(attr_data[data_filter], None, None, None)
             else:
                 cmd_result = attr_cmd
 

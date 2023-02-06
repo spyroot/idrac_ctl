@@ -61,4 +61,4 @@ class JobRmDellServices(IDracManager,
             data = api_result.extra.json()
             result.update(data)
 
-        return CommandResult(result, None, None)
+        return CommandResult(result, None, None, None)

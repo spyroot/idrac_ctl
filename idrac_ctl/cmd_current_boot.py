@@ -80,4 +80,4 @@ class GetCurrentBoot(IDracManager,
         if 'Boot' in data:
             data = data['Boot']
 
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

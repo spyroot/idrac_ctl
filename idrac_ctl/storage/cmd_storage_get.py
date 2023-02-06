@@ -111,4 +111,4 @@ class StorageView(IDracManager,
         if data_filter is not None and len(data_filter) > 0:
             data = self.filter_by_keys(cmd_rest.data, data_filter)
 
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

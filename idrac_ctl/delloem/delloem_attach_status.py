@@ -65,4 +65,4 @@ class GetAttachStatus(IDracManager,
             if 'ISOAttachStatus' in data:
                 result['ISOAttachStatus'] = data['ISOAttachStatus']
 
-        return CommandResult(result, None, None)
+        return CommandResult(result, None, None, None)

@@ -17,6 +17,8 @@ is actually data returned from rest API response.
 
 CommandResult.discovered hold all rest endpoint.
 
+https://www.dell.com/support/manuals/en-us/idrac9-lifecycle-controller-v4.x-series/idrac9_4.00.00.00_redfishapiguide_pub/redfish-resources?guid=guid-d3e85da8-5d22-4eb1-82ff-d2fdd4cd7730&lang=en-us
+
 Author Mus spyroot@gmail.com
 """
 import argparse
@@ -47,7 +49,7 @@ from .cmd_exceptions import UnsupportedAction
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
-                                       ("data", "discovered", "extra"))
+                                       ("data", "discovered", "extra", "error"))
 
 module_logger = logging.getLogger('idrac_ctl.idrac_manager')
 
@@ -925,7 +927,7 @@ class IDracManager:
             data = data[key]
 
         save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)
 
     def base_patch(self,
                    resource: str,
@@ -976,7 +978,7 @@ class IDracManager:
             )
             pass
 
-        return CommandResult(self.api_success_msg(ok), None, response)
+        return CommandResult(self.api_success_msg(ok), None, response, None)
 
     def base_post(self,
                   resource: str,
@@ -1028,7 +1030,7 @@ class IDracManager:
                 pf, exc_info=self._is_debug
             )
 
-        return CommandResult(self.api_success_msg(ok), None, response)
+        return CommandResult(self.api_success_msg(ok), None, response, None)
 
     @staticmethod
     def api_success_msg(status: bool) -> Dict:
@@ -1059,7 +1061,7 @@ class IDracManager:
             if pd_state == 'On':
                 cmd_reboot = self.sync_invoke(
                     ApiRequestType.RebootHost, "reboot",
-                    reset_type=default_reboot_type
+                    reset_type=default_reboot_type, do_watch=do_watch
                 )
                 if 'Status' in cmd_reboot.data:
                     result_data.update(

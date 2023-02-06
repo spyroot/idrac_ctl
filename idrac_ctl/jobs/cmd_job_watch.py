@@ -70,4 +70,4 @@ class JobWatch(IDracManager,
             print(f"the rest of args: {kwargs}")
 
         data = self.fetch_job(job_id)
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

@@ -152,4 +152,4 @@ class BootOneShot(IDracManager,
             reboot_result = self.reboot()
             api_result.update(reboot_result)
 
-        return CommandResult(api_result, None, None)
+        return CommandResult(api_result, None, None, None)

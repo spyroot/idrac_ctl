@@ -51,4 +51,4 @@ class GetRemoteRssAPIStatus(IDracManager,
 
         response = self.api_post_call(r, json.dumps({}), headers)
         _ = self.default_post_success(self, response, expected=204)
-        return CommandResult(response.json(), None, None)
+        return CommandResult(response.json(), None, None, None)

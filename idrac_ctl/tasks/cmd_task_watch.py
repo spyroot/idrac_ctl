@@ -39,7 +39,7 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
                                 default=False,
                                 help="Will create a task and will not wait.")
 
-        cmd_parser.add_argument('--job_id', required=True, dest="job_id", type=str,
+        cmd_parser.add_argument('-t', '--task_id', required=True, dest="job_id", type=str,
                                 default=None, help="Job id. Example JID_744718373591")
 
         cmd_parser.add_argument('-f', '--filename', required=False, type=str,
@@ -83,4 +83,4 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
             warnings.warn(str(mr))
             pass
 
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

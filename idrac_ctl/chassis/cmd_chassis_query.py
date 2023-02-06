@@ -78,4 +78,4 @@ class ChassisQuery(IDracManager,
                         break
                 cmd_result = filter_result
 
-        return CommandResult(cmd_result, actions, None)
+        return CommandResult(cmd_result, actions, None, None)

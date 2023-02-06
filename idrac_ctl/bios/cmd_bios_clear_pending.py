@@ -5,7 +5,6 @@ pending values.
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 import asyncio
 import json
 from abc import abstractmethod
@@ -52,10 +51,10 @@ class BiosClearPending(IDracManager,
                 ) -> CommandResult:
         """Execute clear BIOS pending values
 
-        :param do_async:
-        :param data_type:
+        :param do_async:  async request.
+        :param data_type: data type.
         :param kwargs:
-        :return:
+        :return: CommandResult
         """
         headers = {}
         if data_type == "json":
@@ -69,9 +68,10 @@ class BiosClearPending(IDracManager,
             api_target = cmd_result.discovered['ClearPending'].target
 
         if api_target is None:
-            raise FailedDiscoverAction("Failed discover clear pending bios action.")
+            raise FailedDiscoverAction(
+                "Failed discover clear pending bios action.")
 
-        api_req_result = {}
+        err = None
         try:
             pd = {}
             r = f"https://{self.idrac_ip}{api_target}"
@@ -81,9 +81,15 @@ class BiosClearPending(IDracManager,
             else:
                 loop = asyncio.get_event_loop()
                 ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
+
             api_req_result = {"Status": ok}
 
         except PostRequestFailed as pf:
+            err = pf
+            api_req_result = {
+                "Status": False,
+                "Error": str(pf)
+            }
             self.logger.error(pf)
 
-        return CommandResult(api_req_result, None, None)
+        return CommandResult(api_req_result, None, None, err)

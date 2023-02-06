@@ -61,4 +61,4 @@ class TasksList(IDracManager,
                         action = self.discover_redfish_actions(self, m)
                         actions.update(action)
 
-        return CommandResult(cmd_result, actions, None)
+        return CommandResult(cmd_result, actions, None, None)

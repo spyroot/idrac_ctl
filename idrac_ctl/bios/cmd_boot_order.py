@@ -124,4 +124,4 @@ class ChangeBootOrder(IDracManager,
                 warnings.warn(str(ur))
                 pass
 
-        return CommandResult(result, None, None)
+        return CommandResult(result, None, None, None)

@@ -76,4 +76,4 @@ class GetNetworkIsoAttachStatus(IDracManager,
             if 'Status' in cmd_reboot:
                 result.update({"Reboot": cmd_reboot['Status']})
 
-        return CommandResult(result, None, None)
+        return CommandResult(result, None, None, None)

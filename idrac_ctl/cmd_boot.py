@@ -91,4 +91,4 @@ class BootQuery(IDracManager,
             extra_data = [self.api_get_call(f"https://{self.idrac_ip}{a}", headers).json()
                           for a in extra_actions]
 
-        return CommandResult(data, None, extra_data)
+        return CommandResult(data, None, extra_data, None)

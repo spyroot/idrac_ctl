@@ -171,4 +171,4 @@ class BiosQuery(IDracManager,
             act = self.discover_redfish_actions(self, d)
             action_dict.update(act)
 
-        return CommandResult(data, action_dict, extra_data_dict)
+        return CommandResult(data, action_dict, extra_data_dict, None)

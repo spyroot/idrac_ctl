@@ -69,4 +69,4 @@ class FirmwareInventoryQuery(IDracManager,
         data = response.json()
         self.default_error_handler(response)
         save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

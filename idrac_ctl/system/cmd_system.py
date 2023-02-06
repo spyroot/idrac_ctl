@@ -125,4 +125,4 @@ class SystemQuery(IDracManager, scm_type=ApiRequestType.SystemQuery,
                         print(f"sending request {r} status code {response.status_code}")
                     extra_data_dict[k] = response.json()
 
-        return CommandResult(data, rest_endpoints, extra_data_dict)
+        return CommandResult(data, rest_endpoints, extra_data_dict, None)

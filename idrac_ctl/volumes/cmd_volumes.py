@@ -58,4 +58,4 @@ class VolumeQuery(IDracManager, scm_type=ApiRequestType.VolumeQuery,
                                      do_expanded=True)
 
         actions = self.discover_member_redfish_actions(self, cmd_result.data)
-        return CommandResult(cmd_result.data, actions, None)
+        return CommandResult(cmd_result.data, actions, None, None)

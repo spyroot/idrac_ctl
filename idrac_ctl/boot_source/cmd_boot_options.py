@@ -74,4 +74,4 @@ class BootOptionsQuery(IDracManager, scm_type=ApiRequestType.BootOptionQuery,
 
         data = response.json()
         save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

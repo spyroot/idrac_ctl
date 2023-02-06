@@ -114,4 +114,4 @@ class VirtualMediaGet(IDracManager,
             data = data[filter_key]
 
         save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

@@ -90,4 +90,4 @@ class DellOemAttach(IDracManager, scm_type=ApiRequestType.OemAttach,
             data = api_result.extra.json()
             self.default_json_printer(data)
 
-        return CommandResult(result, None, None)
+        return CommandResult(result, None, None, None)

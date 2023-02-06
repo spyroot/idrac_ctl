@@ -93,4 +93,4 @@ class JobDel(IDracManager,
         except DeleteRequestFailed as drq:
             print(drq)
 
-        return CommandResult(self.api_success_msg(ok), None, None)
+        return CommandResult(self.api_success_msg(ok), None, None, None)

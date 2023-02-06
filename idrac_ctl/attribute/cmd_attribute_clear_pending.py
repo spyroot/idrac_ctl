@@ -85,4 +85,4 @@ class AttributeClearPending(IDracManager,
             print("Error:", pf)
             pass
 
-        return CommandResult(api_req_result, None, None)
+        return CommandResult(api_req_result, None, None, None)

@@ -132,4 +132,4 @@ class StorageQuery(IDracManager, scm_type=ApiRequestType.StorageQuery,
             controller_list = [id_data['@odata.id'].split("/")[-1] for id_data in data['Members']]
             controller_uri = [id_data['@odata.id'] for id_data in data['Members']]
 
-        return CommandResult(controller_list, controller_uri, None)
+        return CommandResult(controller_list, controller_uri, None, None)

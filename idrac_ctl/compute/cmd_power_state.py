@@ -8,7 +8,6 @@ Author Mus spyroot@gmail.com
 import argparse
 import asyncio
 import json
-import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -140,4 +139,4 @@ class RebootHost(IDracManager,
         except UnexpectedResponse as ur:
             self.logger.error(ur)
 
-        return CommandResult(self.api_success_msg(ok), None, None)
+        return CommandResult(self.api_success_msg(ok), None, None, None)

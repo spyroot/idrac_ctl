@@ -97,4 +97,4 @@ class PciDeviceQuery(IDracManager,
                     pbar.update(1)
 
         save_if_needed(filename, pci_data)
-        return CommandResult(pci_data, None, None)
+        return CommandResult(pci_data, None, None,  None)

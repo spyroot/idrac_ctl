@@ -166,4 +166,4 @@ class BiosRegistry(IDracManager,
         if is_value_only:
             data = [entry['Value'] for entry in data if isinstance(entry, dict) and 'Value' in entry][0]
 
-        return CommandResult(data, None, attribute_names)
+        return CommandResult(data, None, attribute_names, None)

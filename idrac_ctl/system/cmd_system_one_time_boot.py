@@ -145,4 +145,4 @@ class ImportOneTimeBoot(IDracManager,
         except PostRequestFailed as prf:
             self.logger.error(prf)
 
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

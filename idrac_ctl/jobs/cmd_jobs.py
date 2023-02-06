@@ -215,4 +215,4 @@ class JobList(IDracManager,
         if job_type is not None and len(job_type) > 0:
             filtered_data = [d for d in filtered_data if d['JobType'] == job_type]
             # BIOSConfiguration
-        return CommandResult(filtered_data, None, None)
+        return CommandResult(filtered_data, None, None, None)

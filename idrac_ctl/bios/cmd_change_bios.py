@@ -314,12 +314,13 @@ class BiosChangeSettings(IDracManager,
             self.logger.info(f"payload: {base_payload}")
 
         if do_show:
-            return CommandResult(json.dumps(payload), None, None)
+            return CommandResult(json.dumps(payload), None, None, None)
 
         cmd_pending = self.sync_invoke(
             ApiRequestType.BiosQueryPending, "bios_query_pending",
         )
 
+        # commit or not pending
         if len(cmd_pending.data) > 0:
             if commit_pending:
                 cmd_apply = self.sync_invoke(
@@ -334,6 +335,7 @@ class BiosChangeSettings(IDracManager,
             target_api, payload=payload,
             do_async=do_async, expected_status=200
         )
+
         if verbose:
             resp = api_result.extra
             print(f"api_result.data: hdr {resp.headers}")
@@ -356,8 +358,16 @@ class BiosChangeSettings(IDracManager,
                         data = self.fetch_job(job_id)
                         if isinstance(api_result.data, dict):
                             result_data.update(data)
+                    # commit
+                    if do_commit:
+                        cmd_apply = self.sync_invoke(
+                            ApiRequestType.JobApply,
+                            "job_apply",
+                            do_reboot=do_reboot,
+                            do_watch=True,
+                        )
                     else:
-                        cmd_result = self.sync_invoke(
+                        cmd_apply = self.sync_invoke(
                             ApiRequestType.JobApply,
                             "job_apply",
                             do_reboot=do_reboot,
@@ -373,4 +383,4 @@ class BiosChangeSettings(IDracManager,
         if do_reboot:
             self.do_reboot(result_data)
 
-        return CommandResult({}, None, None)
+        return CommandResult({}, None, None, None)

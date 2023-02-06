@@ -57,4 +57,4 @@ class TasksGet(IDracManager,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
-        return CommandResult(cmd_result, None, None)
+        return CommandResult(cmd_result, None, None, None)

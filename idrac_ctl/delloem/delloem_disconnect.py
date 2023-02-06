@@ -51,4 +51,4 @@ class DellOemDisconnect(IDracManager,
                                     do_async=do_async, expected_status=200)
         resp = self.parse_task_id(api_result)
         api_result.data.update(resp)
-        return CommandResult(api_result.data, None, None)
+        return CommandResult(api_result.data, None, None, None)

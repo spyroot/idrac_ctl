@@ -82,8 +82,12 @@ class JobApply(IDracManager,
                     # if we need watch for a job, we first reboot and watch and wait.
                     if do_reboot:
                         self.reboot(do_watch)
-                    self.fetch_job(job_id)
+                    cmd_result.data = self.fetch_job(job_id)
         except UnexpectedResponse as un:
+            cmd_result.data = {
+                "Status": False,
+                "Error": str(un)
+            }
             self.logger.error(un)
 
         return CommandResult(cmd_result.data, None, {"job_id": job_id})

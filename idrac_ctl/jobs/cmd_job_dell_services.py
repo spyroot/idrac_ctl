@@ -53,4 +53,4 @@ class JobDellServices(IDracManager,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
         actions = self.discover_redfish_actions(self, cmd_result.data)
-        return CommandResult(cmd_result, None, actions)
+        return CommandResult(cmd_result, None, actions, None)

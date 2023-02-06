@@ -166,4 +166,4 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
         except PostRequestFailed as prf:
             print(prf)
 
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

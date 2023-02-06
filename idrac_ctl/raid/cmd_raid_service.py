@@ -80,4 +80,4 @@ class RaidServiceQuery(IDracManager,
             if len(a) > 0 and 'target' in actions[a]:
                 action_dict[raid_action[1]] = actions[a]['target']
 
-        return CommandResult(data, action_dict, None)
+        return CommandResult(data, action_dict, None, None)

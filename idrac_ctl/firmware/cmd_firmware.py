@@ -92,4 +92,4 @@ class FirmwareQuery(IDracManager,
         data = response.json()
 
         save_if_needed(filename, data)
-        return CommandResult(data, None, None)
+        return CommandResult(data, None, None, None)

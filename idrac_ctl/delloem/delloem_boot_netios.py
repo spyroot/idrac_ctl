@@ -86,4 +86,4 @@ class DellOemNetIsoBoot(IDracManager,
                                     do_async=do_async, expected_status=202)
         resp = self.parse_task_id(api_result)
         api_result.data.update(resp)
-        return CommandResult(api_result, None, None)
+        return CommandResult(api_result, None, None, None)

@@ -110,4 +110,4 @@ class ConvertNoneRaid(IDracManager,
             cmd_result.data.update(resp)
             return CommandResult(cmd_result.data, None, None)
 
-        return CommandResult({"Status": "all disk are none raid"}, None, None)
+        return CommandResult({"Status": "all disk are none raid"}, None, None, None)
