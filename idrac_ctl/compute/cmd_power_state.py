@@ -164,7 +164,7 @@ class RebootHost(IDracManager,
             try:
                 for job in scheduled_jobs.data:
                     # reboot and wait for completion.
-                    self.logger.info(f"Reboot pending job {job}")
+                    self.logger.info(f"Reboot pending job created: task id {job}")
                     data = self.fetch_job(job, wait_completion=True)
                     self.default_json_printer(data)
                     reboot -= 1
@@ -172,6 +172,7 @@ class RebootHost(IDracManager,
                 self.logger.error(str(mr))
                 time.sleep(sleep_time)
 
+            self.logger.info(f"Sleeping and waiting for reboot pending")
             time.sleep(sleep_time)
             retry_counter += 1
         try:
