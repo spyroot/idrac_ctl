@@ -9,6 +9,19 @@ import os
 import warnings
 from pathlib import Path
 from typing import Optional
+import json
+from datetime import datetime
+from shared import ScheduleJobType
+
+
+def from_json_spec(from_spec: str):
+    """read json from a file
+    :param from_spec: a path to a file with json spec.
+    """
+    with open(from_spec) as user_file:
+        file_contents = user_file.read()
+    payload = json.loads(file_contents)
+    return payload
 
 
 def _find_ids(obj, key, result):

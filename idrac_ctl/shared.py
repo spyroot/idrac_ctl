@@ -164,6 +164,7 @@ class Singleton(type):
 
 
 class BootSource(Enum):
+    """IDRAC Boot sources"""
     Pxe = "Pxe"
     Floppy = "Floppy"
     CD = "CD"
@@ -175,12 +176,14 @@ class BootSource(Enum):
 
 
 class BiosSetup(Enum):
-    Disabled = "Disabled"
+    """Bios apply once etc"""
     Once = "Once"
     Continuous = "Continuous"
+    Disabled = "Disabled"
 
 
 class ResetType(Enum):
+    """Reset types"""
     On = "On"
     ForceOff = "ForceOff"
     GracefulRestart = "GracefulRestart"
@@ -197,12 +200,12 @@ class PowerState(Enum):
 
 class JobState(Enum):
     """IDRAC job states"""
-    Running = "Running"
-    RebootCompleted = "RebootCompleted"
-    Completed = "Completed"
     Failed = "Failed"
-    RebootPending = "RebootPending"
+    Running = "Running"
+    Completed = "Completed"
     Scheduled = "Scheduled"
+    RebootCompleted = "RebootCompleted"
+    RebootPending = "RebootPending"
 
 
 class JobTypes(Enum):
@@ -226,6 +229,8 @@ class IDRAC_API:
     IDRAC_DELL_MANAGERS = "/redfish/v1/Dell/Managers"
     IDRAC_TASKS = "/redfish/v1/TaskService/Tasks/"
     IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
+    BIOS_REGISTRY = "/Bios/BiosRegistry"
+    BIOS_SETTINGS = "/Bios/Settings"
 
 
 class IDRAC_JSON:
@@ -240,6 +245,8 @@ class IDRAC_JSON:
     Members = "Members"
     Datatime = "DateTime"
     Location = "Location"
+    Attributes = "Attributes"
+    RegistryEntries = "RegistryEntries"
 
     #
     FirmwareVersion = "FirmwareVersion"
@@ -255,3 +262,16 @@ class IDRAC_JSON:
     JobState = "JobState"
     TaskStatus = "TaskStatus"
     PercentComplete = "PercentComplete"
+
+    RedfishSettingsApplyTime = "@Redfish.SettingsApplyTime"
+    MaintenanceWindowDuration = "MaintenanceWindowDurationInSeconds"
+    MaintenanceWindowStartTime = "MaintenanceWindowStartTime"
+    ApplyTime = "ApplyTime"
+
+class JobApplyTypes:
+    """Job apply types"""
+    InMaintenance = "InMaintenanceWindowOnReset"
+    AtMaintenance = "AtMaintenanceWindowStart"
+    OnReset = "OnReset"
+    Immediate = "Immediate"
+

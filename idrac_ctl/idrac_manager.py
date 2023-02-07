@@ -39,9 +39,10 @@ from functools import cache
 from functools import cached_property
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType, IDRAC_JSON, IDRAC_API
+from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType, IDRAC_JSON, IDRAC_API, JobApplyTypes
 from idrac_ctl.cmd_utils import save_if_needed
 from .cmd_exceptions import AuthenticationFailed
+from .cmd_exceptions import MissingMandatoryArguments
 from .cmd_exceptions import PostRequestFailed
 from .cmd_exceptions import MissingResource
 from .cmd_exceptions import UnexpectedResponse
@@ -49,6 +50,7 @@ from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import PatchRequestFailed
 from .cmd_exceptions import DeleteRequestFailed
 from .cmd_exceptions import UnsupportedAction
+from .cmd_exceptions import InvalidArgumentFormat
 from idrac_ctl.shared import JobState
 
 """Each command encapsulate result in named tuple"""
@@ -1018,6 +1020,10 @@ class IDracManager:
         else:
             pd = payload
 
+        self.logger.debug(f"Issuing patch request to "
+                          f"resource: {resource}, "
+                          f"payload: {json.dumps(pd)}")
+
         ok = False
         err = None
         response = None
@@ -1101,7 +1107,9 @@ class IDracManager:
         return CommandResult(self.api_success_msg(ok), None, response, err)
 
     @staticmethod
-    def api_success_msg(status: bool, message_key: Optional[str] = "message", message=None) -> Dict:
+    def api_success_msg(status: bool,
+                        message_key: Optional[str] = "message",
+                        message=None) -> Dict:
         """A default api success respond.
         :param status: a status true of false
         :param message_key: key we need add extra
@@ -1115,6 +1123,23 @@ class IDracManager:
             }
 
         return {"Status": status}
+
+    @staticmethod
+    def api_is_change_msg(status: bool,
+                          message_key: Optional[str] = "message",
+                          message=None) -> Dict:
+        """A default api msg when no change applied.
+        :param status: a status true of false
+        :param message_key: key we need add extra
+        :param message: message information data
+        :return: a dict
+        """
+        if message is not None:
+            return {
+                "Changed": status,
+                message_key: message
+            }
+        return {"Changed": status}
 
     def reboot(self,
                do_watch: Optional[bool] = False,
@@ -1393,46 +1418,48 @@ class IDracManager:
         return job_id
 
     @staticmethod
-    def schedule_job(
+    def schedule_job_request(
             reboot_type: ScheduleJobType,
-            start_time: Optional[str],
+            start_time_isofmt: Optional[str],
             duration_time: Optional[int]) -> dict:
-        """Schedule a job.
-        :param reboot_type: reboot types.
-        :param start_time: start time for a job
+        """Create a JSON payload for schedule a job.
+
+        :param reboot_type: reboot type, ScheduleJobType
+        :param start_time_isofmt: start time for a job in ISO format.
         :param duration_time: duration for a job
         :return:
         """
         if reboot_type == ScheduleJobType.NoReboot:
             pd = {
-                "@Redfish.SettingsApplyTime": {
-                    "ApplyTime": "InMaintenanceWindowOnReset",
-                    "MaintenanceWindowStartTime": start_time,
-                    "MaintenanceWindowDurationInSeconds": duration_time
+                IDRAC_JSON.RedfishSettingsApplyTime: {
+                    IDRAC_JSON.ApplyTime: JobApplyTypes.InMaintenance,
+                    IDRAC_JSON.MaintenanceWindowStartTime: start_time_isofmt,
+                    IDRAC_JSON.MaintenanceWindowDuration: duration_time
                 }
             }
         elif reboot_type == ScheduleJobType.AutoReboot:
             pd = {
-                "@Redfish.SettingsApplyTime": {
-                    "ApplyTime": "AtMaintenanceWindowStart",
-                    "MaintenanceWindowStartTime": start_time,
-                    "MaintenanceWindowDurationInSeconds": duration_time
+                IDRAC_JSON.RedfishSettingsApplyTime: {
+                    IDRAC_JSON.ApplyTime: JobApplyTypes.AtMaintenance,
+                    IDRAC_JSON.MaintenanceWindowStartTime: start_time_isofmt,
+                    IDRAC_JSON.MaintenanceWindowDuration: duration_time
                 }
             }
         elif reboot_type == ScheduleJobType.OnReset:
             pd = {
-                "@Redfish.SettingsApplyTime": {
-                    "ApplyTime": "OnReset"
+                IDRAC_JSON.RedfishSettingsApplyTime: {
+                    IDRAC_JSON.ApplyTime: JobApplyTypes.OnReset
                 }
             }
         elif reboot_type == ScheduleJobType.Immediate:
             pd = {
-                "@Redfish.SettingsApplyTime": {
-                    "ApplyTime": "Immediate"
+                IDRAC_JSON.RedfishSettingsApplyTime: {
+                    IDRAC_JSON.ApplyTime: JobApplyTypes.Immediate
                 }
             }
         else:
-            raise ValueError("Invalid settings apply time.")
+            raise InvalidArgumentFormat(
+                "Invalid settings apply time.")
         return pd
 
     def parse_task_id(self, data):
@@ -1476,5 +1503,86 @@ class IDracManager:
         if job_id is not None:
             data = self.fetch_job(job_id)
             return data
+
+        return {}
+
+    @staticmethod
+    def make_future_job_ts(start_date: str,
+                           start_time: str,
+                           is_json_string=False) -> str:
+        """Make a future time for a maintenance task.
+        It takes start_date in format YYYY-MM-DD
+        and starts time in format HH:MM:SS and return
+        JSON string time in ISO format.
+
+        "2023-02-08T01:01:01.000001"
+
+       :param start_date: start date for a job YYYY-MM-DD
+       :param start_time: a start time for a job HH:MM:SS
+       :param is_json_string return python string or JSON string.
+       :raise: MissingMandatoryArguments if mandatory args missing.
+       :raise: InvalidArgumentFormat if format of the input is invalid.
+       """
+        if start_date is None or len(start_date) == 0:
+            raise MissingMandatoryArguments(
+                "A maintenance job requires a start date.")
+
+        if start_time is None or len(start_time) == 0:
+            raise MissingMandatoryArguments(
+                "A maintenance job requires a start time.")
+        try:
+            local_timestamp = datetime.now()
+            ts = f'{start_date}T{start_time}.000001'
+            start_timestamp = datetime.fromisoformat(ts)
+            if start_timestamp < local_timestamp:
+                raise InvalidArgumentFormat(
+                    f"Start time is in the past local time "
+                    f"{str(local_timestamp)} {str(start_timestamp)}")
+
+            # note we always parse to make sure we can convert.
+            json_str = json.dumps(start_timestamp.isoformat())
+            if is_json_string:
+                return json_str
+            else:
+                return start_timestamp.isoformat()
+        except ValueError as ve:
+            raise InvalidArgumentFormat(str(ve))
+        except TypeError as te:
+            raise InvalidArgumentFormat(str(te))
+
+    def create_apply_time_req(self,
+                              apply: str,
+                              start_date: str,
+                              start_time: str,
+                              default_duration):
+        """
+        :param start_date
+        :param start_time
+        :param default_duration
+        :param apply time auto-boot, maintenance, on-reset
+        :raise InvalidArgumentFormat
+        """
+        if apply.strip().lower() == "auto-boot":
+            start_timestamp = self.make_future_job_ts(start_date, start_time)
+            return self.schedule_job_request(
+                ScheduleJobType.AutoReboot,
+                start_time_isofmt=start_timestamp,
+                duration_time=default_duration
+            )
+        elif apply.strip().lower() == "maintenance":
+            start_timestamp = self.make_future_job_ts(start_date, start_time)
+            return self.schedule_job_request(
+                ScheduleJobType.NoReboot,
+                start_time_isofmt=start_timestamp,
+                duration_time=default_duration
+            )
+        elif apply.strip().lower() == "on-reset":
+            return self.schedule_job_request(
+                ScheduleJobType.OnReset,
+                start_time_isofmt=None,
+                duration_time=None
+            )
+        else:
+            ValueError("Unknown apply time")
 
         return {}

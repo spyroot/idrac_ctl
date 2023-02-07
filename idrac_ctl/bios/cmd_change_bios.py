@@ -31,9 +31,8 @@ from idrac_ctl.cmd_exceptions import InvalidJsonSpec
 from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
 from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl.cmd_exceptions import UnexpectedResponse
-from idrac_ctl.cmd_exceptions import MissingMandatoryArguments
-from idrac_ctl.shared import ScheduleJobType
-from datetime import datetime
+from idrac_ctl.cmd_utils import from_json_spec
+from idrac_ctl.shared import IDRAC_JSON, IDRAC_API
 
 
 class BiosChangeSettings(IDracManager,
@@ -133,7 +132,8 @@ class BiosChangeSettings(IDracManager,
 
         spec_from_group.add_argument(
             '-s', '--from_spec',
-            help="Read json spec for new bios attributes,  (Example --from_spec new_bios.json)",
+            help="Read json spec for new bios attributes,  "
+                 "(Example --from_spec new_bios.json)",
             type=str, required=True, dest="from_spec", metavar="file name",
             default=None
         )
@@ -176,27 +176,12 @@ class BiosChangeSettings(IDracManager,
         for name, val in zip(attribute_names, attribute_values):
             bios_payload["Attributes"][name.strip()] = val.strip()
 
-        for k, v in bios_payload["Attributes"].items():
+        for k, v in bios_payload[IDRAC_JSON.Attributes].items():
             for current_data in current_config:
                 if k in current_data.values() and current_data['Type'] == "Integer":
-                    bios_payload['Attributes'][k] = int(v)
+                    bios_payload[IDRAC_JSON.Attributes][k] = int(v)
 
         return bios_payload
-
-    def validate_future_job(self, start_date: str, start_time: str):
-        """Executes command to change bios settings.
-
-       :param start_date: start date for a job
-       :param start_time: a start time for a job
-       :raise: MissingMandatoryArguments if mandatory args missing.
-       """
-        if start_date is None or len(start_date):
-            raise MissingMandatoryArguments("Maintenance job requires a start date.")
-        if start_time is None or len(start_time):
-            raise MissingMandatoryArguments("Maintenance job requires a start time.")
-
-        idrac_current_time = self.idrac_current_time()
-        print(idrac_current_time)
 
     def do_reboot(self, result_data) -> CommandResult:
         """Reboot
@@ -269,55 +254,37 @@ class BiosChangeSettings(IDracManager,
         :param start_date:
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/BiosRegistry"
+        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_SETTINGS}"
         cmd_result = self.base_query(
             target_api, filename=filename,
             do_async=do_async, do_expanded=False
         )
 
-        registry = cmd_result.data['RegistryEntries']
-        attribute_data = registry['Attributes']
+        registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
+        attribute_data = registry[IDRAC_JSON.Attributes]
 
         # we read either from a file or form args
         # comma seperated.
         try:
             if from_spec is not None and len(from_spec) > 0:
-                with open(from_spec) as user_file:
-                    file_contents = user_file.read()
-                payload = json.loads(file_contents)
+                payload = from_json_spec(from_spec)
             else:
                 payload = self.crete_bios_config(
                     attribute_data, attr_name, attr_value
                 )
+            if len(payload) == 0:
+                return CommandResult(
+                    self.api_is_change_msg(False), None, None, None)
         except json.decoder.JSONDecodeError as jde:
             raise InvalidJsonSpec(
                 "It looks like your JSON spec is invalid. "
                 "JSONlint the file and check..".format(str(jde)))
 
-        if apply.strip() == "auto-boot":
-            start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
-            base_payload = self.schedule_job(
-                ScheduleJobType.AutoReboot,
-                start_time=str(start_timestamp),
-                duration_time=default_duration
-            )
-        elif apply.strip() == "maintenance":
-            self.validate_future_job(start_date, start_time)
-            start_timestamp = datetime.fromisoformat(f'{start_date}T{start_time}')
-            base_payload = self.schedule_job(
-                ScheduleJobType.NoReboot,
-                start_time=str(start_timestamp),
-                duration_time=default_duration
-            )
-        else:
-            base_payload = self.schedule_job(
-                ScheduleJobType.OnReset,
-                start_time=None, duration_time=None
-            )
-
-        payload.update(base_payload)
+        job_req_payload = self.create_apply_time_req(
+            apply, start_time, start_date, default_duration)
+        payload.update(job_req_payload)
         if verbose:
-            self.logger.info(f"payload: {base_payload}")
+            self.logger.info(f"payload: {payload}")
 
         if do_show:
             return CommandResult(payload, None, None, None)
@@ -330,13 +297,17 @@ class BiosChangeSettings(IDracManager,
         if len(cmd_pending.data) > 0:
             if commit_pending:
                 cmd_apply = self.sync_invoke(
-                    ApiRequestType.JobApply, "job_apply", do_reboot=True, setting="bios",
+                    ApiRequestType.JobApply,
+                    "job_apply", do_reboot=True, setting="bios",
                 )
                 print("Applied change", cmd_apply.data)
             else:
-                raise UncommittedPendingChanges("Bios container pending changes. Please apply first.")
+                raise UncommittedPendingChanges(
+                    "BIOS contains pending changes in the queue. "
+                    "Please apply changes first."
+                )
 
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
+        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_SETTINGS}"
         api_result = self.base_patch(
             target_api, payload=payload,
             do_async=do_async, expected_status=200
@@ -353,34 +324,35 @@ class BiosChangeSettings(IDracManager,
         if api_result.extra is not None:
             resp = api_result.extra
             try:
-                if isinstance(resp, requests.models.Response):
-                    json_data = resp.json()
-                    if verbose:
-                        self.default_json_printer(json_data)
+                if not isinstance(resp, requests.models.Response):
+                    raise UnexpectedResponse("Expected response object.")
+                json_data = resp.json()
+                if verbose:
+                    self.default_json_printer(json_data)
+                # we got job id, no apply required.
+                job_id = self.job_id_from_header(resp)
+                if job_id is not None:
+                    # fetch and update job status.
+                    data = self.fetch_job(job_id)
+                    if isinstance(api_result.data, dict):
+                        result_data.update(data)
 
-                    job_id = self.job_id_from_header(resp)
-                    # we got job id, no apply required.
-                    if job_id is not None:
-                        data = self.fetch_job(job_id)
-                        if isinstance(api_result.data, dict):
-                            result_data.update(data)
-
-                    # commit
-                    if do_commit:
-                        # we commit with reboot
-                        cmd_apply = self.sync_invoke(
-                            ApiRequestType.JobApply,
-                            "job_apply",
-                            do_reboot=do_reboot,
-                            do_watch=True,
-                        )
-                        if cmd_apply.error is not None:
-                            return cmd_apply
+                # for committed request.
+                if do_commit:
+                    # we commit with a reboot
+                    cmd_apply = self.sync_invoke(
+                        ApiRequestType.JobApply,
+                        "job_apply",
+                        do_reboot=do_reboot,
+                        do_watch=True,
+                    )
+                    if cmd_apply.error is not None:
+                        return cmd_apply
             except UnexpectedResponse as ur:
                 self.logger.error(ur)
 
         #
         if do_reboot:
-            reboot_result = self.do_reboot(result_data)
+            self.do_reboot(result_data)
 
-        return CommandResult(reboot_result, None, None, None)
+        return CommandResult(api_result.data, None, None, None)

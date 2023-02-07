@@ -20,6 +20,12 @@ class MissingMandatoryArguments(Exception):
     pass
 
 
+class InvalidArgumentFormat(Exception):
+    """Must raise in an argument is invalid format.
+    """
+    pass
+
+
 class FailedDiscoverAction(Exception):
     """Must raise if requested action failed to discover.
     i.e. old IDRAC version for example.

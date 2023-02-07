@@ -6,8 +6,11 @@ registers to the command line ctl tool. Similarly to the rest command caller can
 to a file and consume asynchronously or synchronously.
 
 idrac_ctl --json bios --filter SystemModelName
-idrac_ctl --json bios --filter --filter systemmodelname
+idrac_ctl --json bios --filter systemmodelname
 idrac_ctl --json bios --filter ProcCStates
+
+Piping to JQ.
+idrac_ctl --nocolor bios --filter ProcCStates,SysMemSize | jq '.data'
 
 Filter by multiple attributes, note you search done case in sensitive
 
@@ -32,6 +35,7 @@ from idrac_ctl import ApiRequestType, CommandResult
 from idrac_ctl.cmd_utils import save_if_needed, find_ids
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
+from idrac_ctl.shared import IDRAC_JSON
 
 
 class BiosQuery(IDracManager,
@@ -80,7 +84,15 @@ class BiosQuery(IDracManager,
             metavar="BIOS_ATTRIBUTE",
             help="will filter on bios attribute information. "
                  "Example --filter ProcCStates , "
-                 "will filter and and show C-State.")
+                 "will filter and and show C-State."
+                 "You can pass a list. --filter ProcCStates,SysMemSize")
+
+        cmd_arg.add_argument(
+            '--from_file', required=False, type=str, dest="attr_filter_file",
+            metavar="FILENAME",
+            help="will user json file to filter a bios attribute information. "
+                 "Example --from_file value_we_need.json. A file must "
+                 "a JSON array")
 
         cmd_arg.add_argument(
             '--deep', default=False, required=False, action='store_true',
@@ -103,16 +115,20 @@ class BiosQuery(IDracManager,
                 do_async: Optional[bool] = False,
                 attr_only: Optional[bool] = False,
                 attr_filter: Optional[str] = "",
+                attr_filter_file: Optional[str] = "",
                 **kwargs) -> CommandResult:
-        """Query bios from iDRAC.
+        """Query bios settings from iDRAC.
 
-        :param attr_filter: filters by BIOS attributes.
-        :param attr_only: Will only output attribute i.e. current bios settings.
-        :param do_async: will use asyncio
-        :param verbose: verbose output, mainly for debug.
-        :param filename: if filename indicate call will save a bios setting to a file.
+        :param attr_filter: Filters by BIOS attributes. Each value is a JSON key.
+                            If we need a query on multiply param, attr_filter must have a
+                            comma-separated list of strings "ProcCStates,SysMemSize"
+        :param attr_filter_file: A JSON file that container JSON keys we will filter on
+        :param attr_only: Will only output bios attribute i.e. current bios settings
+        :param verbose: enables a verbose output, mainly for debug.
         :param do_deep: deep walk
+        :param do_async: will use asyncio
         :param data_type: default json
+        :param filename: if filename signals  data must save to file, a bios setting to a file.
         :return:
         """
         idrac_api = "/redfish/v1/Systems/System.Embedded.1/Bios"
@@ -153,7 +169,7 @@ class BiosQuery(IDracManager,
 
         extra_data_dict = {}
         if do_deep:
-            api_links = find_ids(data, "@odata.id")
+            api_links = find_ids(data, IDRAC_JSON.Data_id)
             api_links = [u for u in api_links if idrac_api != u]
             for api_link in api_links:
                 r = f"{self._default_method}{self.idrac_ip}{api_link}"

@@ -199,6 +199,28 @@ Example --show the flag. It will generate the final spec command will generate.
 idrac_ctl bios-change --from_spec ./my_test.spec.json --show on-reset
 ```
 
+## Compare values.
+
+Before applying the change, you might want to check the current value.
+For example first we fetch current values for ProcCStates and SysMemSize
+
+```bash
+idrac_ctl bios --filter ProcCStates,SysMemSize
+```
+By default, output colorize if you need pass or pipe to jq or any other tools
+user **--nocolor** flag.
+
+```bash
+python idrac_ctl.py --nocolor bios --filter ProcCStates,SysMemSize | jq '.data'
+```
+
+```json
+{
+  "ProcCStates": "Disabled",
+  "SysMemSize": "768 GB"
+}
+
+```
 ## More advanced example. 
 
 Let say we need boot one shot from ISO file from HTTP link and start
