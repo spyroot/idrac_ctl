@@ -3,6 +3,8 @@ build_push.sh
 env_test.sh
 
 *.th
+*.env
+devices/*.env
 *__pycache__*
 __pycache__/
 __.pytest_cache__/

@@ -1,4 +1,3 @@
 #!/bin/bash
-
-cd ..
-python idrac_ctl.py manager-reboot
+# reset manager object
+python idrac_ctl manager-reboot

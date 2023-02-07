@@ -1,7 +1,6 @@
 #!/bin/bash
 
-cd ..
-python idrac_ctl.py chassis --filter PowerState
-python idrac_ctl.py chassis-reset --reset_type On
+idrac_ctl chassis --filter PowerState
+idrac_ctl chassis-reset --reset_type On
 sleep 10
 python idrac_ctl.py chassis --filter PowerState

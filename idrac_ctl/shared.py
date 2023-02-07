@@ -189,13 +189,14 @@ class ResetType(Enum):
 
 
 class PowerState(Enum):
+    """ IDRAC chassis power state
+    """
     On = "On"
     Off = "Off"
 
 
 class JobState(Enum):
-    """IDRAC job states
-    """
+    """IDRAC job states"""
     Running = "Running"
     RebootCompleted = "RebootCompleted"
     Completed = "Completed"
@@ -205,16 +206,14 @@ class JobState(Enum):
 
 
 class JobTypes(Enum):
-    """IDRAC job types
-    """
+    """IDRAC job types"""
     BIOS_CONFIG = "bios_config"
     FIRMWARE_UPDATE = "firmware_update"
     REBOOT_NO_FORCE = "reboot_no_force"
 
 
 class HTTPMethod(Enum):
-    """Base HTTP methods.
-    """
+    """Base HTTP methods."""
     GET = auto()
     POST = auto()
     PUSH = auto()
