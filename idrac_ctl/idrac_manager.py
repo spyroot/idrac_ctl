@@ -1492,10 +1492,10 @@ class IDracManager:
         job_id = None
         try:
             job_id = self.job_id_from_header(resp)
-            logging.debug(
-                f"idrac api returned {job_id} in the header."
-            )
+            logging.debug(f"idrac api returned {job_id} in the header.")
             return job_id
+        except TaskIdUnavailable as tiu:
+            pass
         except UnexpectedResponse as ur:
             logging.debug(ur, exc_info=self._is_debug)
 
@@ -1504,6 +1504,8 @@ class IDracManager:
             if job_id is None:
                 job_id = self.job_id_from_respond(resp)
                 logging.debug(f"idrac api returned {job_id} in the header.")
+        except TaskIdUnavailable as tiu:
+            pass
         except UnexpectedResponse as _:
             pass
 
