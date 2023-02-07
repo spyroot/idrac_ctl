@@ -105,19 +105,19 @@ class IDracManager:
         self._delete_success_responses = [200, 201, 202, 203, 204]
 
     @property
-    def idrac_ip(self):
+    def idrac_ip(self) -> str:
         return self._idrac_ip
 
     @property
-    def username(self):
+    def username(self) -> str:
         return self._username
 
     @property
-    def password(self):
+    def password(self) -> str:
         return self._password
 
     @property
-    def x_auth(self):
+    def x_auth(self) -> str:
         return self._x_auth
 
     def __init_subclass__(cls, scm_type=None, name=None, **kwargs):
@@ -215,9 +215,11 @@ class IDracManager:
 
         if self.x_auth is not None:
             return loop.run_in_executor(
-                None, functools.partial(requests.get, r,
-                                        verify=self._is_verify_cert,
-                                        headers=headers)
+                None, functools.partial(
+                    requests.get, r,
+                    verify=self._is_verify_cert,
+                    headers=headers
+                )
             )
         else:
             return loop.run_in_executor(
@@ -291,11 +293,19 @@ class IDracManager:
 
     def sync_invoke(self, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
         """Synchronous invocation of target command
-        :param api_call: A enum for command.
-        :param name: A name for command to differentiate sub-commands.
-        :param kwargs: Args passed to a command.
-        :return: Return result depends on actual command.
+        :param name: a name for command to differentiate sub-commands
+        :param api_call: enum i.e. a type command that we need invoke
+        :param kwargs: arguments passed to a command
+        :return: Return result depends on actual command,
+                 encapsulated in generic CommandResult
         """
+        if len(self._username) == 0:
+            raise ValueError("Username is empty string.")
+        if len(self._password) == 0:
+            raise ValueError("Password is empty string.")
+        if len(self._idrac_ip) == 0:
+            raise ValueError("IDRAC IP is empty string.")
+
         kwargs.update(
             {
                 "idrac_ip": self._idrac_ip,
@@ -319,8 +329,7 @@ class IDracManager:
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        r = f"/redfish/v1/Managers/iDRAC.Embedded.1/" \
-            f"Oem/Dell/Jobs/{job_id}"
+        r = f"{self.idrac_members}/Oem/Dell/Jobs/{job_id}"
         return self.base_query(r, do_expanded=True, do_async=do_async).data
 
     def fetch_job(self,
@@ -340,16 +349,18 @@ class IDracManager:
         """
         last_update = 0
         percent_done = 0
+
+        # job might be already done.
         jb = self.get_job(job_id)
-        print("Job data", jb)
-        current_state = jb["JobState"]
-        if current_state == JobState.Completed.value:
-            return self.api_success_msg(True, message=f"Job {job_id} completed.")
+        if IDRAC_JSON.JobState in jb:
+            current_state = jb[IDRAC_JSON.JobState]
+            if current_state == JobState.Completed.value:
+                return self.api_success_msg(True, message=f"Job {job_id} completed.")
 
         with tqdm(total=100) as pbar:
             while True:
-                resp = self.api_get_call(f"{self._default_method}{self.idrac_ip}/redfish/v1/"
-                                         f"TaskService/Tasks/{job_id}", hdr={})
+                resp = self.api_get_call(f"{self._default_method}{self.idrac_ip}"
+                                         f"{IDRAC_API.IDRAC_TASKS}{job_id}", hdr={})
                 if resp.status_code == 401:
                     AuthenticationFailed("Authentication failed.")
                 elif resp.status_code == 404:
@@ -360,12 +371,12 @@ class IDracManager:
                     return resp_data
                 elif resp.status_code == 202:
                     resp_data = resp.json()
-                    if 'TaskStatus' in resp_data and resp_data['TaskStatus'] == 'OK':
-                        if 'JobState' in resp_data:
-                            current_state = resp_data['JobState']
-                        if 'PercentComplete' in resp_data:
+                    if IDRAC_JSON.TaskStatus in resp_data and resp_data[IDRAC_JSON.TaskStatus] == 'OK':
+                        if IDRAC_JSON.JobState in resp_data:
+                            current_state = resp_data[IDRAC_JSON.JobState]
+                        if IDRAC_JSON.PercentComplete in resp_data:
                             try:
-                                percent_done = int(resp_data['PercentComplete'])
+                                percent_done = int(resp_data[IDRAC_JSON.PercentComplete])
                             except TypeError:
                                 pass
                             if percent_done > last_update:
@@ -373,11 +384,11 @@ class IDracManager:
                                 inc = percent_done - pbar.n
                                 pbar.update(n=inc)
                             time.sleep(sleep_time)
-                elif wait_completion and current_state == "Completed":
+                elif wait_completion and current_state == JobState.Completed.value:
                     return resp_data
                 else:
-                    if 'JobState' in resp_data:
-                        current_state = resp_data['JobState']
+                    if IDRAC_JSON.JobState in resp_data:
+                        current_state = resp_data[IDRAC_JSON.JobState]
                     self.logger.error("unexpected status code", resp.status_code)
                     time.sleep(sleep_time)
 
@@ -423,15 +434,16 @@ class IDracManager:
         """
         headers = {}
         headers.update(self.json_content_type)
-        r = f"{self._default_method}{self._idrac_ip}/redfish/v1/Dell/Managers" \
-            f"/iDRAC.Embedded.1/DellLCService"
+        r = f"{self._default_method}{self._idrac_ip}{IDRAC_API.IDRAC_DELL_MANAGERS}" \
+            f"{IDRAC_API.IDRAC_LLC}"
+
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
 
         data = response.json()
         self.api_endpoints = data
-        if 'Actions' in self.api_endpoints:
-            actions = self.api_endpoints["Actions"]
+        if IDRAC_JSON.Actions in self.api_endpoints:
+            actions = self.api_endpoints[IDRAC_JSON.Actions]
             action_keys = actions.keys()
             self.action_targets = [actions[k]['target'] for k in action_keys]
 
@@ -442,7 +454,7 @@ class IDracManager:
     def default_json_printer(json_data,
                              sort: Optional[bool] = True,
                              indents: Optional[int] = 4):
-        """json default stdout printer.
+        """default json stdout printer, it mainly used for debug.
         :param json_data:
         :param indents:
         :param sort:
@@ -472,10 +484,10 @@ class IDracManager:
         unfiltered_actions = {}
         full_redfish_names = {}
 
-        if 'Actions' not in json_data:
+        if IDRAC_JSON.Actions not in json_data:
             return unfiltered_actions, full_redfish_names
 
-        redfish_actions = json_data['Actions']
+        redfish_actions = json_data[IDRAC_JSON.Actions]
         for a in redfish_actions:
             _ca = redfish_actions[a]
             if a == "Oem" and isinstance(_ca, dict):
@@ -504,16 +516,16 @@ class IDracManager:
         :return:
         """
         action_dict = {}
-        if 'Members' not in json_data:
-            if 'Actions' in json_data:
+        if IDRAC_JSON.Members not in json_data:
+            if IDRAC_JSON.Actions in json_data:
                 return cls.discover_redfish_actions(cls, json_data)
             else:
                 return action_dict
 
-        member_data = json_data['Members']
+        member_data = json_data[IDRAC_JSON.Members]
         for m in member_data:
             if isinstance(m, dict):
-                if 'Actions' in m.keys():
+                if IDRAC_JSON.Actions in m.keys():
                     action = cls.discover_redfish_actions(cls, m)
                     action_dict.update(action)
 
@@ -548,8 +560,9 @@ class IDracManager:
 
         return action_dict
 
+    @cached_property
     def version_api(self, data_type: Optional[str] = "json") -> bool:
-        """Return true if a new version.
+        """Return true if IDRAC version 6.0 i.e. a new version.
         :return:
         """
         headers = {}
@@ -560,7 +573,12 @@ class IDracManager:
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
         data = response.json()
-        return int(data["FirmwareVersion"].replace(".", "")) >= 6000000
+        if 'FirmwareVersion' in data:
+            fw = data["FirmwareVersion"]
+            self.logger.info(f"IDRAC firmware {fw}")
+            return int(data["FirmwareVersion"].replace(".", "")) >= 6000000
+
+        return False
 
     @staticmethod
     def filter_attribute(cls, json_data, attr_filter: Optional[str]):
@@ -1138,22 +1156,33 @@ class IDracManager:
 
         return result_data
 
-    def idrac_firmware(self):
+    @cached_property
+    def idrac_firmware(self) -> str:
         """Shared method return idrac firmware
         """
-        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="FirmwareVersion")
+        api_return = self.base_query(self.idrac_members,
+                                     key=IDRAC_JSON.FirmwareVersion)
+        return api_return.data
 
-    def idrac_last_reset(self):
+    def idrac_last_reset(self) -> datetime:
         """Shared method return idrac last reset time"""
-        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="LastResetTime")
+        idrac_reset_time = None
+        api_return = self.base_query(self.idrac_members,
+                                     key=IDRAC_JSON.LastResetTime)
+        try:
+            idrac_reset_time = datetime.fromisoformat(api_return.data)
+        except ValueError as ve:
+            self.logger.error(ve)
+        return idrac_reset_time
 
     def idrac_current_time(self) -> datetime:
         """Shared method return idrac current time, if idrac return none ISO format
         return None"""
         idrac_time = None
-        query_result = self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key=IDRAC_JSON.Datatime)
+        api_return = self.base_query(self.idrac_members,
+                                     key=IDRAC_JSON.Datatime)
         try:
-            idrac_time = datetime.fromisoformat(query_result.data)
+            idrac_time = datetime.fromisoformat(api_return.data)
         except ValueError as ve:
             self.logger.error(ve)
         return idrac_time

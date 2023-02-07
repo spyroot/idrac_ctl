@@ -223,6 +223,9 @@ class HTTPMethod(Enum):
 
 class IDRAC_API:
     IDRAC_MANAGER = "/redfish/v1/Managers"
+    IDRAC_DELL_MANAGERS = "/redfish/v1/Dell/Managers"
+    IDRAC_TASKS = "/redfish/v1/TaskService/Tasks/"
+    IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
 
 
 class IDRAC_JSON:
@@ -246,3 +249,8 @@ class IDRAC_JSON:
     DateTimeLocalOffset = "DateTimeLocalOffset"
     PowerState = "PowerState"
     UUID = "UUID"
+
+    # Job states
+    JobState = "JobState"
+    TaskStatus = "TaskStatus"
+    PercentComplete = "PercentComplete"

@@ -57,10 +57,6 @@ class BasicManagerTest(TestCase):
         _ = manager.idrac_manage_servers
         self.assertTrue(updated_query_counter == manager.query_counter, "expect cache property")
 
-
-
-
-
     def test_idrac_manage_chassis(self):
         """Expect /redfish/v1/Chassis/System.Embedded.1"""
         manager = self.setUpClass()
@@ -86,7 +82,27 @@ class BasicManagerTest(TestCase):
     def test_idrac_time(self):
         manager = self.setUpClass()
         idrac_time = manager.idrac_current_time()
+        log.warning(f"idrac time {idrac_time}")
         self.assertTrue(isinstance(idrac_time, datetime), "return wrong data type")
         self.assertTrue(len(str(idrac_time)) > 0, "failed fetch idrac idrac_time")
-        log.warning(f"idrac time {idrac_time}")
+
+    def test_idrac_version_api(self):
+        manager = self.setUpClass()
+        is_new = manager.version_api
+        self.assertTrue(is_new)
+
+    def test_idrac_firmware(self):
+        manager = self.setUpClass()
+        resp = manager.idrac_firmware
+        log.warning(f"idrac firmware {resp}")
+        self.assertTrue(isinstance(resp, str), "return wrong data type.")
+        self.assertTrue(len(resp) > 0, "failed fetch idrac idrac firmware")
+
+    def test_idrac_last_reset(self):
+        manager = self.setUpClass()
+        resp = manager.idrac_last_reset()
+        log.warning(f"idrac last rest time {resp}")
+        self.assertTrue(isinstance(resp, datetime), "return wrong data type")
+        self.assertTrue(len(str(resp)) > 0, "failed fetch idrac idrac reset time")
+
 
