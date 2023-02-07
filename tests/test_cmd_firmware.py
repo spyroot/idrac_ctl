@@ -1,18 +1,11 @@
 import json
 import os
 from unittest import TestCase
-
 from idrac_ctl.idrac_manager import IDracManager, CommandResult
 from idrac_ctl.shared import ApiRequestType
-import urllib3
-urllib3.disable_warnings()
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-import requests
-requests.packages.urllib3.disable_warnings()
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class Test(TestCase):
+class TestFirmware(TestCase):
     redfish_api = None
 
     @classmethod
@@ -52,4 +45,5 @@ class Test(TestCase):
         except Exception as _:
             self.fail("raised exception")
 
-        self.assertTrue('Members' in result.data, f"Failed to fetch mandatory key, keys {result.data.keys()}")
+        self.assertTrue('Members' in result.data,
+                        f"Failed to fetch mandatory key, keys {result.data.keys()}")

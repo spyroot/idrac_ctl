@@ -31,8 +31,9 @@ Set the environment variable, so you don't need to pass each time.
 
 ```bash
 export IDRAC_IP=MY_IP
-export IDRAC_PASSWORD=MY_USERNAME
+export IDRAC_PASSWORD=MY_PASSWORD
 export IDRAC_USERNAME=root
+# root is default.
 ```
 ## Install
 ```
@@ -52,8 +53,8 @@ pip install -r requirements.txt
 python idrac_ctl.py --help
 ```
 
-Now I'm still trying to optimize the root menu for easy consumption. For now, all subcommands are in root, 
-hence format idrac_ctl command optional_args
+Please note i'm still trying to optimize the root menu for easy consumption. 
+For now, all subcommands are in root, hence format idrac_ctl command optional args
 
 List of subcommands.
 

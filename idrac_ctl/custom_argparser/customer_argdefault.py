@@ -1,5 +1,5 @@
-"""overwrites some argparse defaults methods.
-mainly for formatting.
+"""overwrites some argparse defaults methods,
+mainly for formatting, color etc.
 
 Author Mus spyroot@gmail.com
 """
