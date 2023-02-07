@@ -1,3 +1,7 @@
+"""iDRAC IDracManager test suite
+
+Author Mus spyroot@gmail.com
+"""
 import logging
 import os
 from datetime import datetime
@@ -80,6 +84,7 @@ class BasicManagerTest(TestCase):
         log.warning(f"idrac_id server {idrac_id}")
 
     def test_idrac_time(self):
+        """Test idrac time"""
         manager = self.setUpClass()
         idrac_time = manager.idrac_current_time()
         log.warning(f"idrac time {idrac_time}")
@@ -87,11 +92,13 @@ class BasicManagerTest(TestCase):
         self.assertTrue(len(str(idrac_time)) > 0, "failed fetch idrac idrac_time")
 
     def test_idrac_version_api(self):
+        """Test api version 6.0 > """
         manager = self.setUpClass()
         is_new = manager.version_api
         self.assertTrue(is_new)
 
     def test_idrac_firmware(self):
+        """Test firmware version"""
         manager = self.setUpClass()
         resp = manager.idrac_firmware
         log.warning(f"idrac firmware {resp}")
@@ -99,6 +106,7 @@ class BasicManagerTest(TestCase):
         self.assertTrue(len(resp) > 0, "failed fetch idrac idrac firmware")
 
     def test_idrac_last_reset(self):
+        """Test last reset time"""
         manager = self.setUpClass()
         resp = manager.idrac_last_reset()
         log.warning(f"idrac last rest time {resp}")

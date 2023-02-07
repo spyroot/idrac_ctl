@@ -1106,7 +1106,7 @@ class IDracManager:
         :param status: a status true of false
         :param message_key: key we need add extra
         :param message: message information data
-        :return:
+        :return: a dict
         """
         if message is not None:
             return {
@@ -1159,6 +1159,7 @@ class IDracManager:
     @cached_property
     def idrac_firmware(self) -> str:
         """Shared method return idrac firmware
+        :return: str: firmware.
         """
         api_return = self.base_query(self.idrac_members,
                                      key=IDRAC_JSON.FirmwareVersion)
@@ -1177,7 +1178,8 @@ class IDracManager:
 
     def idrac_current_time(self) -> datetime:
         """Shared method return idrac current time, if idrac return none ISO format
-        return None"""
+        :return: datetime
+        """
         idrac_time = None
         api_return = self.base_query(self.idrac_members,
                                      key=IDRAC_JSON.Datatime)
@@ -1195,13 +1197,14 @@ class IDracManager:
 
     def idrac_time_offset(self):
         """Shared method return idrac current time"""
-        api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.DateTimeLocalOffset)
+        api_resp = self.base_query(self.idrac_members,
+                                   key=IDRAC_JSON.DateTimeLocalOffset)
         return api_resp.data
 
     @cached_property
     def idrac_manage_chassis(self) -> str:
         """Shared method return idrac managed chassis list as json
-        /redfish/v1/Chassis/System.Embedded.1
+        :return: str: manage chassis i.e. /redfish/v1/Chassis/System.Embedded.1
         """
         api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.Links)
         if api_resp.data is not None and IDRAC_JSON.ManageChassis in api_resp.data:
@@ -1380,13 +1383,12 @@ class IDracManager:
         :raise UnexpectedResponse if header not present.
         """
         resp_hdr = response.headers
-        if 'Location' not in resp_hdr:
+        if IDRAC_JSON.Location not in resp_hdr:
             raise UnexpectedResponse(
                 "There is no location in the response header. "
                 "(not all api create job id)"
             )
-
-        location = response.headers['Location']
+        location = response.headers[IDRAC_JSON.Location]
         job_id = location.split("/")[-1]
         return job_id
 
@@ -1434,8 +1436,9 @@ class IDracManager:
         return pd
 
     def parse_task_id(self, data):
-        """Parse input data and try to get job id from the header or response.
-        :param data:
+        """Parses input data and try to get a job id from the header
+        or http response.
+        :param data:  http response or CommandResult
         :return:
         """
         # get response from extra

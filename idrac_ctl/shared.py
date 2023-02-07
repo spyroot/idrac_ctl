@@ -239,6 +239,7 @@ class IDRAC_JSON:
     Links = "Links"
     Members = "Members"
     Datatime = "DateTime"
+    Location = "Location"
 
     #
     FirmwareVersion = "FirmwareVersion"
