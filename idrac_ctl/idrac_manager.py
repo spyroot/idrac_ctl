@@ -50,6 +50,7 @@ from .cmd_exceptions import PatchRequestFailed
 from .cmd_exceptions import DeleteRequestFailed
 from .cmd_exceptions import UnsupportedAction
 from .cmd_exceptions import InvalidArgumentFormat
+from .cmd_exceptions import TaskIdUnavailable
 from .shared import JobState
 
 """Each command encapsulate result in named tuple"""
@@ -339,7 +340,7 @@ class IDracManager:
                   wait_for: Optional[int] = 200,
                   wait_status: Optional[bool] = True,
                   wait_completion: Optional[bool] = True):
-        """synchronous fetch a job from iDRAC and wait for completion.
+        """Synchronous fetch a job from iDRAC and wait for completion.
         :param wait_for:  by default, we wait status code 200 based on spec.
         :param job_id: job id as it returned from a task by idrac
         :param sleep_time: sleep and wait.
@@ -357,6 +358,8 @@ class IDracManager:
             current_state = jb[IDRAC_JSON.JobState]
             if current_state == JobState.Completed.value:
                 return self.api_success_msg(True, message=f"Job {job_id} completed.")
+            if current_state == JobState.Failed.value:
+                return self.api_success_msg(True, message=f"Job {job_id} failed.")
 
         with tqdm(total=100) as pbar:
             while True:
@@ -1163,7 +1166,8 @@ class IDracManager:
             if pd_state == 'On':
                 cmd_reboot = self.sync_invoke(
                     ApiRequestType.RebootHost, "reboot",
-                    reset_type=default_reboot_type, do_watch=do_watch
+                    reset_type=default_reboot_type,
+                    do_watch=do_watch
                 )
                 if 'Status' in cmd_reboot.data:
                     result_data.update(
@@ -1410,7 +1414,7 @@ class IDracManager:
         """
         resp_hdr = response.headers
         if IDRAC_JSON.Location not in resp_hdr:
-            raise UnexpectedResponse(
+            raise TaskIdUnavailable(
                 "There is no location in the response header. "
                 "(not all api create job id)"
             )

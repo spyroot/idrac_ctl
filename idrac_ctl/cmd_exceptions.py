@@ -56,6 +56,12 @@ class MissingResource(Exception):
 
 
 class UnexpectedResponse(Exception):
+    """Must raise if received unexpected response"""
+    pass
+
+
+class TaskIdUnavailable(Exception):
+    """Must raise if job , task id unavailable response"""
     pass
 
 

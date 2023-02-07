@@ -12,7 +12,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult, UnexpectedResponse
-from idrac_ctl.cmd_exceptions import InvalidArgument,MissingResource
+from idrac_ctl.cmd_exceptions import InvalidArgument, MissingResource
 from idrac_ctl.shared import JobTypes
 import time
 
@@ -76,6 +76,7 @@ class RebootHost(IDracManager,
                 interface_type: Optional[str] = "",
                 do_async: Optional[bool] = False,
                 sleep_time: Optional[int] = 2,
+                max_retry: Optional[int] = 10,
                 **kwargs
                 ) -> CommandResult:
         """
@@ -89,7 +90,8 @@ class RebootHost(IDracManager,
                                       UefiTarget, SDCard, UefiHttp"
         :param boot_source_override_enabled: "Once, Continuous, Disabled"
         :param boot_source_override_mode: UEFI, Legacy
-        :param sleep_time wait for job to start.
+        :param sleep_time wait for job to start
+        :param max_retry maximum retry.  by default reboot task will wait task to finish.
         :param interface_type: TCM1_0, TPM2_0, TPM1_
         :param kwargs:
         :return:
@@ -140,7 +142,12 @@ class RebootHost(IDracManager,
             )
 
         reboot = 1
+        max_retry = 10
+        retry_counter = 0
         while reboot != 0:
+            if max_retry == 10:
+                break
+            # get reboot reboot pending tasks
             scheduled_jobs = self.sync_invoke(
                 ApiRequestType.Jobs, "jobs_sources_query",
                 reboot_pending=True,
@@ -162,8 +169,11 @@ class RebootHost(IDracManager,
                     self.default_json_printer(data)
                     reboot -= 1
             except MissingResource as mr:
+                self.logger.error(str(mr))
                 time.sleep(sleep_time)
 
+            time.sleep(sleep_time)
+            retry_counter += 1
         try:
             job_id = self.job_id_from_header(response)
             if job_id is not None:

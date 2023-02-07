@@ -18,6 +18,7 @@ from typing import Optional
 
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 from idrac_ctl.cmd_exceptions import InvalidArgument, UnexpectedResponse
+from idrac_ctl.cmd_exceptions import TaskIdUnavailable
 
 
 class BootOneShot(IDracManager,
@@ -131,7 +132,8 @@ class BootOneShot(IDracManager,
             if value is None:
                 del payload['Boot'][key]
 
-        response = self.api_patch_call(r, json.dumps(payload), headers)
+        response = self.api_patch_call(
+            r, json.dumps(payload), headers)
         api_result = {}
         if self.default_patch_success(self, response):
             api_result = self.api_success_msg(True)
@@ -144,12 +146,14 @@ class BootOneShot(IDracManager,
             if job_id is not None:
                 data = self.fetch_job(job_id)
                 api_result.update(data)
+        except TaskIdUnavailable as _:
+            pass
         except UnexpectedResponse as ur:
             self.logger.critical(ur, exc_info=True)
             pass
 
         if do_reboot:
-            reboot_result = self.reboot()
+            reboot_result = self.reboot(do_watch=True)
             api_result.update(reboot_result)
 
         return CommandResult(api_result, None, None, None)
