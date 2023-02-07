@@ -34,9 +34,12 @@ from abc import abstractmethod
 from typing import Optional, Tuple, Dict, Any
 import re
 import logging
+from datetime import datetime
+from functools import cache
+from functools import cached_property
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType
+from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType, IDRAC_JSON, IDRAC_API
 from idrac_ctl.cmd_utils import save_if_needed
 from .cmd_exceptions import AuthenticationFailed
 from .cmd_exceptions import PostRequestFailed
@@ -88,6 +91,11 @@ class IDracManager:
 
         self.content_type = {'Content-Type': 'application/json; charset=utf-8'}
         self.json_content_type = {'Content-Type': 'application/json; charset=utf-8'}
+
+        self._manage_servers_obs = []
+        self._manage_chassis_obs = []
+        # mainly to track query sent , for unit test
+        self.query_counter = 0
 
         # run time
         self.action_targets = None
@@ -952,6 +960,7 @@ class IDracManager:
 
         if not do_async:
             response = self.api_get_call(r, headers)
+            self.query_counter += 1
             self.default_error_handler(response)
         else:
             loop = asyncio.get_event_loop()
@@ -1138,31 +1147,94 @@ class IDracManager:
         """Shared method return idrac last reset time"""
         return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="LastResetTime")
 
-    def idrac_current_time(self):
-        """Shared method return idrac current time"""
-        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="DateTime")
+    def idrac_current_time(self) -> datetime:
+        """Shared method return idrac current time, if idrac return none ISO format
+        return None"""
+        idrac_time = None
+        query_result = self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key=IDRAC_JSON.Datatime)
+        try:
+            idrac_time = datetime.fromisoformat(query_result.data)
+        except ValueError as ve:
+            self.logger.error(ve)
+        return idrac_time
+
+    @staticmethod
+    def local_time_iso():
+        """local time in iso format"""
+        current_date = datetime.now()
+        return current_date.isoformat()
 
     def idrac_time_offset(self):
         """Shared method return idrac current time"""
-        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="DateTimeLocalOffset")
+        api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.DateTimeLocalOffset)
+        return api_resp.data
 
-    def idrac_manage_chassis(self):
-        """Shared method return idrac managed chassis list as json"""
-        links = self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="Links")
-        if links.data is not None and 'ManagerForChassis' in links.data:
-            return links.data['ManagerForChassis']
-        return links
+    @cached_property
+    def idrac_manage_chassis(self) -> str:
+        """Shared method return idrac managed chassis list as json
+        /redfish/v1/Chassis/System.Embedded.1
+        """
+        api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.Links)
+        if api_resp.data is not None and IDRAC_JSON.ManageChassis in api_resp.data:
+            if isinstance(api_resp.data, dict):
+                manage_chassis = api_resp.data[IDRAC_JSON.ManageChassis]
+                self._manage_chassis_obs = manage_chassis
+                return self.value_from_json_list(
+                    manage_chassis, IDRAC_JSON.Data_id
+                )
+        else:
+            self.logger.error("")
+        return ""
 
-    def idrac_manage_servers(self):
-        """Shared method return idrac managed servers list as json"""
-        links = self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="Links")
-        if links.data is not None and 'ManagerForServers' in links.data:
-            return links.data['ManagerForServers']
-        return links
+    @cached_property
+    def idrac_members(self) -> str:
+        """Shared method return idrac manage members servers list as json
+        /redfish/v1/Managers/iDRAC.Embedded.1
+        """
+        cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
+        return self.value_from_json_list(cmd_result.data, IDRAC_JSON.Data_id)
 
+    @staticmethod
+    def value_from_json_list(json_obj, k):
+        """Parse json object dict.  If resp is json list [] get a key from last element
+        otherwise if a dict return value from a dict.
+        """
+        if isinstance(json_obj, list) and len(json_obj) > 0:
+            list_flat = json_obj[-1]
+            if isinstance(list_flat, dict):
+                if k in list_flat:
+                    return list_flat[k]
+        elif isinstance(json_obj, dict):
+            if k in json_obj:
+                return json_obj[k]
+        elif isinstance(json_obj, str):
+            return json_obj
+
+    @cached_property
+    def idrac_manage_servers(self) -> str:
+        """Shared method return idrac managed servers list as json
+        "/redfish/v1/Systems/System.Embedded.1"
+        """
+        api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.Links)
+        if api_resp.data is not None and IDRAC_JSON.ManagerServers in api_resp.data:
+            if isinstance(api_resp.data, dict):
+                manage_servers = api_resp.data[IDRAC_JSON.ManagerServers]
+                self._manage_servers_obs = manage_servers
+                return self.value_from_json_list(
+                    manage_servers, IDRAC_JSON.Data_id
+                )
+        else:
+            self.logger.error("")
+        return ""
+
+    @cached_property
     def idrac_id(self):
-        """Shared method return idrac current time"""
-        return self.base_query("/redfish/v1/Managers/iDRAC.Embedded.1", key="Id")
+        """Shared method return idrac id, System.Embedded.1"""
+        self.base_query(self.idrac_manage_servers, key=IDRAC_JSON.Id)
+        api_resp = self.base_query(self.idrac_manage_servers, key=IDRAC_JSON.Id)
+        if api_resp is None:
+            self.logger.critical(f"failed obtain {IDRAC_JSON.Id}")
+        return api_resp.data
 
     @staticmethod
     def base_parser(is_async: Optional[bool] = True,
@@ -1171,11 +1243,12 @@ class IDracManager:
                     is_remote_share: Optional[bool] = False,
                     is_reboot: Optional[bool] = False):
         """This idrac_ctl optional parser for all sub command.
-        Each sub-command can add additional optional flags
-        and args.
-        :return:
+        Each sub-command can add additional optional flags and args.
+        :return: argparse.ArgumentParser
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False, formatter_class=CustomArgumentDefaultsHelpFormatter)
+        cmd_parser = argparse.ArgumentParser(
+            add_help=False, formatter_class=CustomArgumentDefaultsHelpFormatter
+        )
 
         output_parser = cmd_parser.add_argument_group('output', 'Output related options')
         chassis_parser = cmd_parser.add_argument_group('chassis', 'Chassis state options')

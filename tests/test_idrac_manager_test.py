@@ -1,6 +1,11 @@
+import logging
 import os
+from datetime import datetime
 from unittest import TestCase
 from idrac_ctl.idrac_manager import IDracManager
+
+logging.basicConfig()
+log = logging.getLogger("LOG")
 
 
 class BasicManagerTest(TestCase):
@@ -26,12 +31,62 @@ class BasicManagerTest(TestCase):
         self.assertTrue(manager.username == os.environ.get('IDRAC_USERNAME', ''))
         self.assertTrue(manager.password == os.environ.get('IDRAC_PASSWORD', ''))
 
-    def test_idrac_id(self):
+    def test_idrac_idrac_members(self):
+        """Expect /redfish/v1/Managers/iDRAC.Embedded.1"""
         manager = self.setUpClass()
-        idrac_id = manager.idrac_id()
-        self.assertTrue(len(idrac_id) > 0, "failed fetch idrac id")
+        members = manager.idrac_members
+        self.assertTrue(isinstance(members, str), "members must be str and flat")
+        self.assertTrue(members == "/redfish/v1/Managers/iDRAC.Embedded.1")
+        log.warning(f"Manager members return {members}")
+
+    def test_idrac_manage_servers(self):
+        """Expect /redfish/v1/Systems/System.Embedded.1"""
+        manager = self.setUpClass()
+        manager_server = manager.idrac_manage_servers
+        current_query_counter = manager.query_counter
+
+        log.warning(f"Members server {manager_server} query counter {current_query_counter}")
+        self.assertTrue(isinstance(manager_server, str), "manage server must be string")
+        self.assertTrue(len(manager_server) > 0, "failed fetch manager server, empty string")
+        self.assertTrue(
+            manager_server == "/redfish/v1/Systems/System.Embedded.1",
+            "Expected string /redfish/v1/Systems/System.Embedded.1"
+        )
+        # track cache count
+        updated_query_counter = manager.query_counter
+        _ = manager.idrac_manage_servers
+        self.assertTrue(updated_query_counter == manager.query_counter, "expect cache property")
+
+
+
+
+
+    def test_idrac_manage_chassis(self):
+        """Expect /redfish/v1/Chassis/System.Embedded.1"""
+        manager = self.setUpClass()
+        manage_chassis = manager.idrac_manage_chassis
+        log.warning(f"Members chassis  {manage_chassis}")
+
+        self.assertTrue(isinstance(manage_chassis, str), "manage chassis must be string")
+        self.assertTrue(len(manage_chassis) > 0, "failed fetch manager server, empty string")
+        self.assertTrue(
+            manage_chassis == "/redfish/v1/Chassis/System.Embedded.1",
+            "Expected string /redfish/v1/Chassis/System.Embedded.1"
+        )
+
+    def test_idrac_id(self):
+        """Expects System.Embedded.1"""
+        manager = self.setUpClass()
+        idrac_id = manager.idrac_id
+        self.assertTrue(isinstance(idrac_id, str), "idrac id must a string")
+        self.assertTrue(len(idrac_id) > 0, "failed fetch idrac id, empty string")
+        self.assertTrue(idrac_id == "System.Embedded.1", "Expected ID System.Embedded.1")
+        log.warning(f"idrac_id server {idrac_id}")
 
     def test_idrac_time(self):
         manager = self.setUpClass()
         idrac_time = manager.idrac_current_time()
-        self.assertTrue(len(idrac_time) > 0, "failed fetch idrac idrac_time")
+        self.assertTrue(isinstance(idrac_time, datetime), "return wrong data type")
+        self.assertTrue(len(str(idrac_time)) > 0, "failed fetch idrac idrac_time")
+        log.warning(f"idrac time {idrac_time}")
+

@@ -1,0 +1,94 @@
+{
+  'ActiveSoftwareImage': {
+    '@odata.id': '/redfish/v1/UpdateService/FirmwareInventory/Installed-25227-6.00.30.00__iDRAC.Embedded.1-1'
+  },
+  'ManagerForChassis': [
+    {
+      '@odata.id': '/redfish/v1/Chassis/System.Embedded.1'
+    }
+  ],
+  'ManagerForChassis@odata.count': 1,
+  'ManagerForServers': [
+    {
+      '@odata.id': '/redfish/v1/Systems/System.Embedded.1'
+    }
+  ],
+  'ManagerForServers@odata.count': 1,
+  'ManagerInChassis': {
+    '@odata.id': '/redfish/v1/Chassis/System.Embedded.1'
+  },
+  'Oem': {
+    'Dell': {
+      '@odata.type': '#DellOem.v1_3_0.DellOemLinks',
+      'DellAttributes': [
+        {
+          '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/iDRAC.Embedded.1'
+        },
+        {
+          '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/System.Embedded.1'
+        },
+        {
+          '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/LifecycleController.Embedded.1'
+        }
+      ],
+      'DellAttributes@odata.count': 3,
+      'DellJobService': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellJobService'
+      },
+      'DellLCService': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellLCService'
+      },
+      'DellLicensableDeviceCollection': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellLicensableDevices'
+      },
+      'DellLicenseCollection': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellLicenses'
+      },
+      'DellLicenseManagementService': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellLicenseManagementService'
+      },
+      'DellOpaqueManagementDataCollection': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellOpaqueManagementData'
+      },
+      'DellPersistentStorageService': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellPersistentStorageService'
+      },
+      'DellSwitchConnectionCollection': {
+        '@odata.id': '/redfish/v1/Systems/System.Embedded.1/NetworkPorts/Oem/Dell/DellSwitchConnections'
+      },
+      'DellSwitchConnectionService': {
+        '@odata.id': '/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellSwitchConnectionService'
+      },
+      'DellSystemManagementService': {
+        '@odata.id': '/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellSystemManagementService'
+      },
+      'DellSystemQuickSyncCollection': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellSystemQuickSync'
+      },
+      'DellTimeService': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellTimeService'
+      },
+      'DellUSBDeviceCollection': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellUSBDevices'
+      },
+      'DelliDRACCardService': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DelliDRACCardService'
+      },
+      'DellvFlashCollection': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellvFlash'
+      },
+      'Jobs': {
+        '@odata.id': '/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/Jobs'
+      }
+    }
+  },
+  'SoftwareImages': [
+    {
+      '@odata.id': '/redfish/v1/UpdateService/FirmwareInventory/Previous-25227-5.00.00.00__iDRAC.Embedded.1-1'
+    },
+    {
+      '@odata.id': '/redfish/v1/UpdateService/FirmwareInventory/Installed-25227-6.00.30.00__iDRAC.Embedded.1-1'
+    }
+  ],
+  'SoftwareImages@odata.count': 2
+}

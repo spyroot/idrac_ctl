@@ -219,3 +219,30 @@ class HTTPMethod(Enum):
     PUSH = auto()
     PATCH = auto()
     DELETE = auto()
+
+
+class IDRAC_API:
+    IDRAC_MANAGER = "/redfish/v1/Managers"
+
+
+class IDRAC_JSON:
+    """All Keys we expect idrac uses based on specification.
+    """
+    Id = "Id"
+    Data_id = "@odata.id"
+    Data_type = "@odata.type"
+    Data_content = "@odata.context"
+    Actions = "Actions"
+    Links = "Links"
+    Members = "Members"
+    Datatime = "DateTime"
+
+    #
+    FirmwareVersion = "FirmwareVersion"
+    ManagerServers = "ManagerForServers"
+    ManageChassis = "ManagerForChassis"
+    LastResetTime = "LastResetTime"
+    TimezoneName = "TimeZoneName"
+    DateTimeLocalOffset = "DateTimeLocalOffset"
+    PowerState = "PowerState"
+    UUID = "UUID"
