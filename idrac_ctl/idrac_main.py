@@ -411,21 +411,21 @@ def idrac_main_ctl():
         print(
             "Please indicate the idrac ip. "
             "--idrac_ip or set IDRAC_IP environment variable. "
-            "(export IDRAC_IP=ip_address"
+            "(export IDRAC_IP=ip_address)"
         )
         sys.exit(1)
     if args.idrac_username is None or len(args.idrac_username) == 0:
         print(
             "Please indicate the idrac username."
             "--idrac_username or set IDRAC_USERNAME environment variable. "
-            "(export IDRAC_USERNAME=ip_address"
+            "(export IDRAC_USERNAME=ip_address)"
         )
         sys.exit(1)
     if args.idrac_password is None or len(args.idrac_password) == 0:
         print(
             "Please indicate the idrac password. "
             "--idrac_password or set IDRAC_PASSWORD environment."
-            "(export IDRAC_PASSWORD=ip_address"
+            "(export IDRAC_PASSWORD=ip_address)"
         )
         sys.exit(1)
 

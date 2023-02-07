@@ -85,7 +85,7 @@ class VirtualMediaGet(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        if self.version_api():
+        if self.version_api:
             r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
                 f"System.Embedded.1/VirtualMedia?$expand=*($levels=1)"
         else:

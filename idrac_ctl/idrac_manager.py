@@ -35,7 +35,6 @@ from typing import Optional, Tuple, Dict, Any
 import re
 import logging
 from datetime import datetime
-from functools import cache
 from functools import cached_property
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter

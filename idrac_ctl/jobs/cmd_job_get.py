@@ -6,13 +6,11 @@ and serialize back as caller as JSON, YAML, and XML.
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
 
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
-from idrac_ctl.shared import JobState
 
 
 class JobGet(IDracManager,

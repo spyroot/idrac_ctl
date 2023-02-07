@@ -151,7 +151,7 @@ class VirtualMediaInsert(IDracManager,
             ApiRequestType.VirtualMediaGet,
             "virtual_disk_query"
         )
-        if self.version_api():
+        if self.version_api:
             new_api = True
             # this for a future issue if old API doesn't work
 

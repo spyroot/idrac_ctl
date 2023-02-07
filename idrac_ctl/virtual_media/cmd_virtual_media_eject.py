@@ -68,7 +68,7 @@ class VirtualMediaEject(IDracManager,
             ApiRequestType.VirtualMediaGet,
             "virtual_disk_query"
         )
-        if self.version_api():
+        if self.version_api:
             new_api = True
 
         if new_api is False:
