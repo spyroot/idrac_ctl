@@ -390,6 +390,8 @@ class IDracManager:
                             time.sleep(sleep_time)
                 elif wait_completion and current_state == JobState.Completed.value:
                     return resp_data
+                elif wait_completion and current_state == JobState.Failed.value:
+                    return resp_data
                 else:
                     if IDRAC_JSON.JobState in resp_data:
                         current_state = resp_data[IDRAC_JSON.JobState]
