@@ -231,6 +231,7 @@ class IDRAC_API:
     IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
     BIOS_REGISTRY = "/Bios/BiosRegistry"
     BIOS_SETTINGS = "/Bios/Settings"
+    BIOS = "/Bios"
 
 
 class IDRAC_JSON:
@@ -268,10 +269,10 @@ class IDRAC_JSON:
     MaintenanceWindowStartTime = "MaintenanceWindowStartTime"
     ApplyTime = "ApplyTime"
 
+
 class JobApplyTypes:
     """Job apply types"""
     InMaintenance = "InMaintenanceWindowOnReset"
     AtMaintenance = "AtMaintenanceWindowStart"
     OnReset = "OnReset"
     Immediate = "Immediate"
-

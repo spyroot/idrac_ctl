@@ -40,7 +40,7 @@ from functools import cached_property
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType, IDRAC_JSON, IDRAC_API, JobApplyTypes
-from idrac_ctl.cmd_utils import save_if_needed
+from .cmd_utils import save_if_needed
 from .cmd_exceptions import AuthenticationFailed
 from .cmd_exceptions import MissingMandatoryArguments
 from .cmd_exceptions import PostRequestFailed
@@ -51,7 +51,7 @@ from .cmd_exceptions import PatchRequestFailed
 from .cmd_exceptions import DeleteRequestFailed
 from .cmd_exceptions import UnsupportedAction
 from .cmd_exceptions import InvalidArgumentFormat
-from idrac_ctl.shared import JobState
+from .shared import JobState
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
@@ -583,7 +583,9 @@ class IDracManager:
         return False
 
     @staticmethod
-    def filter_attribute(cls, json_data, attr_filter: Optional[str]):
+    def filter_attribute(cls,
+                         json_data,
+                         attr_filter: Optional[str]):
         """Filter attribute from json_data
         :param cls:
         :param json_data:

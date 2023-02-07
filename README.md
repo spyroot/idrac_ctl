@@ -219,6 +219,22 @@ python idrac_ctl.py --nocolor bios --filter ProcCStates,SysMemSize | jq '.data'
   "ProcCStates": "Disabled",
   "SysMemSize": "768 GB"
 }
+```
+
+
+You can also create query in json file and query many servers at same time.
+
+Create query.json
+```bios_query.json
+[
+  "ProcCStates",
+  "SysMemSize"
+]
+```
+
+```bash
+idrac_ctl --nocolor bios --from_file bios_query.json | jq '.data'
+```
 
 ```
 ## More advanced example. 

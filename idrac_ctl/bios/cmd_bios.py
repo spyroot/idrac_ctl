@@ -32,10 +32,10 @@ from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import IDracManager, Singleton
 from idrac_ctl import ApiRequestType, CommandResult
-from idrac_ctl.cmd_utils import save_if_needed, find_ids
+from idrac_ctl.cmd_utils import save_if_needed, find_ids, from_json_spec
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
-from idrac_ctl.shared import IDRAC_JSON
+from idrac_ctl.shared import IDRAC_JSON, IDRAC_API
 
 
 class BiosQuery(IDracManager,
@@ -119,6 +119,10 @@ class BiosQuery(IDracManager,
                 **kwargs) -> CommandResult:
         """Query bios settings from iDRAC.
 
+        It supports filtering via coma separate list or from a
+        JSON file that contains a list of keys
+        python idrac_ctl.py --nocolor bios --from_file specs/bios_query.json
+
         :param attr_filter: Filters by BIOS attributes. Each value is a JSON key.
                             If we need a query on multiply param, attr_filter must have a
                             comma-separated list of strings "ProcCStates,SysMemSize"
@@ -131,7 +135,8 @@ class BiosQuery(IDracManager,
         :param filename: if filename signals  data must save to file, a bios setting to a file.
         :return:
         """
-        idrac_api = "/redfish/v1/Systems/System.Embedded.1/Bios"
+        from_file = False
+        idrac_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS}"
 
         if verbose:
             self.logger.debug(
@@ -158,15 +163,30 @@ class BiosQuery(IDracManager,
         data = response.json()
         # list of action for bios
         action_dict = self.discover_redfish_actions(self, data)
-        if attr_only is True and 'Attributes' in data:
-            data = {'Attributes': data['Attributes']}
+        if attr_only is True and IDRAC_JSON.Attributes in data:
+            data = {
+                IDRAC_JSON.Attributes:
+                    data[IDRAC_JSON.Attributes]
+            }
 
-        # filter
-        data = self.filter_attribute(self, data, attr_filter)
+        if attr_filter_file is not None and len(attr_filter_file) > 0:
+            data_filter = from_json_spec(attr_filter_file)
+            if isinstance(data_filter, list):
+                attr_filter = ",".join(data_filter)
+                data = self.filter_attribute(self, data, attr_filter)
+            if isinstance(data_filter, str):
+                data = self.filter_attribute(self, data, attr_filter)
+            if isinstance(data_filter, dict):
+                attr_keys = attr_filter.keys()
+                attr_filter = ",".join(attr_keys)
+                data = self.filter_attribute(self, data, attr_filter)
+        else:
+            data = self.filter_attribute(self, data, attr_filter)
 
         # save data
         save_if_needed(filename, data)
 
+        # search for value
         extra_data_dict = {}
         if do_deep:
             api_links = find_ids(data, IDRAC_JSON.Data_id)

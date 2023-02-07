@@ -10,8 +10,6 @@ import warnings
 from pathlib import Path
 from typing import Optional
 import json
-from datetime import datetime
-from shared import ScheduleJobType
 
 
 def from_json_spec(from_spec: str):
