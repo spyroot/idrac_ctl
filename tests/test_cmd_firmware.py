@@ -52,4 +52,4 @@ class Test(TestCase):
         except Exception as _:
             self.fail("raised exception")
 
-        self.assertTrue('Members' in result.data, "Failed to fetch mandatory key")
+        self.assertTrue('Members' in result.data, f"Failed to fetch mandatory key, keys {result.data.keys()}")

@@ -13,6 +13,7 @@ import argparse
 import collections
 import json
 import os
+import ssl
 import sys
 import warnings
 from typing import Optional, Dict
@@ -434,3 +435,7 @@ def idrac_main_ctl():
         console_error_printer(f"Error: {af}")
     except requests.exceptions.ConnectionError as http_error:
         console_error_printer(f"Error: {http_error}")
+    except ssl.SSLCertVerificationError as ssl_err:
+        console_error_printer(f"Error: {ssl_err}")
+
+
