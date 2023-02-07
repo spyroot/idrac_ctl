@@ -1,8 +1,21 @@
 # idrac_ctl
-Standalone command line tool provide option to interact with Dell iDRAC 
-via Redfish REST API.  It supports both asynchronous and synchronous options 
+Standalone command line tool provide option to interact with Dell iDRAC via Redfish 
+REST API and execute typical workflow. It supports both asynchronous and synchronous options 
 to interact with iDRAC.
 
+* boot from remote location via http/https
+* boot from remote NFS/CIFS
+* optimize bios setting for real time workload.
+* basic option related to job and management.  apply/reset pending changes.
+* query any object that IDRAC exposes via REST interface. firmware/driver/status/metrics
+* manage volumes
+* manage raid
+* manage boot source
+* manage secure boot / UEFI
+* and much more..
+
+Examples directory contains typical examples.
+Project on https://pypi.org/manage/project/idrac-ctl/releases/
 
 # Overview
 This tool provides an option to interact with Dell iDRAC via the command line and execute almost 
