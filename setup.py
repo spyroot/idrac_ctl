@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
 setup_info = dict(name='idrac_ctl',
-                  version='1.0.11',
+                  version='1.0.12',
                   author='Mustafa Bayramov',
                   author_email="spyroot@gmail.com",
                   url="https://github.com/spyroot/idrac_ctl",
