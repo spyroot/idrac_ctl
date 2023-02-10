@@ -45,7 +45,11 @@ idrac_ctl --help
 ```
 
 ## Manual install
-Make sure you are using python >= 3.9
+Make sure you are using python >= 3.10
+
+Make sure you are using 3.10
+conda install -n py310 python=3.10
+
 ```bash
 git clone https://github.com/spyroot/idrac_ctl.git
 cd idrac_ctl

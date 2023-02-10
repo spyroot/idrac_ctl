@@ -17,7 +17,7 @@ setup_info = dict(name='idrac_ctl',
                   long_description_content_type='text/markdown',
                   packages=['idrac_ctl'] + ['idrac_ctl.' + pkg for pkg in find_packages('idrac_ctl')],
                   license="MIT",
-                  python_requires='>=3',
+                  python_requires='>=3.10',
                   install_requires=requirements,
                   entry_points={
                       'console_scripts': [
