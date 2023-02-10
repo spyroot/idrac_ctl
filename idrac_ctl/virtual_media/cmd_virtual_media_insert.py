@@ -176,7 +176,6 @@ class VirtualMediaInsert(IDracManager,
                                   f"already inserted. Eject media first.")
 
         target = [a['InsertMedia'].target for a in actions][-1]
-        # r = f"https://{self.idrac_ip}{target}"
 
         payload = {
             'Image': uri_path,

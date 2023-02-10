@@ -263,7 +263,7 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         if json_printer:
             json_printer(processed_data, cmd_args, colorized=cmd_args.nocolor)
     except TaskIdUnavailable as tid:
-        console_error_printer(f"Error: {mr}")
+        console_error_printer(f"Error: {tid}")
     except MissingResource as mr:
         console_error_printer(f"Error: {mr}")
     except InvalidJsonSpec as ijs:
