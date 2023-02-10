@@ -85,7 +85,7 @@ class ChassisReset(IDracManager,
         try:
             if not do_async:
                 response = self.api_post_call(r, json.dumps(payload), headers)
-                ok = self.default_post_success(self, response)
+                ok = self.default_post_success(self, response, ignore=409)
             else:
                 loop = asyncio.get_event_loop()
                 ok, response = loop.run_until_complete(

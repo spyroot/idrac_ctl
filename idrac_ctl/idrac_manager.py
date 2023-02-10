@@ -857,7 +857,8 @@ class IDracManager:
     @staticmethod
     def default_post_success(cls,
                              response: requests.models.Response,
-                             expected: Optional[int] = 204) -> bool:
+                             expected: Optional[int] = 204,
+                             ignore: Optional[int] = 0) -> bool:
         """Default post success handler,  Check for status code.
         and raise exception.  Default handler to check post
         request respond.
@@ -869,6 +870,9 @@ class IDracManager:
         :raise PostRequestFailed if POST Method failed
         """
         if response.status_code == expected:
+            return True
+
+        if ignore > 0 and ignore == response.status_code:
             return True
 
         if response.status_code == 200 \
