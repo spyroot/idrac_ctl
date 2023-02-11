@@ -254,13 +254,20 @@ class BiosChangeSettings(IDracManager,
         :param start_date:
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_SETTINGS}"
+        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_REGISTRY}"
         cmd_result = self.base_query(
             target_api, filename=filename,
             do_async=do_async, do_expanded=False
         )
+        if verbose:
+            self.default_json_printer(cmd_result.data)
 
+        if IDRAC_JSON.RegistryEntries not in cmd_result.data:
+            return CommandResult({"Status": "Failed fetch bios registry"}, None, None, None)
         registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
+
+        if IDRAC_JSON.Attributes not in cmd_result.data:
+            return CommandResult({"Status": "Failed fetch attributes from bios registry"}, None, None, None)
         attribute_data = registry[IDRAC_JSON.Attributes]
 
         # we read either from a file or form args

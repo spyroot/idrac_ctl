@@ -23,12 +23,7 @@ from .bios.cmd_bios_reset_default import *
 
 from .attribute.cmd_attribute import *
 from .attribute.cmd_attribute_clear_pending import *
-from .boot_source.cmd_boot_source_enable import *
-from .boot_source.cmd_boot_sources_list import *
-from .boot_source.cmd_boot_source_get import *
-from .boot_source.cmd_boot_options import *
-from .boot_source.cmd_boot_settings import *
-from .boot_source.cmd_clear_pending import *
+
 
 # jobs command
 from .jobs.cmd_jobs import *
@@ -56,7 +51,6 @@ from .virtual_media.cmd_virtual_media_get import *
 from .virtual_media.cmd_virtual_media_insert import *
 from .virtual_media.cmd_virtual_media_eject import *
 from .cmd_current_boot import *
-from .cmd_boot_one_shot import *
 
 from .cmd_query import *
 
@@ -91,3 +85,11 @@ from .volumes.cmd_initilize import *
 from .volumes.cmd_volumes import *
 from .volumes.cmd_virtual_disk import *
 
+# boot sources
+from .boot_source.cmd_boot_one_shot import *
+from .boot_source.cmd_boot_source_enable import *
+from .boot_source.cmd_boot_sources_list import *
+from .boot_source.cmd_boot_source_get import *
+from .boot_source.cmd_boot_options import *
+from .boot_source.cmd_boot_settings import *
+from .boot_source.cmd_clear_pending import *

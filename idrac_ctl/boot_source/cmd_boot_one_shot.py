@@ -105,7 +105,9 @@ class BootOneShot(IDracManager,
             ApiRequestType.CurrentBoot,
             "current_boot_query"
         )
-        boot_device = current_boot.data['BootSourceOverrideTarget@Redfish.AllowableValues']
+        boot_device = current_boot.data[
+            'BootSourceOverrideTarget@Redfish.AllowableValues'
+        ]
         if device not in boot_device:
             raise InvalidArgument(f"Invalid boot device {device}, "
                                   f"supported device {boot_device}")
@@ -127,7 +129,7 @@ class BootOneShot(IDracManager,
             }
         }
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Systems/System.Embedded.1"
+        r = f"{self._default_method}{self.idrac_ip}/{self.idrac_manage_servers}"
         for key, value in dict(payload['Boot']).items():
             if value is None:
                 del payload['Boot'][key]

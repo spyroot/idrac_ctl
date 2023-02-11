@@ -697,12 +697,14 @@ class IDracManager:
             self, r: str,
             payload: str,
             hdr: Dict,
+            ignore_error_code: Optional[int] = 0,
             loop=None) -> Tuple[requests.models.Response, bool]:
         """Make async post api request until completion , it issues post with x-auth
         authentication header or idrac_ctl. Caller can use this in asyncio routine.
 
         :param r: request.
-        :param hdr: http header.
+        :param hdr: http header
+        :param ignore_error_code: error code that we need ignore.
         :param loop: asyncio loop
         :param payload: json payload
         :return:
@@ -710,7 +712,9 @@ class IDracManager:
         if loop is None:
             loop = asyncio.get_event_loop()
         response = await self.api_async_post_call(loop, r, payload, hdr)
-        ok = await self.async_default_post_success(await response)
+        ok = await self.async_default_post_success(
+            await response, ignore_error_code=ignore_error_code
+        )
         return await response, ok
 
     def api_patch_call(self,
@@ -830,18 +834,23 @@ class IDracManager:
     @staticmethod
     def default_patch_success(cls,
                               response: requests.models.Response,
-                              expected: Optional[int] = 200) -> bool:
+                              expected: Optional[int] = 200,
+                              ignore_error_code: Optional[int] = 0) -> bool:
         """Default HTTP patch success handler
         Default handler to check patch request respond.
 
         :param cls:
         :param response: HTTP response
         :param expected:  Option status code that we caller consider success.
+        :param ignore_error_code: error code to ignore.
         :return: True if patch msg succeed
         :raise PatchFailed if patch failed
         """
         if response.status_code == expected:
             return True
+
+        if ignore_error_code > 0 and ignore_error_code == response.status_code:
+            return False
 
         if response.status_code == 200 \
                 or response.status_code == 202 or response.status_code == 204:
@@ -858,13 +867,14 @@ class IDracManager:
     def default_post_success(cls,
                              response: requests.models.Response,
                              expected: Optional[int] = 204,
-                             ignore: Optional[int] = 0) -> bool:
+                             ignore_error_code: Optional[int] = 0) -> bool:
         """Default post success handler,  Check for status code.
         and raise exception.  Default handler to check post
         request respond.
 
         :param cls:
         :param response: HTTP response
+        :param ignore_error_code: error code to ignore.
         :param expected:  Option status code that we caller consider success.
         :return: True if patch msg succeed
         :raise PostRequestFailed if POST Method failed
@@ -872,8 +882,8 @@ class IDracManager:
         if response.status_code == expected:
             return True
 
-        if ignore > 0 and ignore == response.status_code:
-            return True
+        if ignore_error_code > 0 and ignore_error_code == response.status_code:
+            return False
 
         if response.status_code == 200 \
                 or response.status_code == 202 \
@@ -916,13 +926,17 @@ class IDracManager:
         pass
 
     @staticmethod
-    async def async_default_post_success(response: requests.models.Response) -> bool:
+    async def async_default_post_success(response: requests.models.Response,
+                                         ignore_error_code: Optional[int] = 0) -> bool:
         """Default error handler, for post
         :param response: response HTTP response.
+        :param ignore_error_code: ignore HTTP statue error.
         :return: True or False and if failed raise exception
         :raise  PostRequestFailed
         """
-        return IDracManager.default_post_success(IDracManager, response)
+        return IDracManager.default_post_success(
+            IDracManager, response, ignore_error_code=ignore_error_code
+        )
 
     @staticmethod
     async def async_default_delete_success(response: requests.models.Response) -> bool:
@@ -934,12 +948,16 @@ class IDracManager:
         return IDracManager.default_delete_success(response)
 
     @staticmethod
-    async def async_default_patch_success(response: requests.models.Response) -> bool:
+    async def async_default_patch_success(response: requests.models.Response,
+                                          ignore_error_code: Optional[int] = 0) -> bool:
         """Default error handler for patch http method.
         :param response: response HTTP response.
+        :param ignore_error_code: ignore HTTP statue error.
         :return: True or False and if failed raise exception
         """
-        return IDracManager.default_patch_success(IDracManager, response)
+        return IDracManager.default_patch_success(
+            IDracManager, response, ignore_error_code=ignore_error_code
+        )
 
     @staticmethod
     def expanded(level=1):

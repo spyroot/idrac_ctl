@@ -11,7 +11,9 @@ from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl import CommandResult
-from idrac_ctl.cmd_exceptions import FailedDiscoverAction, PostRequestFailed, UnsupportedAction
+from idrac_ctl.cmd_exceptions import FailedDiscoverAction
+from idrac_ctl.cmd_exceptions import PostRequestFailed
+from idrac_ctl.cmd_exceptions import UnsupportedAction
 from idrac_ctl.cmd_exceptions import InvalidArgument
 
 
@@ -62,7 +64,9 @@ class ChassisReset(IDracManager,
             headers.update(self.json_content_type)
 
         chassis_data = self.sync_invoke(
-            ApiRequestType.ChassisQuery, "chassis_service_query", do_expanded=True
+            ApiRequestType.ChassisQuery,
+            "chassis_service_query",
+            do_expanded=True
         )
 
         if 'Reset' not in chassis_data.discovered:
@@ -84,18 +88,26 @@ class ChassisReset(IDracManager,
         ok = False
         try:
             if not do_async:
-                response = self.api_post_call(r, json.dumps(payload), headers)
-                ok = self.default_post_success(self, response, ignore=409)
+                response = self.api_post_call(
+                    r, json.dumps(payload), headers
+                )
+                ok = self.default_post_success(
+                    self, response, ignore_error_code=409
+                )
             else:
                 loop = asyncio.get_event_loop()
                 ok, response = loop.run_until_complete(
-                    self.async_post_until_complete(r, json.dumps(payload), headers)
+                    self.async_post_until_complete(
+                        r, json.dumps(payload), headers,
+                        ignore_error_code=409
+                    )
                 )
 
-            job_id = self.parse_task_id(response)
-            self.logger.info(f"job id: {job_id}")
-            if len(job_id) > 0:
-                self.fetch_job(job_id)
+            if ok:
+                job_id = self.parse_task_id(response)
+                self.logger.info(f"job id: {job_id}")
+                if len(job_id) > 0:
+                    self.fetch_job(job_id)
 
         except PostRequestFailed as prf:
             self.logger.error(prf)

@@ -231,6 +231,7 @@ class IDRAC_API:
     IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
     BIOS_REGISTRY = "/Bios/BiosRegistry"
     BIOS_SETTINGS = "/Bios/Settings"
+    COMPUTE_RESET = "/Actions/ComputerSystem.Reset"
     BIOS = "/Bios"
 
 

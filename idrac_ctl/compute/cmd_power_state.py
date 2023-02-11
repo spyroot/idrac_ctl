@@ -11,9 +11,10 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult, UnexpectedResponse
+from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
+from idrac_ctl import UnexpectedResponse
 from idrac_ctl.cmd_exceptions import InvalidArgument, MissingResource
-from idrac_ctl.shared import JobTypes
+from idrac_ctl.shared import JobTypes, IDRAC_API
 import time
 
 
@@ -107,12 +108,15 @@ class RebootHost(IDracManager,
         system_actions = system_state.data['Actions']
         allowed_reset_types = []
 
-        target = "/redfish/v1/Systems/System.Embedded.1" \
-                 "/Actions/ComputerSystem.Reset"
+        target = f"{self.idrac_manage_servers}{IDRAC_API.COMPUTE_RESET}"
 
         if '#ComputerSystem.Reset' in system_actions:
-            ra = system_actions['#ComputerSystem.Reset']
-            allowed_reset_types = ra['ResetType@Redfish.AllowableValues']
+            ra = system_actions[
+                '#ComputerSystem.Reset'
+            ]
+            allowed_reset_types = ra[
+                'ResetType@Redfish.AllowableValues'
+            ]
             if 'target' in ra:
                 target = ra['target']
 
@@ -141,12 +145,13 @@ class RebootHost(IDracManager,
                 )
             )
 
-        reboot = 1
-        max_retry = 10
+        _reboot = 1
         retry_counter = 0
-        while reboot != 0:
+        while _reboot != 0:
             if max_retry == 10:
+                self.logger("Power state , max retried... gave up waiting.")
                 break
+
             # get reboot reboot pending tasks
             scheduled_jobs = self.sync_invoke(
                 ApiRequestType.Jobs, "jobs_sources_query",
@@ -167,7 +172,8 @@ class RebootHost(IDracManager,
                     self.logger.info(f"Reboot pending job created: task id {job}")
                     data = self.fetch_job(job, wait_completion=True)
                     self.default_json_printer(data)
-                    reboot -= 1
+                    _reboot -= 1
+
             except MissingResource as mr:
                 self.logger.error(str(mr))
                 time.sleep(sleep_time)
