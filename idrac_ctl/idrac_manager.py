@@ -23,7 +23,6 @@ Author Mus spyroot@gmail.com
 """
 import argparse
 import asyncio
-import collections
 import functools
 
 import requests
@@ -51,19 +50,18 @@ from .cmd_exceptions import DeleteRequestFailed
 from .cmd_exceptions import UnsupportedAction
 from .cmd_exceptions import InvalidArgumentFormat
 from .cmd_exceptions import TaskIdUnavailable
+from .redfish_manager import RedfishManager
 from .shared import JobState
-
-"""Each command encapsulate result in named tuple"""
-CommandResult = collections.namedtuple("cmd_result",
-                                       ("data", "discovered", "extra", "error"))
+from idrac_ctl.redfish_manager import CommandResult
 
 module_logger = logging.getLogger('idrac_ctl.idrac_manager')
 
 
-class IDracManager:
+class IDracManager(RedfishManager):
     """
-    Main Class, that interact with iDRAC via REST API interface.
+    IDracManager Class, interact with iDRAC via REST API interface
     """
+
     _registry = {t: {} for t in ApiRequestType}
 
     def __init__(self, idrac_ip: Optional[str] = "",
@@ -399,24 +397,6 @@ class IDracManager:
                     time.sleep(sleep_time)
 
         return resp_data
-
-    @staticmethod
-    async def async_default_error_handler(response: requests.models.Response) -> bool:
-        """Default error handler.
-        :param response:
-        :return:
-        """
-        if response.status_code >= 200 or response.status_code < 300:
-            return True
-        if response.status_code == 401:
-            raise AuthenticationFailed(
-                "Authentication failed."
-            )
-        if response.status_code != 200:
-            raise UnexpectedResponse(
-                f"Failed acquire result. "
-                f"Status code {response.status_code}"
-            )
 
     @staticmethod
     def default_error_handler(response) -> bool:
@@ -976,8 +956,7 @@ class IDracManager:
                    verbose: Optional[bool] = False,
                    key: Optional[str] = None,
                    **kwargs) -> CommandResult:
-        """command will give the status of the Drivers and ISO Image
-        that has been exposed to host.
+        """Base http query.
 
         :param resource: path to a resource
         :param do_async: note async will subscribe to an event loop.

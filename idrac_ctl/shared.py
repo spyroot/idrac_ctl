@@ -189,6 +189,9 @@ class ResetType(Enum):
     GracefulRestart = "GracefulRestart"
     PushPowerButton = "PushPowerButton"
     NMI = "NMI"
+    # redfish
+    ForceOn = "ForceOn"
+    ForceRestart = "ForceRestart"
 
 
 class PowerState(Enum):
@@ -224,24 +227,118 @@ class HTTPMethod(Enum):
     DELETE = auto()
 
 
+class RedfishChangePasswordReq:
+    json = {
+        "PasswordName": "Administrator | User",
+        "OldPassword": "OldPasswordText",
+        "NewPassword": "NewPasswordText"
+    }
+
+
+class Rest:
+    pass
+
+
+class RestMethodMapping:
+    def __init__(self):
+        """A generic api to map from a rest to supported HTTP method.
+        """
+        self._api_call = {}
+
+    def add_api(self, a: Rest, method: HTTPMethod):
+        self._api_call[a] = method
+
+    def method(self, a):
+        return self._api_call[a]
+
+
+# ChassisCollection.ChassisCollection
+
+class RedfishJson:
+    Actions = "Actions"
+    Links = "Links"
+    Members = "Members"
+    Datatime = "DateTime"
+    Location = "Location"
+    Attributes = "Attributes"
+    RegistryEntries = "RegistryEntries"
+
+    Id = "Id"
+    # Describes the source of the payload.
+    Data_id = "@odata.id"
+    # odata type
+    Data_type = "@odata.type"
+    # Displays the total number of Members in the Resource Collection
+    Data_count = "@odata.count"
+    # Describes the source of the payload.
+    Data_content = "@odata.context"
+    # Indicates the "nextLink" when the payload contains partial results
+    Data_next = "@odata.nextLink"
+
+    # This property is an array of references to the systems that this manager has control over.
+    ManagerServers = "ManagerForServers"
+    # This property is an array of references to the chassis that this manager has control over.
+    ManagerForChassis = "ManagerForChassis"
+    # Manager.Reset
+
+
+class RedfishActions:
+    BiosReset = "Bios.ResetBios"
+    ManagerReset = "#Manager.Reset"
+    ComputerSystemReset = "ComputerSystem.Reset"
+
+
+class RedfishApi:
+    Version = "/redfish/v1"
+    Managers = f"{Version}/Managers"
+    Systems = f"{Version}/Systems"
+    Chassis =f"{Version}/Chassis"
+
+    UpdateService = f"{Version}/UpdateService"
+    UpdateServiceAction = f"{Version}/{UpdateService}/Actions/SimpleUpdate"
+
+    ManagerAccount = f"{Version}/AccountService"
+    COMPUTE_RESET = "/Actions/ComputerSystem.Reset"
+    BIOS_RESET = "/Bios/Settings/Actions/Bios.ResetBios"
+    BIOS_SETTINGS = "/Bios/Settings"
+    BIOS = "/Bios"
+    CHASSIS = "/Chassis"
+    # Bios.ChangePassword
+
+
+class SUPERMICRO_API:
+    Sessions = f"{RedfishApi.Version}/SessionService/Sessions"
+    BiosAttributeRegistry = f"{RedfishApi.Version}/Registries/BiosAttributeRegistry.v1_0_0"
+    FirmwareInventoryBackup = f"{RedfishApi.Version}/UpdateService/FirmwareInventory/Backup_BIOS"
+    BMC_Backup = f"{RedfishApi.Version}/UpdateService/FirmwareInventory/Backup_BMC"
+
+
 class IDRAC_API:
-    IDRAC_MANAGER = "/redfish/v1/Managers"
-    IDRAC_DELL_MANAGERS = "/redfish/v1/Dell/Managers"
-    IDRAC_TASKS = "/redfish/v1/TaskService/Tasks/"
+    IDRAC_MANAGER = RedfishApi.Managers
+    IDRAC_DELL_MANAGERS = f"{RedfishApi.Version}/Dell/Managers"
+    IDRAC_TASKS = f"{RedfishApi.Version}/TaskService/Tasks/"
     IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
     BIOS_REGISTRY = "/Bios/BiosRegistry"
-    BIOS_SETTINGS = "/Bios/Settings"
-    COMPUTE_RESET = "/Actions/ComputerSystem.Reset"
-    BIOS = "/Bios"
+    BIOS_SETTINGS = RedfishApi.BIOS_SETTINGS
+    COMPUTE_RESET = RedfishApi.COMPUTE_RESET
+    BIOS = RedfishApi.BIOS
 
 
 class IDRAC_JSON:
     """All Keys we expect idrac uses based on specification.
     """
     Id = "Id"
+    # Describes the source of the payload.
     Data_id = "@odata.id"
+    # odata type
     Data_type = "@odata.type"
+    # Displays the total number of Members in the Resource Collection
+    Data_count = "@odata.count"
+    # Describes the source of the payload.
     Data_content = "@odata.context"
+    # Indicates the "nextLink" when the payload contains partial results
+    Data_next = "@odata.nextLink"
+
     Actions = "Actions"
     Links = "Links"
     Members = "Members"

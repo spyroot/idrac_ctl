@@ -11,7 +11,8 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
+from idrac_ctl.redfish_manager import CommandResult
+from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl import UnexpectedResponse
 from idrac_ctl.cmd_exceptions import InvalidArgument, MissingResource
 from idrac_ctl.shared import JobTypes, IDRAC_API
@@ -149,7 +150,7 @@ class RebootHost(IDracManager,
         retry_counter = 0
         while _reboot != 0:
             if max_retry == 10:
-                self.logger("Power state , max retried... gave up waiting.")
+                self.logger.info("Power state, max retried reached, no pending reboot states.")
                 break
 
             # get reboot reboot pending tasks
