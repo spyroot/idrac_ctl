@@ -14,10 +14,10 @@ import logging
 from abc import abstractmethod
 from functools import cached_property
 from typing import Optional, Dict
-
 import requests
 
-from .cmd_exceptions import AuthenticationFailed, RedfishMethodNotAllowed
+from .cmd_exceptions import AuthenticationFailed
+from .cmd_exceptions import AuthenticationFailed
 from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import UnexpectedResponse
 from .shared import RedfishApi, RedfishJson
@@ -71,6 +71,7 @@ class RedfishManager:
         # run time
         self.action_targets = None
         self.api_endpoints = None
+        self.redfish{}
 
     @property
     def redfish_ip(self) -> str:
@@ -94,7 +95,7 @@ class RedfishManager:
     @staticmethod
     async def async_default_error_handler(
             response: requests.models.Response) -> bool:
-        """Default error handler for base query type of request.
+        """Default error handler for base query and redfish error code based on spec.
         :param response:
         :return:
         """
@@ -112,12 +113,20 @@ class RedfishManager:
 
         if response.status_code == 405:
             raise RedfishMethodNotAllowed(
-                "Authentication failed."
+                "DELETE, GET, HEAD, POST, PUT, "
+                "or PATCH , is not supported."
             )
 
-        if response.status_code == 405:
-            raise AuthenticationFailed(
-                "Authentication failed."
+        if response.status_code == 406:
+            raise RedfishNotAcceptable(
+                "Server rejected error code 406."
+            )
+
+        if response.status_code == 409:
+            raise RedfishNotAcceptable(
+                "Creation or update request could not be completed "
+                "because it would cause a conflict "
+                "in the current state of the resources."
             )
 
         if response.status_code != 200:
@@ -126,10 +135,11 @@ class RedfishManager:
                 f"Status code {response.status_code}"
             )
 
-    async def api_async_get_call(self, loop, r, hdr: Dict):
-        """Make api request either with x-auth authentication header or idrac_ctl.
-        :param loop:  asyncio event loop
-        :param r:  request
+    async def api_async_get_call(self, loop, req, hdr: Dict):
+        """Make api request either with x-auth authentication header or base authentication
+        to redfish endpoint.
+        :param loop: asyncio event loop
+        :param req: request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
         :return: request.
         """
@@ -157,7 +167,8 @@ class RedfishManager:
 
     def api_get_call(
             self, req: str, hdr: Dict) -> requests.models.Response:
-        """Make api request either with x-auth authentication header or idrac_ctl.
+        """Make api request either with x-auth authentication header or base
+        authentication to redfish.
         :param req:  request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
         :return: request.
@@ -222,23 +233,25 @@ class RedfishManager:
                    verbose: Optional[bool] = False,
                    key: Optional[str] = None,
                    **kwargs) -> CommandResult:
-        """command will give the status of the Drivers and ISO Image
-        that has been exposed to host.
+        """A base implementation for query redfish. This method shared
+        by many other methods that require just a base http get query.
 
-        :param resource: path to a resource
-        :param do_async: note async will subscribe to an event loop.
-        :param do_expanded:  will do expand query
+        :param resource: path to a redfish resource
+        :param do_async: sync will subscribe to an event loop and issue async rquest/
+        :param do_expanded:  will do expand query based on spec.
         :param filename: if filename indicate call will save a bios setting to a file.
-        :param verbose: enables verbose output
+        :param verbose: enables verbose output, mainly to debug if endpoint return something strange.
         :param data_type: json or xml
-        :param key: Optional json key
-        :return: CommandResult and if filename provide will save to a file.
+        :param key: Optional json key in case we want get something from a root element only.
+        :return: CommandResult
+        :raise RedfishException
         """
         if verbose:
             self.logger.info(
-                f"cmd args"
+                f"cbase_query recived args"
                 f"data_type: {data_type} "
                 f"resource:{resource} "
+                f"do_expanded:{do_expanded} "
                 f"do_async:{do_async} "
                 f"filename:{filename}")
             self.logger.info(f"the rest of args: {kwargs}")
@@ -312,8 +325,8 @@ class RedfishManager:
 
     @abstractmethod
     def redfish_manage_servers(self) -> str:
-        """Shared method return idrac managed servers list as json
-        "/redfish/v1/Systems/System.Embedded.1"
+        """Shared method return managed servers list as json
+        "/redfish/v1/Systems
         """
         api_resp = self.base_query(self.members, key=RedfishJson.Links)
         if api_resp.data is not None and RedfishJson.ManagerServers in api_resp.data:

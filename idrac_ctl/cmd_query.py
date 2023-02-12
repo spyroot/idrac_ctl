@@ -1,7 +1,7 @@
 """iDRAC query command
 
-Command provides raw query option based URI resource, in
-case specific action might not implement yet; hence it
+Command provides capability raw query based URI resource,
+in case specific action might not implement yet; hence it
 is easy to query.
 
 Author Mus spyroot@gmail.com
@@ -29,7 +29,8 @@ class QueryIDRAC(IDracManager,
         :return:
         """
         cmd_parser = cls.base_parser()
-        cmd_parser.add_argument('-r', '--resource', required=True, dest="resource",
+        cmd_parser.add_argument(
+            '-r', '--resource', required=True, dest="resource",
                                 type=str, default=None,
                                 help="Job id. Example /redfish/v1/Managers")
         help_text = "command query based on resource."

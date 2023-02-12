@@ -137,7 +137,15 @@ class RebootHost(IDracManager,
             response = self.api_post_call(
                 r, json.dumps(payload), headers
             )
-            ok = self.default_post_success(self, response)
+            # Service that support the @ Redfish.OperationApplyTime annotation for a resource collection, action,
+            # or multipart HTTP POST operation shall create a task, and respond with the HTTP 202 Accepted
+            # status code with a Location header set to the URI of a task monitor,
+            # if the client's request body contains.
+            # if the client's request body contains
+            # @Redfish.OperationApplyTime in the request.
+
+            request.
+            ok = self.default_post_success(self, response, expected=202)
         else:
             loop = asyncio.get_event_loop()
             ok, response = loop.run_until_complete(
@@ -145,6 +153,10 @@ class RebootHost(IDracManager,
                     r, json.dumps(payload), headers
                 )
             )
+
+
+        if not ok {
+        }
 
         _reboot = 1
         retry_counter = 0

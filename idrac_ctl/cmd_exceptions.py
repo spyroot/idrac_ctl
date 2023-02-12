@@ -47,13 +47,6 @@ class AuthenticationFailed(Exception):
     pass
 
 
-class RedfishMethodNotAllowed(Exception):
-    """ The response shall include an Allow header that provides
-    a list of methods that the resource identified by the URI
-    in the client request supports.
-    """
-    pass
-
 
 class ResourceNotFound(Exception):
     pass
