@@ -67,8 +67,7 @@ class ApiRequestType(Enum):
     BootSettingsQuery = auto()
     BootSourceClear = auto()
     JobServices = auto()
-    ChassisQuery = auto()
-    ChassisReset = auto()
+
     GetAttachStatus = auto()
     DellOemNetIsoBoot = ()
     DellOemDetach = auto()
@@ -80,9 +79,17 @@ class ApiRequestType(Enum):
 
     BiosResetDefault = auto()
 
+    QueryAccount = auto()
+    AccountQuery = auto()
+    QueryAccountService = auto()
+
+    ChassisQuery = auto()
+    ChassisReset = auto()
+    ChassisUpdate = auto()
+
 
 class ScheduleJobType(Enum):
-    """Each commands enum.
+    """Each commands enum, based on redfish spec.
     """
     NoReboot = auto()
     AutoReboot = auto()
@@ -202,13 +209,23 @@ class PowerState(Enum):
 
 
 class JobState(Enum):
-    """IDRAC job states"""
-    Failed = "Failed"
+    """IDRAC job states
+    https://developer.dell.com/apis/2978/versions/4.xx/docs/101WhatsNew.md
+    """
+    Scheduled = "Scheduled"
     Running = "Running"
     Completed = "Completed"
-    Scheduled = "Scheduled"
+    Downloaded = "Downloaded"
+    Downloading = "Downloading"
+    Scheduling = "Scheduling"
+    Waiting = "Waiting"
+    Failed = "Failed"
+    CompletedWithErrors = "CompletedWithErrors"
+    RebootFailed = "RebootFailed"
     RebootCompleted = "RebootCompleted"
     RebootPending = "RebootPending"
+    PendingActivation = "PendingActivation"
+    Unknown = "Unknown"
 
 
 class JobTypes(Enum):
@@ -282,17 +299,32 @@ class RedfishJson:
     # Manager.Reset
 
 
-class RedfishActions:
+class RedfishActions(Enum):
     BiosReset = "Bios.ResetBios"
     ManagerReset = "#Manager.Reset"
     ComputerSystemReset = "ComputerSystem.Reset"
 
 
+class SupportedScheduledJobs(Enum):
+    actions = {
+        "ComputerSystem.Reset": ""
+                                "Chassis.Reset"
+    }
+
+
+# /redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset
+# /redfish/v1/Chassis/System.Embedded.1/Actions/Chassis.Reset
+# /redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.Reset
+# /redfish/v1/Systems/System.Embedded.1/Storage/Volumes/(instance-id)/Actions/Volume.CheckConsistency
+# /redfish/v1/Managers/(ID)/LogServices/Sel/Actions/LogService.ClearLog
+
 class RedfishApi:
+    """
+    """
     Version = "/redfish/v1"
     Managers = f"{Version}/Managers"
     Systems = f"{Version}/Systems"
-    Chassis =f"{Version}/Chassis"
+    Chassis = f"{Version}/Chassis"
 
     UpdateService = f"{Version}/UpdateService"
     UpdateServiceAction = f"{Version}/{UpdateService}/Actions/SimpleUpdate"
@@ -306,7 +338,15 @@ class RedfishApi:
     # Bios.ChangePassword
 
 
-class SUPERMICRO_API:
+class RedfishJsonSpec:
+    Links = "Links"
+    Location = "Links"
+    WwwAuthentication = "WWW-Authenticate"
+
+
+class RedfishSupermicro:
+    """Mapping redfish rest to supermicro
+    """
     Sessions = f"{RedfishApi.Version}/SessionService/Sessions"
     BiosAttributeRegistry = f"{RedfishApi.Version}/Registries/BiosAttributeRegistry.v1_0_0"
     FirmwareInventoryBackup = f"{RedfishApi.Version}/UpdateService/FirmwareInventory/Backup_BIOS"
@@ -316,9 +356,18 @@ class SUPERMICRO_API:
 class IDRAC_API:
     IDRAC_MANAGER = RedfishApi.Managers
     IDRAC_DELL_MANAGERS = f"{RedfishApi.Version}/Dell/Managers"
-    IDRAC_TASKS = f"{RedfishApi.Version}/TaskService/Tasks/"
+    Tasks = f"{RedfishApi.Version}/TaskService/Tasks/"
+
     IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
     BIOS_REGISTRY = "/Bios/BiosRegistry"
+    AccountService = "/redfish/v1/AccountService"
+    Accounts = "/redfish/v1/AccountService/Accounts"
+    ACCOUNT = "/redfish/v1/AccountService/Accounts/"
+
+    Chassis = f"/redfish/v1/Chassis/"
+
+    # /redfish/v1/AccountService/Roles/{RoleId}
+    # The value of the Id property of the Role resource
     BIOS_SETTINGS = RedfishApi.BIOS_SETTINGS
     COMPUTE_RESET = RedfishApi.COMPUTE_RESET
     BIOS = RedfishApi.BIOS
@@ -340,7 +389,7 @@ class IDRAC_JSON:
     Data_next = "@odata.nextLink"
 
     Actions = "Actions"
-    Links = "Links"
+    Links = RedfishJsonSpec.Links
     Members = "Members"
     Datatime = "DateTime"
     Location = "Location"
@@ -359,6 +408,7 @@ class IDRAC_JSON:
 
     # Job states
     JobState = "JobState"
+    TaskState = "TaskState"
     TaskStatus = "TaskStatus"
     PercentComplete = "PercentComplete"
 
@@ -374,3 +424,31 @@ class JobApplyTypes:
     AtMaintenance = "AtMaintenanceWindowStart"
     OnReset = "OnReset"
     Immediate = "Immediate"
+
+
+class RedfishApiRespond:
+    AcceptedTaskGenerated = auto()
+
+
+class IdracApiRespond(RedfishApiRespond):
+    """We need report to a client either redfish created task and accepted
+    or ok and success.  Note that some API has mismatch between
+    200/204  hence it better differentiate each case
+    """
+    Ok = auto()
+    Error = auto()
+    Created = auto()
+    Success = auto()
+    AcceptedTaskGenerated = auto()
+
+
+class ApiRespondString:
+    """We need report to a client either redfish created task and accepted
+    or ok and success.  Note that some API has mismatch between
+    200/204  hence it better differentiate each case
+    """
+    Ok = "ok"
+    Error = "error"
+    Created = "created"
+    Success = "success"
+    AcceptedTaskGenerated = "accepted"

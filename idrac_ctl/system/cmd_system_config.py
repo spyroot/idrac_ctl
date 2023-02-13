@@ -124,7 +124,7 @@ class ExportSystemConfig(IDracManager,
         location = response.headers['Location']
         job_id = location.split("/")[-1]
         if not do_async:
-            data = self.fetch_job(job_id)
+            data = self.fetch_task(job_id)
             # we save only if we need to.
             if verbose:
                 print(f"Saving to a file {filename}")

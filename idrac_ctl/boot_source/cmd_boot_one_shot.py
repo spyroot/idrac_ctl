@@ -19,6 +19,7 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 from idrac_ctl.cmd_exceptions import InvalidArgument, UnexpectedResponse
 from idrac_ctl.cmd_exceptions import TaskIdUnavailable
+from idrac_ctl.shared import IdracApiRespond
 
 
 class BootOneShot(IDracManager,
@@ -137,17 +138,19 @@ class BootOneShot(IDracManager,
         response = self.api_patch_call(
             r, json.dumps(payload), headers)
         api_result = {}
+        api_resp = self.default_patch_success(self, response)
         if self.default_patch_success(self, response):
             api_result = self.api_success_msg(True)
 
         try:
-            json_data = response.json()
-            if verbose:
-                self.default_json_printer(json_data)
-            job_id = self.job_id_from_header(response)
-            if job_id is not None:
-                data = self.fetch_job(job_id)
-                api_result.update(data)
+            if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+                json_data = response.json()
+                if verbose:
+                    self.default_json_printer(json_data)
+                job_id = self.job_id_from_header(response)
+                if job_id is not None:
+                    data = self.fetch_task(job_id)
+                    api_result.update(data)
         except TaskIdUnavailable as _:
             pass
         except UnexpectedResponse as ur:

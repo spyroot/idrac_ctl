@@ -156,7 +156,7 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
                 job_id = self.job_id_from_header(response)
                 if job_id is not None:
                     if not do_async:
-                        data = self.fetch_job(job_id)
+                        data = self.fetch_task(job_id)
                     else:
                         data = {"job_id": job_id}
 

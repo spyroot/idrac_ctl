@@ -47,7 +47,6 @@ class AuthenticationFailed(Exception):
     pass
 
 
-
 class ResourceNotFound(Exception):
     pass
 
@@ -57,7 +56,9 @@ class MissingResource(Exception):
 
 
 class UnexpectedResponse(Exception):
-    """Must raise if received unexpected response"""
+    """Must raise if received unexpected response,
+    example we got a value for a key that not in redfish spec.
+    and we have no idea what to do with it."""
     pass
 
 
@@ -67,6 +68,12 @@ class TaskIdUnavailable(Exception):
 
 
 class JsonHttpError(Exception):
+    """ Root exception about json and http errors.
+    This mainly to differentiate positive case.
+    i.e. 404 is ok in many case and we except that i.e.
+    it not an exception meanwhile if we get something dodgy
+    we raise.
+    """
     def __init__(self, *args, **kwargs):
         super(JsonHttpError, self).__init__(args, kwargs)
         self.json_error = kwargs.get('json_error')

@@ -93,3 +93,8 @@ from .boot_source.cmd_boot_source_get import *
 from .boot_source.cmd_boot_options import *
 from .boot_source.cmd_boot_settings import *
 from .boot_source.cmd_clear_pending import *
+
+# account
+from .accounts.cmd_accounts import *
+from .accounts.cmd_query_account import *
+from .accounts.cmd_account_svc import *

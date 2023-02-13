@@ -24,35 +24,39 @@ Author Mus spyroot@gmail.com
 import argparse
 import asyncio
 import functools
-
-import requests
 import json
-import time
-from tqdm import tqdm
-from abc import abstractmethod
-from typing import Optional, Tuple, Dict, Any
-import re
 import logging
+import time
+from abc import abstractmethod
 from datetime import datetime
 from functools import cached_property
+from typing import Optional, Tuple, Dict
+
+import requests
+from tqdm import tqdm
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl.shared import ApiRequestType, RedfishAction, ScheduleJobType, IDRAC_JSON, IDRAC_API, JobApplyTypes
-from .cmd_utils import save_if_needed
-from .cmd_exceptions import AuthenticationFailed
-from .cmd_exceptions import MissingMandatoryArguments
-from .cmd_exceptions import PostRequestFailed
-from .cmd_exceptions import MissingResource
-from .cmd_exceptions import UnexpectedResponse
-from .cmd_exceptions import ResourceNotFound
-from .cmd_exceptions import PatchRequestFailed
-from .cmd_exceptions import DeleteRequestFailed
-from .cmd_exceptions import UnsupportedAction
-from .cmd_exceptions import InvalidArgumentFormat
-from .cmd_exceptions import TaskIdUnavailable
-from .redfish_manager import RedfishManager
-from .shared import JobState
 from idrac_ctl.redfish_manager import CommandResult
+from idrac_ctl.shared import ApiRequestType, HTTPMethod
+from idrac_ctl.shared import ApiRespondString
+from idrac_ctl.shared import IDRAC_API
+from idrac_ctl.shared import IDRAC_JSON
+from idrac_ctl.shared import IdracApiRespond
+from idrac_ctl.shared import JobApplyTypes
+from idrac_ctl.shared import RedfishAction
+from idrac_ctl.shared import ResetType as ResetType
+from idrac_ctl.shared import ScheduleJobType
+from .cmd_exceptions import AuthenticationFailed, PostRequestFailed, DeleteRequestFailed
+from .cmd_exceptions import InvalidArgumentFormat
+from .cmd_exceptions import MissingMandatoryArguments
+from .cmd_exceptions import PatchRequestFailed
+from .cmd_exceptions import UnexpectedResponse
+from .cmd_exceptions import UnsupportedAction
+from .redfish_exceptions import RedfishException, RedfishUnauthorized, RedfishForbidden
+from .redfish_manager import RedfishManager
+from .redfish_task_state import TaskState
+from .redfish_task_state import TaskStatus
+from .shared import JobState
 
 module_logger = logging.getLogger('idrac_ctl.idrac_manager')
 
@@ -64,7 +68,8 @@ class IDracManager(RedfishManager):
 
     _registry = {t: {} for t in ApiRequestType}
 
-    def __init__(self, idrac_ip: Optional[str] = "",
+    def __init__(self,
+                 idrac_ip: Optional[str] = "",
                  idrac_username: Optional[str] = "root",
                  idrac_password: Optional[str] = "",
                  insecure: Optional[bool] = False,
@@ -80,6 +85,12 @@ class IDracManager(RedfishManager):
         :param insecure: by default, we use insecure SSL
         :param x_auth: X-Authentication header.
         """
+        super().__init__(redfish_ip=idrac_ip,
+                         redfish_username=idrac_username,
+                         redfish_password=idrac_username,
+                         insecure=insecure,
+                         x_auth=x_auth,
+                         is_debug=is_debug)
         self._idrac_ip = idrac_ip
         self._username = idrac_username
         self._password = idrac_password
@@ -97,12 +108,79 @@ class IDracManager(RedfishManager):
         # mainly to track query sent , for unit test
         self.query_counter = 0
 
+        # mapping between rest API respond to respected
+        # string that we report to apper layer.
+        self._api_respond_to_string = {
+            IdracApiRespond.Ok: ApiRespondString.Ok,
+            IdracApiRespond.Error: ApiRespondString.Error,
+            IdracApiRespond.Success: ApiRespondString.Success,
+            IdracApiRespond.AcceptedTaskGenerated: ApiRespondString.AcceptedTaskGenerated,
+
+        }
+
+        # a mapping from http status code to result of request.
+        # idrac not consistent with return code, so it not very clear
+        # case when 200 is ok and 201 is something else. So it API per API
+        # Thus default success has extra field, so we can always
+        # pass what we expect for particular cmd.
+
+        #  Redfish spec 202 Request has been accepted for processing
+        #  but the processing has not been completed
+        self._http_code_mapping = {
+            200: IdracApiRespond.Ok,
+            201: IdracApiRespond.Created,
+            202: IdracApiRespond.Success,
+            204: IdracApiRespond.AcceptedTaskGenerated
+        }
+
+        # mapping a string state to enum, so each cmd can just check a state
+        # without doing any string if else branches.
+        self._job_state_mapping = {
+            "Scheduled": JobState.Scheduled,
+            "Running": JobState.Running,
+            "Completed": JobState.Completed,
+            "Downloaded": JobState.Downloaded,
+            "Downloading": JobState.Downloading,
+            "Scheduling": JobState.Scheduling,
+            "Waiting": JobState.Waiting,
+            "Failed": JobState.Failed,
+            "CompletedWithErrors": JobState.CompletedWithErrors,
+            "RebootFailed": JobState.RebootFailed,
+            "RebootCompleted": JobState.RebootCompleted,
+            "RebootPending": JobState.RebootPending,
+            "PendingActivation": JobState.PendingActivation,
+            "Unknown": JobState.Unknown,
+        }
+
+        # mapping a task state string to enum
+        # without doing any string if else branches.
+        self._task_state_mapping = {
+            "New": TaskState.New,
+            "Starting": TaskState.Starting,
+            "Suspended": TaskState.Suspended,
+            "Interrupted": TaskState.Interrupted,
+            "Pending": TaskState.Pending,
+            "Stopping": TaskState.Stopping,
+            "Completed": TaskState.Completed,
+            "Killed": TaskState.Killed,
+            "Exception": TaskState.Exception,
+            "Service": TaskState.Service,
+            "Canceling": TaskState.Canceling,
+            "Cancelled": TaskState.Cancelled
+        }
+
+        # mapping from string to task status enum
+        self._task_status_mapping = {
+            "Ok": TaskStatus.Ok,
+            "Warning": TaskStatus.Warning,
+            "Critical": TaskStatus.Critical
+        }
+
+        self._redfish_error = None
+
         # run time
         self.action_targets = None
         self.api_endpoints = None
-        self._post_success_responses = [200, 201, 202, 203, 204]
-        self._patch_success_responses = [200, 201, 202, 203, 204]
-        self._delete_success_responses = [200, 201, 202, 203, 204]
 
     @property
     def idrac_ip(self) -> str:
@@ -179,12 +257,13 @@ class IDracManager(RedfishManager):
         )
         return inst.execute(**kwargs)
 
-    async def async_invoke(cls, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
+    async def async_invoke(
+            cls, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
         """Main interface uses to invoke a command.
         :param api_call: api request type is enum for each cmd.
-        :param name:
-        :param kwargs:
-        :return:
+        :param name: a name.
+        :param kwargs: argument passed to command
+        :return: CommandResult
         """
         z = cls._registry[api_call]
         disp = z[name]
@@ -201,10 +280,12 @@ class IDracManager(RedfishManager):
         )
         return inst.execute(**kwargs)
 
-    async def api_async_get_call(self, loop, r, hdr: Dict):
-        """Make api request either with x-auth authentication header or idrac_ctl.
-        :param loop:  asyncio event loop
-        :param r:  request
+    async def api_async_get_call(self, loop, req, hdr: Dict):
+        """Make api asynced requests either with x-auth authentication
+         header or base authentication.
+        If event loop is none it will create one.
+        :param loop: asyncio event loop
+        :param req: request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
         :return: request.
         """
@@ -216,7 +297,7 @@ class IDracManager(RedfishManager):
         if self.x_auth is not None:
             return loop.run_in_executor(
                 None, functools.partial(
-                    requests.get, r,
+                    requests.get, req,
                     verify=self._is_verify_cert,
                     headers=headers
                 )
@@ -224,30 +305,30 @@ class IDracManager(RedfishManager):
         else:
             return loop.run_in_executor(
                 None, functools.partial(
-                    requests.get, r,
+                    requests.get, req,
                     verify=self._is_verify_cert,
                     auth=(self._username, self._password)
                 )
             )
 
-    async def api_async_get_until_complete(self, r, hdr: Dict, loop=None):
-        """
-        :param r:
-        :param hdr:
-        :param loop:
+    async def api_async_get_until_complete(
+            self, req, hdr: Dict, loop=None) -> requests.models.Response:
+        """Make asyncio request,
+        :param req: request
+        :param hdr: HTTP headers
+        :param loop: a default loop, if loop is None method will create
         :return:
         """
         if loop is None:
             loop = asyncio.get_event_loop()
-        response = await self.api_async_get_call(loop, r, hdr)
+        response = await self.api_async_get_call(loop, req, hdr)
         await self.async_default_error_handler(await response)
         return await response
 
-    def api_get_call(self,
-                     r: str,
-                     hdr: Dict) -> requests.models.Response:
+    def api_get_call(
+            self, req: str, hdr: Dict) -> requests.models.Response:
         """Make api request either with x-auth authentication header or idrac_ctl.
-        :param r:  request
+        :param req:  request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
         :return: request.
         """
@@ -259,36 +340,12 @@ class IDracManager(RedfishManager):
         if self.x_auth is not None:
             headers.update({'X-Auth-Token': self.x_auth})
             return requests.get(
-                r, verify=self._is_verify_cert, headers=headers
+                req, verify=self._is_verify_cert, headers=headers
             )
         else:
             return requests.get(
-                r, verify=self._is_verify_cert,
+                req, verify=self._is_verify_cert,
                 auth=(self._username, self._password)
-            )
-
-    def api_delete_call(self, r, hdr: Dict):
-        """Make api request for delete method.
-        :param r:  request
-        :param hdr: http header dict that will append to HTTP/HTTPS request.
-        :return: request.
-        """
-        headers = {}
-        headers.update(self.content_type)
-        if hdr is not None:
-            headers.update(hdr)
-
-        if self.x_auth is not None:
-            headers.update({'X-Auth-Token': self.x_auth})
-            return requests.delete(r,
-                                   verify=self._is_verify_cert,
-                                   headers=headers
-                                   )
-        else:
-            return requests.delete(
-                r, verify=self._is_verify_cert,
-                auth=(self._username, self._password),
-                headers=headers
             )
 
     def sync_invoke(self, api_call: ApiRequestType, name: str, **kwargs) -> CommandResult:
@@ -319,11 +376,13 @@ class IDracManager(RedfishManager):
                 job_id: str,
                 data_type: Optional[str] = "json",
                 do_async: Optional[bool] = False) -> dict:
-        """Query information for particular job.
+        """Query information for particular job from dell oem.
+        Respond is information about a specific configuration Job scheduled
+        by or being executed by a Redfish service's Job Service.
         :param job_id: iDRAC job_id JID_744718373591
         :param do_async: note async will subscribe to an event loop.
         :param data_type: json or xml
-        :return: CommandResult and if filename provide will save to a file.
+        :return: CommandResult.
         """
         headers = {}
         if data_type == "json":
@@ -332,18 +391,84 @@ class IDracManager(RedfishManager):
         r = f"{self.idrac_members}/Oem/Dell/Jobs/{job_id}"
         return self.base_query(r, do_expanded=True, do_async=do_async).data
 
-    def fetch_job(self,
-                  job_id: str,
-                  sleep_time: Optional[int] = 2,
-                  wait_for: Optional[int] = 200,
-                  wait_status: Optional[bool] = True,
-                  wait_completion: Optional[bool] = True):
-        """Synchronous fetch a job from iDRAC and wait for completion.
-        :param wait_for:  by default, we wait status code 200 based on spec.
-        :param job_id: job id as it returned from a task by idrac
-        :param sleep_time: sleep and wait.
-        :param wait_status: wait for http status.
-        :param wait_completion: wait for completion a task.
+    @staticmethod
+    def update_progress(resp_data, old_value):
+        """Get a percent computed from respond, if something dodgy
+        will return old value.
+        :param resp_data: response
+        :param old_value:  old value
+        :return:
+        """
+        # update percent_done and progress bar
+        if IDRAC_JSON.PercentComplete in resp_data:
+            try:
+                percent_done = int(resp_data[IDRAC_JSON.PercentComplete])
+                return percent_done
+            except TypeError:
+                pass
+
+        return old_value
+
+    def get_task_state(self, resp: requests.models.Response) -> Tuple[TaskState, TaskStatus]:
+        """Parse response and return task state and status,
+        if resp has no json payload and JSONDecodeError raised , return Unknown state.
+
+        if Task Status or TaskState absent from response UnexpectedResponse raised.
+
+        :param resp: a requests.models.Response object.
+        :return:  idrac_ctl.TaskState and idrac_ctl.TaskStatus
+        :raise  idrac_ctl.UnexpectedResponse: If the response body does not
+            contain a task state.
+        """
+        try:
+            resp_data = resp.json()
+        except requests.exceptions.JSONDecodeError as json_err:
+            self.logger.error(f"failed parse response to get a task state. {str(json_err)}")
+            return TaskState.Unknown, TaskStatus.Warning
+
+        # dodge case
+        if IDRAC_JSON.TaskStatus not in resp_data or IDRAC_JSON.TaskState not in resp_data:
+            raise UnexpectedResponse(f"IDRAC returned a {resp_data}, neither task state nor status is present..")
+
+        # update state and status.
+        task_state = self._task_state_mapping[IDRAC_JSON.TaskState]
+        task_status = self._task_state_mapping[IDRAC_JSON.TaskStatus]
+
+        return task_state, task_status
+
+    def fetch_task(self,
+                   task_id: str,
+                   sleep_time: Optional[int] = 2,
+                   wait_for: Optional[int] = 0,
+                   wait_for_state: Optional[TaskState] = TaskState.Unknown) -> TaskState:
+
+        """Synchronous fetch a job from iDRAC and wait for job completion.
+
+        A job in idrac is the Task and contains information about a task
+        that the Redfish Task Service schedules or executes.
+
+        Tasks represent operations that we want to wait.
+        Example we applied a change that create a task, and we need wait for completion.
+
+        Note: that caller can provide wait_for_state that will unblock waiting loop,
+        for example if we don't want wait for completion or error.  i.e.
+        Running or Scheduled is sufficient criterion.
+        (It useful for async io type of request)
+
+        if server return  404 or  410:
+        - if a state was update caller will get last known state.
+        - if a state never updated caller will get Unknown.
+
+        THus, for a caller it amke sense to re-check task services.
+
+        :param wait_for: by default, we wait status code 200 based on spec.
+                         in case API return something else. 204 for example.
+        :param task_id: task id as it returned from a task by task services.
+        :param sleep_time: a default sleep and wait, if server ask for retry_after, it takes precedence
+                           only if retry_after > sleep_time.
+        :param wait_for_state: wait a specific state. Example caller only care
+                               it Running and will resume later to monitor progress
+
         :return: Nothing
         :raise AuthenticationFailed MissingResource
         """
@@ -351,66 +476,118 @@ class IDracManager(RedfishManager):
         percent_done = 0
 
         # job might be already done.
-        jb = self.get_job(job_id)
+        jb = self.get_job(task_id)
+
+        # if job scheduler or scheduling it make sense to wait otherwise we return state
+        # we expect a JobState
         if IDRAC_JSON.JobState in jb:
             current_state = jb[IDRAC_JSON.JobState]
-            if current_state == JobState.Completed.value:
-                return self.api_success_msg(True, message=f"Job {job_id} completed.")
-            if current_state == JobState.Failed.value:
-                return self.api_success_msg(True, message=f"Job {job_id} failed.")
+            if current_state not in self._job_state_mapping:
+                raise UnexpectedResponse(f"IDRAC returned a {current_state} job type that we don't know.")
+            _ = self._job_state_mapping[current_state]
+            if current_state == JobState.Scheduled.value or current_state == JobState.Scheduling:
+                self.logger.info(f"Job {task_id} is {current_state}.. waiting for completion.")
+            else:
+                self.logger.info(f"Job {task_id} is {current_state}..bouncing off.")
+                return self._job_state_mapping[current_state]
 
+        # in case server will ask to wait.
+        retry_after = 0
+        # initial state we don't know
+        task_state = TaskState.Unknown
         with tqdm(total=100) as pbar:
             while True:
+                # /redfish/v1/TaskService/Tasks/{TaskId}
                 resp = self.api_get_call(f"{self._default_method}{self.idrac_ip}"
-                                         f"{IDRAC_API.IDRAC_TASKS}{job_id}", hdr={})
-                if resp.status_code == 401:
-                    AuthenticationFailed("Authentication failed.")
-                elif resp.status_code == 404:
-                    raise MissingResource(f"Task {job_id} not found.")
+                                         f"{IDRAC_API.Tasks}{task_id}", hdr={})
 
-                elif resp.status_code == wait_for and wait_status:
-                    resp_data = resp.json()
-                    return resp_data
+                if 'Retry-After' in resp.headers["Retry-After"]:
+                    retry_after = int(resp.headers["Retry-After"])
+                    self.logger.info(f"Remote server responded with Retry-After {retry_after}")
+
+                if resp.status_code == 401:
+                    self.logger.error(f"task service returned 401")
+                    AuthenticationFailed("Authentication failed.")
+                # if server failed, meanwhile HTTP exception propagate
+                # up on the stack.
+                if resp.status_code > 499:
+                    self.logger.critical(f"task service return http error code {resp.status_code}")
+                    break
+                # Cancellation: A subsequent GET request on the task monitor URI
+                # returns either the HTTP 410 Gone or 404 Not Found status code.
+                elif resp.status_code == 404 or resp.status_code == 410:
+                    self.logger.info(f"task service returned {resp.status_code}")
+                    # at the end we check a state and return it might fail, exception etc.
+                    break
+                # if client expect something else than 200 or something else, we return result.
+                elif 0 < wait_for == resp.status_code:
+                    task_state, task_status = self.get_task_state(resp)
+                    return task_state
+                # As long as the operation is in process, the service shall return the HTTP 202 Accepted status code
+                # when the client performs a GET request on the task monitor URI.
                 elif resp.status_code == 202:
+                    self.logger.info(f"task service returned 202")
+
+                    # state acquisition and update state
                     resp_data = resp.json()
-                    if IDRAC_JSON.TaskStatus in resp_data and resp_data[IDRAC_JSON.TaskStatus] == 'OK':
-                        if IDRAC_JSON.JobState in resp_data:
-                            current_state = resp_data[IDRAC_JSON.JobState]
-                        if IDRAC_JSON.PercentComplete in resp_data:
-                            try:
-                                percent_done = int(resp_data[IDRAC_JSON.PercentComplete])
-                            except TypeError:
-                                pass
-                            if percent_done > last_update:
-                                last_update = percent_done
-                                inc = percent_done - pbar.n
-                                pbar.update(n=inc)
-                            time.sleep(sleep_time)
-                elif wait_completion and current_state == JobState.Completed.value:
-                    return resp_data
-                elif wait_completion and current_state == JobState.Failed.value:
-                    return resp_data
-                else:
-                    if IDRAC_JSON.JobState in resp_data:
-                        current_state = resp_data[IDRAC_JSON.JobState]
-                    self.logger.error("unexpected status code", resp.status_code)
+                    task_state, task_status = self.get_task_state(resp)
+                    self.logger.info(f"Updating state, new state "
+                                     f"{task_state.value}, status {task_status.value}")
+
+                    # update description so caller see.
+                    pbar.set_description(task_state.value)
+                    if task_status == TaskStatus.Critical or TaskStatus.Warning:
+                        # we bounce, if status not ok
+                        break
+
+                    percent_done = self.update_progress(resp_data, percent_done)
+                    if percent_done > last_update:
+                        last_update = percent_done
+                        inc = percent_done - pbar.n
+                        pbar.update(n=inc)
+
+                    # update retry time, we've been asked
+                    if retry_after > sleep_time:
+                        sleep_time = retry_after
                     time.sleep(sleep_time)
 
-        return resp_data
+                # The appropriate HTTP status code, such as but not limited to 200 OK
+                # for most operations or 201 Created for POST to create a resource.
+                # if client passed wait_for for example 204 we need have handle for 200
+                elif resp.status_code == 200:
+                    task_state, task_status = self.get_task_state(resp)
+                    self.logger.info(
+                        f"Server return status code 200, Task state {task_state.value}, {task_status.value}")
+                    return task_state
+                # client wait for specific state
+                elif task_state == wait_for_state:
+                    self.logger.info(f"caller asked for wait for a state {wait_for_state.value}")
+                    task_state, task_status = self.get_task_state(resp)
+                    return task_state
+                else:
+                    # in all other cases update state and go back sleep.
+                    task_state, task_status = self.get_task_state(resp)
+                    self.logger.error("unexpected status code", resp.status_code)
+                    if retry_after > sleep_time:
+                        sleep_time = retry_after
+                    time.sleep(sleep_time)
 
-    @staticmethod
-    def default_error_handler(response) -> bool:
+        return task_state
+
+    def default_error_handler(self, response: requests.models.Response) -> IdracApiRespond:
         """Default error handler.
         :param response:
         :return:
         """
         if response.status_code >= 200 or response.status_code < 300:
-            return True
+            if response.status_code in self._http_code_mapping:
+                return self._http_code_mapping[response.status_code]
+
         if response.status_code == 401:
             raise AuthenticationFailed("Authentication failed.")
-        if response.status_code == 404:
-            error_msg, json_error = IDracManager.parse_error(response)
-            raise ResourceNotFound(error_msg)
+        if 401 <= response.status_code < 500:
+            # we try to parse error.
+            self._redfish_error = IDracManager.parse_error(response)
         if response.status_code != 200:
             raise UnexpectedResponse(f"Failed acquire result. Status code {response.status_code}")
 
@@ -437,9 +614,10 @@ class IDracManager(RedfishManager):
 
     @staticmethod
     @abstractmethod
-    def default_json_printer(json_data,
-                             sort: Optional[bool] = True,
-                             indents: Optional[int] = 4):
+    def default_json_printer(
+            json_data,
+            sort: Optional[bool] = True,
+            indents: Optional[int] = 4):
         """default json stdout printer, it mainly used for debug.
         :param json_data:
         :param indents:
@@ -590,11 +768,34 @@ class IDracManager(RedfishManager):
                                  if attr_filter.lower() in attr.lower())
         return json_data
 
-    def api_post_call(self,
-                      req: str,
-                      payload: str,
-                      hdr: dict) -> requests.models.Response:
-        """Make api post request.
+    def api_delete_call(
+            self, req, hdr: Dict) -> requests.models.Response:
+        """Make api request for delete method.
+        :param req: request
+        :param hdr: http header dict that will append to HTTP/HTTPS request.
+        :return: request.
+        """
+        headers = {}
+        headers.update(self.content_type)
+        if hdr is not None:
+            headers.update(hdr)
+
+        if self.x_auth is not None:
+            headers.update({'X-Auth-Token': self.x_auth})
+            return requests.delete(
+                req, verify=self._is_verify_cert,
+                headers=headers
+            )
+        else:
+            return requests.delete(
+                req, verify=self._is_verify_cert,
+                auth=(self._username, self._password),
+                headers=headers
+            )
+
+    def api_post_call(
+            self, req: str, payload: str, hdr: dict) -> requests.models.Response:
+        """Make HTTP post request.
         :param req: path to a path request
         :param payload:  json payload
         :param hdr: header that will append.
@@ -621,7 +822,8 @@ class IDracManager(RedfishManager):
                 auth=(self._username, self._password)
             )
 
-    async def api_async_post_call(self, loop, req: str, payload: str, hdr: Dict):
+    async def api_async_post_call(
+            self, loop, req: str, payload: str, hdr: Dict):
         """Make post api request either with x-auth authentication header or idrac_ctl.
         :param loop:  asyncio event loop
         :param req:  request
@@ -657,10 +859,16 @@ class IDracManager(RedfishManager):
     async def api_async_patch_until_complete(
             self, r: str,
             payload: str,
-            hdr: Dict, loop=None) -> Tuple[requests.models.Response, bool]:
+            hdr: Dict,
+            loop=None,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0
+    ) -> Tuple[requests.models.Response, IdracApiRespond]:
         """Make async patch api request until completion , it issues post with x-auth
         authentication header or idrac_ctl. Caller can use this in asyncio routine.
 
+        :param expected:
+        :param ignore_error_code:
         :param r: request.
         :param hdr: http header.
         :param loop: asyncio loop
@@ -670,18 +878,47 @@ class IDracManager(RedfishManager):
         if loop is None:
             loop = asyncio.get_event_loop()
         response = await self.api_async_patch_call(loop, r, payload, hdr)
-        ok = await self.async_default_patch_success(await response)
-        return await response, ok
+        api_respond_status = await self.async_default_patch_success(
+            await response, expected=expected, ignore_error_code=ignore_error_code)
+        return await response, api_respond_status
+
+    async def api_async_delete_until_complete(
+            self, r: str,
+            payload: str,
+            hdr: Dict,
+            loop=None,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0
+    ) -> Tuple[requests.models.Response, IdracApiRespond]:
+        """Make async patch api request until completion , it issues post with x-auth
+        authentication header or idrac_ctl. Caller can use this in asyncio routine.
+
+        :param expected:
+        :param ignore_error_code:
+        :param r: request.
+        :param hdr: http header.
+        :param loop: asyncio loop
+        :param payload: json payload
+        :return:
+        """
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        response = await self.api_async_delete_call(loop, r, payload, hdr)
+        api_respond_status = await self.async_default_delete_success(
+            await response, expected=expected, ignore_error_code=ignore_error_code)
+        return await response, api_respond_status
 
     async def async_post_until_complete(
             self, r: str,
             payload: str,
             hdr: Dict,
-            ignore_error_code: Optional[int] = 0,
-            loop=None) -> Tuple[requests.models.Response, bool]:
+            loop=None,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> Tuple[requests.models.Response, IdracApiRespond]:
         """Make async post api request until completion , it issues post with x-auth
         authentication header or idrac_ctl. Caller can use this in asyncio routine.
 
+        :param expected:
         :param r: request.
         :param hdr: http header
         :param ignore_error_code: error code that we need ignore.
@@ -692,15 +929,13 @@ class IDracManager(RedfishManager):
         if loop is None:
             loop = asyncio.get_event_loop()
         response = await self.api_async_post_call(loop, r, payload, hdr)
-        ok = await self.async_default_post_success(
-            await response, ignore_error_code=ignore_error_code
+        api_respond_status = await self.async_default_post_success(
+            await response, ignore_error_code=ignore_error_code, expected=expected
         )
-        return await response, ok
+        return await response, api_respond_status
 
-    def api_patch_call(self,
-                       req: str,
-                       payload: str,
-                       hdr: dict) -> requests.models.Response:
+    def api_patch_call(
+            self, req: str, payload: str, hdr: dict, ) -> requests.models.Response:
         """Make api patch request.
         :param req: path to a path request
         :param payload: json payload
@@ -714,18 +949,21 @@ class IDracManager(RedfishManager):
 
         if self.x_auth is not None:
             headers.update({'X-Auth-Token': self.x_auth})
-            return requests.patch(req,
-                                  data=payload,
-                                  verify=self._is_verify_cert,
-                                  headers=headers)
+            return requests.patch(
+                req, data=payload,
+                verify=self._is_verify_cert,
+                headers=headers
+            )
         else:
-            return requests.patch(req,
-                                  data=payload,
-                                  verify=self._is_verify_cert,
-                                  headers=headers,
-                                  auth=(self._username, self._password))
+            return requests.patch(
+                req, data=payload,
+                verify=self._is_verify_cert,
+                headers=headers,
+                auth=(self._username, self._password)
+            )
 
-    async def api_async_patch_call(self, loop, req, payload: str, hdr: Dict):
+    async def api_async_patch_call(
+            self, loop, req, payload: str, hdr: Dict):
         """Make async post api request either with
         x-auth authentication header or idrac_ctl.
 
@@ -756,8 +994,8 @@ class IDracManager(RedfishManager):
                 )
             )
 
-    async def api_async_delete_call(self, loop,
-                                    req, payload: str, hdr: Dict):
+    async def api_async_delete_call(
+            self, loop, req, payload: str, hdr: Dict):
         """Make async delete api request either with
         x-auth authentication header or idrac_ctl.
 
@@ -789,154 +1027,142 @@ class IDracManager(RedfishManager):
                 )
             )
 
-    @staticmethod
-    def parse_error(error_response: requests.models.Response) -> Tuple[str, str]:
-        """Default Parser for error msg from
-        JSON error response based on iDRAC.
-        :param error_response:
-        :return:
-        """
-        err_msg = "Default error."
-        messages = [""]
-        err_resp = error_response.json()
-        if 'error' in err_resp:
-            err_data = err_resp['error']
-            if 'message' in err_data:
-                err_msg = err_resp['error']['message']
-            if '@Message.ExtendedInfo' in err_data:
-                messages = [m['Message'] for m in err_data['@Message.ExtendedInfo'] if 'Message' in m]
-                extended_err = err_data['@Message.ExtendedInfo'][-1]
-                err_msg = [f"{k}: {v}" for k, v in extended_err.items() if "@" not in k]
-                err_msg = "\n".join(err_msg)
+    def read_api_respond(
+            self,
+            response: requests.models.Response,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
+        """Default success handler,  Check for status code.
+        In case of critical error raise exception. If exception expected
+        i.e. operation canceled.
 
-        return err_msg, " ".join(messages)
+        Expected allow to overwrite if API return expect something different
+        200, 201, 202, 204
 
-    @staticmethod
-    def default_patch_success(cls,
-                              response: requests.models.Response,
-                              expected: Optional[int] = 200,
-                              ignore_error_code: Optional[int] = 0) -> bool:
-        """Default HTTP patch success handler
-        Default handler to check patch request respond.
-
-        :param cls:
-        :param response: HTTP response
-        :param expected:  Option status code that we caller consider success.
-        :param ignore_error_code: error code to ignore.
-        :return: True if patch msg succeed
-        :raise PatchFailed if patch failed
-        """
-        if response.status_code == expected:
-            return True
-
-        if ignore_error_code > 0 and ignore_error_code == response.status_code:
-            return False
-
-        if response.status_code == 200 \
-                or response.status_code == 202 or response.status_code == 204:
-            return True
-        else:
-            err_msg, json_error = IDracManager.parse_error(response)
-            e = PatchRequestFailed(
-                f"{err_msg}\nHTTP Status code: "
-                f"{response.status_code}", json_error=json_error
-            )
-            e.error_msg = json_error
-
-    @staticmethod
-    def default_post_success(cls,
-                             response: requests.models.Response,
-                             expected: Optional[int] = 204,
-                             ignore_error_code: Optional[int] = 0) -> bool:
-        """Default post success handler,  Check for status code.
-        and raise exception.  Default handler to check post
-        request respond.
-
-        :param cls:
-        :param response: HTTP response
+        :param response: requests.models.Response: responses
         :param ignore_error_code: error code to ignore.
         :param expected:  Option status code that we caller consider success.
-        :return: True if patch msg succeed
-        :raise PostRequestFailed if POST Method failed
+        :return: IdracApiRespond if httm method request succeed
+        :raise RedfishException if HTTP method failed.
         """
         if response.status_code == expected:
-            return True
+            return self._api_respond_to_string[response.status_code]
 
         if ignore_error_code > 0 and ignore_error_code == response.status_code:
-            return False
+            return self._api_respond_to_string[response.status_code]
 
-        if response.status_code == 200 \
-                or response.status_code == 202 \
-                or response.status_code == 204:
-            return True
+        if 200 <= response.status_code < 300:
+            return self._api_respond_to_string[response.status_code]
+
+        self._redfish_error = IDracManager.parse_error(response)
+
+        if 300 <= response.status_code < 400:
+            if response.status_code == 401:
+                raise RedfishUnauthorized("Authorization failed.")
+            if response.status_code == 403:
+                raise RedfishForbidden("Authorization failed.")
+            return IdracApiRespond.Error
+        elif 400 <= response.status_code < 500:
+            raise RedfishException(
+                f"{self._redfish_error.message} HTTP Status code: "
+                f"{response.status_code}")
         else:
-            err_msg, json_error = IDracManager.parse_error(response)
-            raise PostRequestFailed(
-                f"{err_msg}\nHTTP Status code: "
-                f"{response.status_code}", json_error=json_error
+            raise RedfishException(
+                f"{self._redfish_error}, HTTP Status code: "
+                f"{response.status_code}"
             )
 
-    @staticmethod
-    def default_delete_success(response: requests.models.Response,
-                               expected: Optional[int] = 200) -> bool:
+    def default_patch_success(
+            self,
+            response: requests.models.Response,
+            expected: Optional[int] = 202,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
         """Default delete success handler,  Check for status code.
         and raise exception.  Default handler to check post
         request respond.
 
         :param response: HTTP response
+        :param ignore_error_code: error code to ignore.
         :param expected:  Option status code that we caller consider success.
-        :return: True if patch msg succeed
+        :return:
         :raise DeleteRequestFailed if POST Method failed
         """
-        if response.status_code == expected:
-            return True
-
-        if response.status_code == 200 \
-                or response.status_code == 202 \
-                or response.status_code == 204:
-            return True
-        else:
-            err_msg, json_error = IDracManager.parse_error(response)
-            raise DeleteRequestFailed(
-                f"{err_msg}\nHTTP Status code: "
-                f"{response.status_code}", json_error=json_error
-            )
-
-    def api_async_del_until_complete(self, r, headers):
-        pass
-
-    @staticmethod
-    async def async_default_post_success(response: requests.models.Response,
-                                         ignore_error_code: Optional[int] = 0) -> bool:
-        """Default error handler, for post
-        :param response: response HTTP response.
-        :param ignore_error_code: ignore HTTP statue error.
-        :return: True or False and if failed raise exception
-        :raise  PostRequestFailed
-        """
-        return IDracManager.default_post_success(
-            IDracManager, response, ignore_error_code=ignore_error_code
+        return self.read_api_respond(
+            response, expected=expected, ignore_error_code=ignore_error_code
         )
 
-    @staticmethod
-    async def async_default_delete_success(response: requests.models.Response) -> bool:
+    def default_post_success(
+            self,
+            response: requests.models.Response,
+            expected: Optional[int] = 200,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
+        return self.read_api_respond(
+            response, expected=expected, ignore_error_code=ignore_error_code
+        )
+
+    def default_delete_success(
+            self,
+            response: requests.models.Response,
+            expected: Optional[int] = 200,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
+        """Default delete success handler,  Check for status code.
+        and raise exception.  Default handler to check post
+        request respond.
+
+        :param response: HTTP response
+        :param ignore_error_code: error code to ignore.
+        :param expected:  Option status code that we caller consider success.
+        :return:
+        :raise DeleteRequestFailed if POST Method failed
+        """
+        return self.read_api_respond(
+            response, expected=expected, ignore_error_code=ignore_error_code
+        )
+
+    async def async_default_post_success(
+            self,
+            response: requests.models.Response,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
         """Default error handler, for post
+        :param expected:
+        :param response: response HTTP response.
+        :param ignore_error_code: ignore HTTP statue error.
+        :return: True or False and if failed raise exception
+        :raise  PostRequestFailed
+        """
+        return self.read_api_respond(
+            response, expected=expected, ignore_error_code=ignore_error_code
+        )
+
+    async def async_default_delete_success(
+            self,
+            response: requests.models.Response,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
+        """Default error handler, for post
+        :param ignore_error_code:
+        :param expected:
         :param response: response HTTP response.
         :return: True or False and if failed raise exception
         :raise  PostRequestFailed
         """
-        return IDracManager.default_delete_success(response)
+        return self.read_api_respond(
+            response, expected=expected, ignore_error_code=ignore_error_code
+        )
 
-    @staticmethod
-    async def async_default_patch_success(response: requests.models.Response,
-                                          ignore_error_code: Optional[int] = 0) -> bool:
+    async def async_default_patch_success(
+            self, response: requests.models.Response,
+            expected: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> IdracApiRespond:
         """Default error handler for patch http method.
+        :param expected:
         :param response: response HTTP response.
         :param ignore_error_code: ignore HTTP statue error.
         :return: True or False and if failed raise exception
         """
-        return IDracManager.default_patch_success(
-            IDracManager, response, ignore_error_code=ignore_error_code
+        return self.read_api_respond(
+            response, expected=expected, ignore_error_code=ignore_error_code
         )
 
     @staticmethod
@@ -947,247 +1173,264 @@ class IDracManager(RedfishManager):
         """
         return f"?$expand=*($levels={level})"
 
-    def base_query(self,
-                   resource: str,
-                   filename: Optional[str] = None,
-                   do_async: Optional[bool] = False,
-                   do_expanded: Optional[bool] = False,
-                   data_type: Optional[str] = "json",
-                   verbose: Optional[bool] = False,
-                   key: Optional[str] = None,
-                   **kwargs) -> CommandResult:
-        """Base http query.
+    def base_request_respond(
+            self,
+            resource: str,
+            method: HTTPMethod,
+            payload: Optional[dict] = None,
+            do_async: Optional[bool] = False,
+            data_type: Optional[str] = "json",
+            expected_status: Optional[int] = 200,
+            ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
+        """A base http patch.
 
-        :param resource: path to a resource
-        :param do_async: note async will subscribe to an event loop.
-        :param do_expanded:  will do expand query
-        :param filename: if filename indicate call will save a bios setting to a file.
-        :param verbose: enables verbose output
-        :param data_type: json or xml
-        :param key: Optional json key
-        :return: CommandResult and if filename provide will save to a file.
-        """
-        if verbose:
-            self.logger.info(
-                f"cmd args"
-                f"data_type: {data_type} "
-                f"resource:{resource} "
-                f"do_async:{do_async} "
-                f"filename:{filename}")
-            self.logger.info(f"the rest of args: {kwargs}")
-
-        headers = {}
-        if data_type == "json":
-            headers.update(self.json_content_type)
-
-        if do_expanded:
-            r = f"{self._default_method}{self.idrac_ip}{resource}{self.expanded()}"
-        else:
-            r = f"{self._default_method}{self.idrac_ip}{resource}"
-
-        if not do_async:
-            response = self.api_get_call(r, headers)
-            self.query_counter += 1
-            self.default_error_handler(response)
-        else:
-            loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(
-                self.api_async_get_until_complete(
-                    r, headers
-                )
-            )
-
-        data = response.json()
-        if key is not None and len(key) > 0 and key in data:
-            data = data[key]
-
-        save_if_needed(filename, data)
-        return CommandResult(data, None, None, None)
-
-    def base_patch(self,
-                   resource: str,
-                   payload: Optional[dict] = None,
-                   do_async: Optional[bool] = False,
-                   data_type: Optional[str] = "json",
-                   expected_status: Optional[int] = 200) -> CommandResult:
-        """Base http patch
-        :param resource:
-        :param payload:
-        :param do_async:
-        :param data_type:
-        :param expected_status:
-        :return:
+        :param method:
+        :param ignore_error_code:
+        :param resource:  a request to api,  /redfish/v1/
+        :param payload: a json payload
+        :param do_async: for asynced request.
+        :param data_type: a data-type json/xml
+        :param expected_status: expected status code depend on patch msg.
+        :return: CommandResult
         """
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        if payload is None:
-            pd = {}
-        else:
-            pd = payload
+        pd = payload if payload is not None else {}
 
-        self.logger.debug(f"Issuing patch request to "
+        self.logger.debug(f"Issuing {method} request to "
                           f"resource: {resource}, "
                           f"payload: {json.dumps(pd)}")
 
-        ok = False
         err = None
         response = None
+        api_resp = IdracApiRespond.Error
         try:
             r = f"{self._default_method}{self.idrac_ip}{resource}"
             if not do_async:
-                if self._is_debug:
-                    self.logger.debug(json.dumps(pd))
-
-                response = self.api_patch_call(
-                    r, json.dumps(pd), headers
-                )
-                ok = self.default_patch_success(
-                    self, response, expected=expected_status
-                )
-            else:
-                loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(
-                    self.api_async_patch_until_complete(
+                if method == HTTPMethod.PATCH:
+                    response = self.api_patch_call(
                         r, json.dumps(pd), headers
                     )
-                )
+                    api_resp = self.default_patch_success(
+                        response, expected=expected_status,
+                        ignore_error_code=ignore_error_code
+                    )
+                if method == HTTPMethod.POST:
+                    response = self.api_post_call(
+                        r, json.dumps(pd), headers
+                    )
+                    api_resp = self.default_post_success(
+                        response, expected=expected_status,
+                        ignore_error_code=ignore_error_code
+                    )
+                if method == HTTPMethod.DELETE:
+                    response = self.api_delete_call(
+                        r, headers
+                    )
+                    api_resp = self.default_post_success(
+                        response, expected=expected_status,
+                        ignore_error_code=ignore_error_code
+                    )
+            else:
+                loop = asyncio.get_event_loop()
+                if method == HTTPMethod.PATCH:
+                    api_resp, response = loop.run_until_complete(
+                        self.api_async_patch_until_complete(
+                            r, json.dumps(pd), headers,
+                            expected=expected_status,
+                            ignore_error_code=ignore_error_code
+                        )
+                    )
+                if method == HTTPMethod.POST:
+                    api_resp, response = loop.run_until_complete(
+                        self.api_async_patch_until_complete(
+                            r, json.dumps(pd), headers,
+                            expected=expected_status,
+                            ignore_error_code=ignore_error_code
+                        )
+                    )
+                if method == HTTPMethod.DELETE:
+                    api_resp, response = loop.run_until_complete(
+                        self.api_async_patch_until_complete(
+                            r, json.dumps(pd), headers,
+                            expected=expected_status,
+                            ignore_error_code=ignore_error_code
+                        )
+                    )
         except PatchRequestFailed as pf:
             self.logger.critical(
                 pf, exc_info=self._is_debug
             )
             err = pf
+        except PostRequestFailed as pf:
+            self.logger.critical(
+                pf, exc_info=self._is_debug
+            )
+            err = pf
+        except DeleteRequestFailed as pf:
+            self.logger.critical(
+                pf, exc_info=self._is_debug)
+            err = pf
 
-        return CommandResult(self.api_success_msg(ok), None, response, err)
+        # if task id available we fetch result.
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = self.job_id_from_header(response)
+            return CommandResult({"task_id": task_id}, None, response, err), api_resp
+
+        return CommandResult(self.api_success_msg(api_resp), None, response, err), api_resp
 
     def base_post(self,
                   resource: str,
                   payload: Optional[dict] = None,
                   do_async: Optional[bool] = False,
                   data_type: Optional[str] = "json",
-                  expected_status: Optional[int] = 20,
-                  verbose: Optional[bool] = False) -> CommandResult:
-        """Base http post request
-        :param resource: a remote resource
+                  expected_status: Optional[int] = 204,
+                  ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
+        """Base http post request for redfish remote api.
+
+        Returns CommandResult and data field contain a data payload.
+        If such data is present. In most case post doesn't return anything.
+
+        Method return a tuple CommandResult, IdracApiRespond
+        provide option if post accepted , ok status just ok or failed.
+
+        Meanwhile, in case error CommandResult. Error
+        store Redfish error if any.
+
+        :param ignore_error_code:
+        :param resource: a remote redfish api resource
         :param payload: a json payload
-        :param do_async:
-        :param data_type:
-        :param expected_status:
-        :param verbose: enables verbose output
+        :param do_async: whether we do asyncio or not
+        :param data_type: a default data type json or xml.
+        :param expected_status: in case we expect http status that different from spec.
+        :return: Tuple[CommandResult, IdracApiRespond]
+        :raise: PostRequestFailed for all error that we can't handle.
+                i.e. error like api return are not exception.
+        """
+        return self.base_request_respond(
+            resource, HTTPMethod.POST, payload=payload,
+            do_async=do_async, data_type=data_type,
+            expected_status=expected_status, ignore_error_code=ignore_error_code,
+        )
+
+    def base_patch(self,
+                   resource: str,
+                   payload: Optional[dict] = None,
+                   do_async: Optional[bool] = False,
+                   data_type: Optional[str] = "json",
+                   expected_status: Optional[int] = 204,
+                   ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
+        """Base http post request for redfish remote api.
+
+        Returns CommandResult and data field contain a data payload.
+        If such data is present. In most case post doesn't return anything.
+
+        Method return a tuple CommandResult, IdracApiRespond
+        provide option if post accepted , ok status just ok or failed.
+
+        Meanwhile, in case error CommandResult. Error
+        store Redfish error if any.
+
+        :param ignore_error_code:
+        :param resource: a remote redfish api resource
+        :param payload: a json payload
+        :param do_async: whether we do asyncio or not
+        :param data_type: a default data type json or xml.
+        :param expected_status: in case we expect http status that different from spec.
+        :return: Tuple[CommandResult, IdracApiRespond]
+        :raise: PostRequestFailed for all error that we can't handle.
+                i.e. error like api return are not exception.
+        """
+        return self.base_request_respond(
+            resource, HTTPMethod.PATCH, payload=payload,
+            do_async=do_async, data_type=data_type,
+            expected_status=expected_status, ignore_error_code=ignore_error_code,
+        )
+
+    def base_delete(self,
+                    resource: str,
+                    payload: Optional[dict] = None,
+                    do_async: Optional[bool] = False,
+                    data_type: Optional[str] = "json",
+                    expected_status: Optional[int] = 204,
+                    ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
+        """Base http delete request for redfish remote api.
+
+        Returns CommandResult and data field contain a data payload.
+        If such data is present. In most case post doesn't return anything.
+
+        Method return a tuple CommandResult, IdracApiRespond
+        provide option if post accepted , ok status just ok or failed.
+
+        Meanwhile, in case error CommandResult. Error
+        store Redfish error if any.
+
+        :param ignore_error_code:
+        :param resource: a remote redfish api resource
+        :param payload: a json payload
+        :param do_async: whether we do asyncio or not
+        :param data_type: a default data type json or xml.
+        :param expected_status: in case we expect http status that different from spec.
+        :return: Tuple[CommandResult, IdracApiRespond]
+        :raise: PostRequestFailed for all error that we can't handle.
+                i.e. error like api return are not exception.
+        """
+        return self.base_request_respond(
+            resource, HTTPMethod.DELETE, payload=payload,
+            do_async=do_async, data_type=data_type,
+            expected_status=expected_status, ignore_error_code=ignore_error_code,
+        )
+
+    def reboot(
+            self,
+            do_watch: Optional[bool] = False,
+            power_state_attr: Optional[str] = "PowerState",
+            default_reboot_type: Optional[ResetType.ForceRestart] = ResetType.ForceRestart) -> CommandResult:
+        """Reboot a chassis, if chassis in power down state.
+
+        Reboot on power down state is no op, method return
+        chassis data. caller need check CommandResult data
+        and if required Change power state.
+
+        :param do_watch: if reboot respond with task_id, do watch
+                         passed to reboot and block reboot complete.
+        :param default_reboot_type: ResetType.ForceRestart: type reboot.
+        :param power_state_attr:  is attribute method check
+                to determine chassis up or in power done state.
         :return:
         """
-        headers = {}
-        if data_type == "json":
-            headers.update(self.json_content_type)
-
-        if payload is None:
-            pd = {}
-        else:
-            pd = payload
-
-        ok = False
-        err = None
-        response = None
-        try:
-            r = f"{self._default_method}{self.idrac_ip}{resource}"
-            if not do_async:
-                response = self.api_post_call(r, json.dumps(pd), headers)
-                if verbose:
-                    self.logger.debug(f"received status code {response.status_code}")
-                    self.logger.debug(f"received status code {response.headers}")
-                    self.logger.debug(f"received {response.raw}")
-                ok = self.default_post_success(
-                    self, response, expected=expected_status
-                )
-            else:
-                loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(
-                    self.async_post_until_complete(
-                        r, json.dumps(pd), headers
-                    )
-                )
-        except PostRequestFailed as pf:
-            err = pf
-            self.logger.critical(pf, exc_info=self._is_debug)
-
-        return CommandResult(self.api_success_msg(ok), None, response, err)
-
-    @staticmethod
-    def api_success_msg(status: bool,
-                        message_key: Optional[str] = "message",
-                        message=None) -> Dict:
-        """A default api success respond.
-        :param status: a status true of false
-        :param message_key: key we need add extra
-        :param message: message information data
-        :return: a dict
-        """
-        if message is not None:
-            return {
-                "Status": status,
-                message_key: message
-            }
-
-        return {"Status": status}
-
-    @staticmethod
-    def api_is_change_msg(status: bool,
-                          message_key: Optional[str] = "message",
-                          message=None) -> Dict:
-        """A default api msg when no change applied.
-        :param status: a status true of false
-        :param message_key: key we need add extra
-        :param message: message information data
-        :return: a dict
-        """
-        if message is not None:
-            return {
-                "Changed": status,
-                message_key: message
-            }
-        return {"Changed": status}
-
-    def reboot(self,
-               do_watch: Optional[bool] = False,
-               power_state_attr: Optional[str] = "PowerState",
-               default_reboot_type: Optional[str] = "ForceRestart") -> dict:
-        """Check if power state is on, reboots a host.
-        :return: return a dict stora if operation succeed..
-        """
-        result_data = {}
-
         # state of chassis
         cmd_chassis = self.sync_invoke(
-            ApiRequestType.ChassisQuery,
-            "chassis_service_query",
+            ApiRequestType.ChassisQuery, "chassis_service_query",
             data_filter=power_state_attr
         )
+
+        if cmd_chassis.error is not None:
+            self.logger.info(
+                f"Failed to fetch a chassis power state")
+            return cmd_chassis
 
         if isinstance(cmd_chassis.data, dict) and 'PowerState' in cmd_chassis.data:
             pd_state = cmd_chassis.data[power_state_attr]
             if pd_state == 'On':
-                cmd_reboot = self.sync_invoke(
+                return self.sync_invoke(
                     ApiRequestType.RebootHost, "reboot",
                     reset_type=default_reboot_type,
                     do_watch=do_watch
                 )
-                if 'Status' in cmd_reboot.data:
-                    result_data.update(
-                        {
-                            "Reboot": cmd_reboot.data['Status']
-                        }
-                    )
             else:
                 self.logger.info(
                     f"Can't reboot a host, "
                     f"chassis power state in {pd_state} state."
                 )
+                return CommandResult({}, None, None, None)
         else:
             self.logger.info(
-                f"Failed to fetch chassis power state")
+                f"Failed to acquire current power state.")
 
-        return result_data
+        return cmd_chassis
 
     @cached_property
     def idrac_firmware(self) -> str:
@@ -1199,7 +1442,9 @@ class IDracManager(RedfishManager):
         return api_return.data
 
     def idrac_last_reset(self) -> datetime:
-        """Shared method return idrac last reset time"""
+        """Shared method returns idrac last reset time as datatime
+        :return: datetime
+        """
         idrac_reset_time = None
         api_return = self.base_query(self.idrac_members,
                                      key=IDRAC_JSON.LastResetTime)
@@ -1210,7 +1455,8 @@ class IDracManager(RedfishManager):
         return idrac_reset_time
 
     def idrac_current_time(self) -> datetime:
-        """Shared method return idrac current time, if idrac return none ISO format
+        """Shared method return idrac current time, if idrac
+        return none ISO format
         :return: datetime
         """
         idrac_time = None
@@ -1224,12 +1470,16 @@ class IDracManager(RedfishManager):
 
     @staticmethod
     def local_time_iso():
-        """local time in iso format"""
+        """return local time in iso format
+        :return: idrac local time
+        """
         current_date = datetime.now()
         return current_date.isoformat()
 
     def idrac_time_offset(self):
-        """Shared method return idrac current time"""
+        """
+        :return:  idrac time zone
+        """
         api_resp = self.base_query(self.idrac_members,
                                    key=IDRAC_JSON.DateTimeLocalOffset)
         return api_resp.data
@@ -1255,30 +1505,18 @@ class IDracManager(RedfishManager):
     def idrac_members(self) -> str:
         """Shared method return idrac manage members servers list as json
         /redfish/v1/Managers/iDRAC.Embedded.1
+        after first cal , result cached all follow-up call will return cached result.
+        :return:
         """
         cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
         return self.value_from_json_list(cmd_result.data, IDRAC_JSON.Data_id)
 
-    @staticmethod
-    def value_from_json_list(json_obj, k):
-        """Parse json object dict.  If resp is json list [] get a key from last element
-        otherwise if a dict return value from a dict.
-        """
-        if isinstance(json_obj, list) and len(json_obj) > 0:
-            list_flat = json_obj[-1]
-            if isinstance(list_flat, dict):
-                if k in list_flat:
-                    return list_flat[k]
-        elif isinstance(json_obj, dict):
-            if k in json_obj:
-                return json_obj[k]
-        elif isinstance(json_obj, str):
-            return json_obj
-
     @cached_property
     def idrac_manage_servers(self) -> str:
         """Shared method return idrac managed servers list as json
-        "/redfish/v1/Systems/System.Embedded.1"
+        list i.e. /redfish/v1/Systems/System.Embedded.1
+        after first cal , result cached all follow-up call will return cached result.
+        :return:
         """
         api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.Links)
         if api_resp.data is not None and IDRAC_JSON.ManagerServers in api_resp.data:
@@ -1294,7 +1532,10 @@ class IDracManager(RedfishManager):
 
     @cached_property
     def idrac_id(self):
-        """Shared method return idrac id, System.Embedded.1"""
+        """Shared method return idrac id, i.e. System.Embedded.1
+        id cached all follow-up calls and will return cached result.
+        :return:
+        """
         self.base_query(self.idrac_manage_servers, key=IDRAC_JSON.Id)
         api_resp = self.base_query(self.idrac_manage_servers, key=IDRAC_JSON.Id)
         if api_resp is None:
@@ -1307,10 +1548,19 @@ class IDracManager(RedfishManager):
                     is_expanded: Optional[bool] = True,
                     is_remote_share: Optional[bool] = False,
                     is_reboot: Optional[bool] = False):
-        """This idrac_ctl optional parser for all sub command.
-        Each sub-command can add additional optional flags and args.
-        :return: argparse.ArgumentParser
         """
+        This idrac_ctl optional parser for all sub command
+        that most of command share.
+        Each sub-command can add additional optional flags and args.
+        :param is_async: will add to optional group async
+        :param is_file_save:  will add to optional group arg option save to file
+        :param is_expanded:  will add to optional group arg option for expanded query
+        :param is_remote_share:  will add remote share for optional group arg
+        :param is_reboot:  will add optional reboot for optional arg.
+                           ( for cmds that we want to execute and reboot)
+        :return:
+        """
+
         cmd_parser = argparse.ArgumentParser(
             add_help=False, formatter_class=CustomArgumentDefaultsHelpFormatter
         )
@@ -1387,50 +1637,12 @@ class IDracManager(RedfishManager):
         return cmd_parser
 
     @staticmethod
-    def job_id_from_respond(
-            response: requests.models.Response) -> Any | None:
-        """Parses job id from a HTTP respond.
-        :param response:
-        :return:
-        """
-        try:
-            if response is not None:
-                response_dict = str(response.__dict__)
-                if response_dict is not None and len(response_dict) > 0:
-                    job_id = re.search("JID_.+?,", response_dict)
-                    if job_id is not None:
-                        job_id = job_id.group(0)
-                    return job_id
-        except AttributeError as _:
-            pass
-
-        return None
-
-    @staticmethod
-    def job_id_from_header(
-            response: requests.models.Response) -> str:
-        """Returns job id from the response header.
-        :param response: a response that should have job
-        id information in the header.
-        :return: job id
-        :raise UnexpectedResponse if header not present.
-        """
-        resp_hdr = response.headers
-        if IDRAC_JSON.Location not in resp_hdr:
-            raise TaskIdUnavailable(
-                "There is no location in the response header. "
-                "(not all api create job id)"
-            )
-        location = response.headers[IDRAC_JSON.Location]
-        job_id = location.split("/")[-1]
-        return job_id
-
-    @staticmethod
     def schedule_job_request(
             reboot_type: ScheduleJobType,
             start_time_isofmt: Optional[str],
             duration_time: Optional[int]) -> dict:
-        """Create a JSON payload for schedule a job.
+        """Create a JSON payload for schedule a job, either
+        somewhere in future or OnReset.
 
         :param reboot_type: reboot type, ScheduleJobType
         :param start_time_isofmt: start time for a job in ISO format.
@@ -1470,57 +1682,14 @@ class IDracManager(RedfishManager):
                 "Invalid settings apply time.")
         return pd
 
-    def parse_task_id(self, data):
-        """Parses input data and try to get a job id from the header
-        or http response.
-        :param data:  http response or CommandResult
-        :return:
-        """
-        # get response from extra
-        if data is None:
-            return {}
-
-        if hasattr(data, "extra"):
-            resp = data.extra
-        elif isinstance(data, requests.models.Response):
-            resp = data
-        else:
-            raise ValueError("Unknown data type.")
-
-        if resp is None:
-            return {}
-
-        job_id = None
-        try:
-            job_id = self.job_id_from_header(resp)
-            logging.debug(f"idrac api returned {job_id} in the header.")
-            return job_id
-        except TaskIdUnavailable as tiu:
-            pass
-        except UnexpectedResponse as ur:
-            logging.debug(ur, exc_info=self._is_debug)
-
-        try:
-            # try to get from the response , it an optional check.
-            if job_id is None:
-                job_id = self.job_id_from_respond(resp)
-                logging.debug(f"idrac api returned {job_id} in the header.")
-        except TaskIdUnavailable as tiu:
-            pass
-        except UnexpectedResponse as _:
-            pass
-
-        if job_id is not None:
-            data = self.fetch_job(job_id)
-            return data
-
-        return {}
-
     @staticmethod
     def make_future_job_ts(start_date: str,
                            start_time: str,
                            is_json_string=False) -> str:
         """Make a future time for a maintenance task.
+
+        Specifically @Redfish.MaintenanceWindow
+
         It takes start_date in format YYYY-MM-DD
         and starts time in format HH:MM:SS and return
         JSON string time in ISO format.
@@ -1566,11 +1735,14 @@ class IDracManager(RedfishManager):
                               start_time: str,
                               default_duration):
         """
-        :param start_date
-        :param start_time
-        :param default_duration
+        The settings apply time and operation apply time annotations
+        enable an operation to be performed during a maintenance window
+        :param start_date a date as string
+        :param start_time a start time for a future job
+        :param default_duration a duration
         :param apply time auto-boot, maintenance, on-reset
-        :raise InvalidArgumentFormat
+        :raise InvalidArgumentFormat will raise in case we can't parse args
+        :raise ValueError if unknown apply type
         """
         if apply.strip().lower() == "auto-boot":
             start_timestamp = self.make_future_job_ts(start_date, start_time)

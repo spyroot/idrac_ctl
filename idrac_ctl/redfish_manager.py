@@ -6,26 +6,30 @@ https://www.dmtf.org/standards/REDFISH
 Author Mus spyroot@gmail.com
 """
 
-
 import asyncio
 import collections
 import functools
 import logging
+import re
 from abc import abstractmethod
 from functools import cached_property
 from typing import Optional, Dict
+
 import requests
 
 from .cmd_exceptions import AuthenticationFailed
-from .cmd_exceptions import AuthenticationFailed
 from .cmd_exceptions import ResourceNotFound
-from .cmd_exceptions import UnexpectedResponse
-from .shared import RedfishApi, RedfishJson
+from .cmd_exceptions import TaskIdUnavailable
 from .cmd_utils import save_if_needed
+from .redfish_error import RedfishError
+from .redfish_exceptions import RedfishForbidden
+from .redfish_exceptions import RedfishMethodNotAllowed
+from .redfish_exceptions import RedfishNotAcceptable
+from .shared import RedfishApi, RedfishJson, RedfishJsonSpec, RedfishApiRespond
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
-                                       ("data", "discovered", "extra", "error"))
+                                       ("data", "discovered", "extra", "error",))
 
 
 class RedfishManager:
@@ -42,7 +46,7 @@ class RedfishManager:
            By default, Redfish Manager uses json to serialize a data to callee
            and uses json content type.
 
-        :param redfish_ip: redfish IP address
+        :param redfish_ip: redfish IP or hostname
         :param redfish_username: redfish username default is root
         :param redfish_password: redfish password.
         :param insecure: by default, we use insecure SSL
@@ -71,7 +75,6 @@ class RedfishManager:
         # run time
         self.action_targets = None
         self.api_endpoints = None
-        self.redfish{}
 
     @property
     def redfish_ip(self) -> str:
@@ -93,6 +96,36 @@ class RedfishManager:
         pass
 
     @staticmethod
+    def redfish_error_handlers(status_code):
+        if status_code == 401:
+            raise AuthenticationFailed(
+                "Authentication failed."
+            )
+        if status_code == 403:
+            raise RedfishForbidden(
+                "Authentication failed."
+            )
+        if status_code == 403:
+            raise RedfishForbidden(
+                "Authentication failed."
+            )
+        if status_code == 405:
+            raise RedfishMethodNotAllowed(
+                "DELETE, GET, HEAD, POST, PUT, "
+                "or PATCH , is not supported."
+            )
+        if status_code == 406:
+            raise RedfishNotAcceptable(
+                "Server rejected error code 406."
+            )
+        if status_code == 409:
+            raise RedfishNotAcceptable(
+                "Creation or update request could not be completed "
+                "because it would cause a conflict "
+                "in the current state of the resources."
+            )
+
+    @staticmethod
     async def async_default_error_handler(
             response: requests.models.Response) -> bool:
         """Default error handler for base query and redfish error code based on spec.
@@ -101,43 +134,12 @@ class RedfishManager:
         """
         if response.status_code >= 200 or response.status_code < 300:
             return True
-
-        if response.status_code == 401:
-            raise AuthenticationFailed(
-                "Authentication failed."
-            )
-        if response.status_code == 403:
-            raise AuthenticationFailed(
-                "Authentication failed."
-            )
-
-        if response.status_code == 405:
-            raise RedfishMethodNotAllowed(
-                "DELETE, GET, HEAD, POST, PUT, "
-                "or PATCH , is not supported."
-            )
-
-        if response.status_code == 406:
-            raise RedfishNotAcceptable(
-                "Server rejected error code 406."
-            )
-
-        if response.status_code == 409:
-            raise RedfishNotAcceptable(
-                "Creation or update request could not be completed "
-                "because it would cause a conflict "
-                "in the current state of the resources."
-            )
-
-        if response.status_code != 200:
-            raise UnexpectedResponse(
-                f"Failed acquire result. "
-                f"Status code {response.status_code}"
-            )
+        RedfishManager.redfish_error_handlers(response.status_code)
 
     async def api_async_get_call(self, loop, req, hdr: Dict):
         """Make api request either with x-auth authentication header or base authentication
         to redfish endpoint.
+
         :param loop: asyncio event loop
         :param req: request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
@@ -151,7 +153,7 @@ class RedfishManager:
         if self.x_auth is not None:
             return loop.run_in_executor(
                 None, functools.partial(
-                    requests.get, r,
+                    requests.get, req,
                     verify=self._is_verify_cert,
                     headers=headers
                 )
@@ -159,7 +161,7 @@ class RedfishManager:
         else:
             return loop.run_in_executor(
                 None, functools.partial(
-                    requests.get, r,
+                    requests.get, req,
                     verify=self._is_verify_cert,
                     auth=(self._username, self._password)
                 )
@@ -229,6 +231,7 @@ class RedfishManager:
                    filename: Optional[str] = None,
                    do_async: Optional[bool] = False,
                    do_expanded: Optional[bool] = False,
+                   query_expansion: Optional[str] = "",
                    data_type: Optional[str] = "json",
                    verbose: Optional[bool] = False,
                    key: Optional[str] = None,
@@ -236,31 +239,44 @@ class RedfishManager:
         """A base implementation for query redfish. This method shared
         by many other methods that require just a base http get query.
 
+        do_expanded allow to leverage  $expand query parameter and
+        enables a client to request a response that includes not only the
+        requested resource, but also includes the contents of the
+        subordinate or hyperlinked resource.
+
+        Note tht expanded usually very chatty.
+
+        By default,  base_query uses ?$expand=*($levels={level}
+
         :param resource: path to a redfish resource
-        :param do_async: sync will subscribe to an event loop and issue async rquest/
+        :param do_async: sync will subscribe to an event loop and issue async request.
         :param do_expanded:  will do expand query based on spec.
+        :param query_expansion:  allow to overwrite expansion, and it always appended to request.
         :param filename: if filename indicate call will save a bios setting to a file.
         :param verbose: enables verbose output, mainly to debug if endpoint return something strange.
         :param data_type: json or xml
-        :param key: Optional json key in case we want get something from a root element only.
+        :param key: Optional json key in case we want to get something from a root element only.
         :return: CommandResult
         :raise RedfishException
         """
         if verbose:
-            self.logger.info(
-                f"cbase_query recived args"
+            self.logger.debug(
+                f"base_query received args"
                 f"data_type: {data_type} "
-                f"resource:{resource} "
+                f"resource: {resource} "
                 f"do_expanded:{do_expanded} "
-                f"do_async:{do_async} "
-                f"filename:{filename}")
-            self.logger.info(f"the rest of args: {kwargs}")
+                f"do_async: {do_async} "
+                f"filename: {filename}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        if do_expanded:
+        # for expanded
+        if len(query_expansion) > 0:
+            r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
+        elif do_expanded:
             r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
         else:
             r = f"{self._default_method}{self._redfish_ip}{resource}"
@@ -284,8 +300,37 @@ class RedfishManager:
         save_if_needed(filename, data)
         return CommandResult(data, None, None, None)
 
-    @abstractmethod
-    def parse_error(self):
+    @staticmethod
+    def parse_error(error_response: requests.models.Response) -> RedfishError:
+        """Default Parser for error msg from a JSON error
+        response based on iDRAC.
+        :param error_response:
+        :return:
+        """
+        redfish_error = RedfishError(error_response.status_code)
+
+        try:
+            err_resp = error_response.json()
+            if 'error' not in err_resp:
+                return err_resp
+
+            err_data = err_resp['error']
+
+            # on top of redfish error we copy status code and header
+            # if we need analyze verbose error
+            redfish_error = RedfishError(error_response.status_code)
+
+            if 'message' in err_data:
+                redfish_error.message = err_data['message']
+
+            if '@Message.ExtendedInfo' in err_data:
+                redfish_error.message_extended = [m for m in err_data['@Message.ExtendedInfo']]
+
+        except requests.exceptions.JSONDecodeError as json_err:
+            redfish_error.exception_msg = str(json_err)
+            return redfish_error
+
+        return redfish_error
 
     @staticmethod
     def default_error_handler(response) -> bool:
@@ -295,38 +340,54 @@ class RedfishManager:
         """
         if response.status_code >= 200 or response.status_code < 300:
             return True
-        if response.status_code == 401:
-            raise AuthenticationFailed("Authentication failed.")
+
+        RedfishManager.redfish_error_handlers(response.status_code)
+
         if response.status_code == 404:
             error_msg, json_error = RedfishManager.parse_error(response)
             raise ResourceNotFound(error_msg)
+
         return False
 
     @staticmethod
-    def value_from_json_list(json_obj, k):
-        """Parse json object dict.  If resp is json list [] get a key from last element
-        otherwise if a dict return value from a dict.
+    def value_from_json_list(json_obj, k: str):
+        """Try to parse the JSON object and get the key. It doesn't do a deep lookup.
+        If an object is a list, it attempts to get a key. Note this specifically for cases
+        When spec defines an array, but a list holds a single element.
+
+        :param json_obj: could be a list , dict or string.
+        :param k: a key
+        :return: a value or None
         """
+        # a case for list, return last
         if isinstance(json_obj, list) and len(json_obj) > 0:
             list_flat = json_obj[-1]
             if isinstance(list_flat, dict):
                 if k in list_flat:
                     return list_flat[k]
+        # a case for dict
         elif isinstance(json_obj, dict):
             if k in json_obj:
                 return json_obj[k]
+        # a case for str
         elif isinstance(json_obj, str):
             return json_obj
+        else:
+            return None
 
     @cached_property
     def members(self):
+        """Redfish manager members.
+        :return:
+        """
         cmd_result = self.base_query(f"{RedfishApi.Managers}", key=RedfishJson.Members)
         return self.value_from_json_list(cmd_result.data, RedfishJson.Data_id)
 
     @abstractmethod
     def redfish_manage_servers(self) -> str:
-        """Shared method return managed servers list as json
-        "/redfish/v1/Systems
+        """Shared method return who remote endpoint managed servers and list as json
+        ManagerForServers
+        :return: return manager
         """
         api_resp = self.base_query(self.members, key=RedfishJson.Links)
         if api_resp.data is not None and RedfishJson.ManagerServers in api_resp.data:
@@ -339,3 +400,101 @@ class RedfishManager:
         else:
             self.logger.error("")
         return ""
+
+    @staticmethod
+    def job_id_from_header(
+            response: requests.models.Response) -> str:
+        """Returns job id from the response header.
+        :param response: a response that should have job id information in the header.
+        :return: job id from the Location header
+        :raise TaskIdUnavailable if header not present.
+        """
+        resp_hdr = response.headers
+        if RedfishJsonSpec.Location not in resp_hdr:
+            raise TaskIdUnavailable(
+                "There is no location in the response header. "
+                "(not all api create job id)"
+            )
+        location = response.headers[RedfishJsonSpec.Location]
+        job_id = location.split("/")[-1]
+        return job_id
+
+    @staticmethod
+    def job_id_from_respond(
+            response: requests.models.Response) -> str:
+        """Try to parse job id from HTTP respond, otherwise empty string
+        :param response: requests.models.Response
+        :return: str: a job id or empty string
+        """
+        try:
+            if response is not None and hasattr(response, __dict__):
+                response_dict = str(response.__dict__)
+                if response_dict is not None and len(response_dict) > 0:
+                    job_id = re.search("JID_.+?,", response_dict)
+                    if job_id is not None:
+                        job_id = job_id.group(0)
+                    return job_id
+        except AttributeError as _:
+            pass
+
+        return ""
+
+    def parse_task_id(self, data) -> str:
+        """Parses input data and try to get a
+        job id from the header or http response.
+
+        :param data:  http response or CommandResult
+        :return: job_id or empty string.
+        """
+        # get response from extra
+        if data is None:
+            return ""
+
+        # TODO this case I need remove
+        if hasattr(data, "extra"):
+            resp = data.extra
+        elif isinstance(data, requests.models.Response):
+            resp = data
+        else:
+            raise ValueError("Unknown data type.")
+
+        if resp is None:
+            return ""
+
+        # this based on spec
+        try:
+            job_id = self.job_id_from_header(resp)
+            logging.debug(f"idrac api returned job_id: {job_id} in the response header.")
+            return job_id
+        # ignored.
+        except TaskIdUnavailable as _:
+            pass
+
+        # this from response
+        try:
+            # try to get from the response, it an optional check.
+            job_id = self.job_id_from_respond(resp)
+            logging.debug(f"idrac api returned job_id: {job_id} in the response header.")
+        except TaskIdUnavailable as _:
+            pass
+
+        return ""
+
+    @abstractmethod
+    def api_success_msg(self,
+                        api_respond: RedfishApiRespond,
+                        message_key: Optional[str] = "message",
+                        message=None) -> Dict:
+        """A default api success respond,
+        Return dict contains Status, and it describes whether rest return
+        ok, accepted or success.
+
+        if message and msg key provide msg key added to a dict.
+        for example if we want to add extra information about success.
+
+        :param api_respond: respond enum. we report to upper ok, accepted, success.
+        :param message_key: key we need add extra
+        :param message: message information data
+        :return: a dict
+        """
+        pass

@@ -87,7 +87,7 @@ class JobApply(IDracManager,
             print(f"Applying job {job}")
             self.logger.info(f"Rebooting a host to apply pending job {job}")
             self.reboot(do_watch=True)
-            data = self.fetch_job(job, wait_completion=True)
+            data = self.fetch_task(job, wait_completion=True)
             self.default_json_printer(data)
 
         cmd_result = self.base_post(target_api, pd, do_async=do_async)
@@ -103,7 +103,7 @@ class JobApply(IDracManager,
                     # if we need watch for a job, we first reboot and watch and wait.
                     if do_reboot:
                         self.reboot(do_watch)
-                    cmd_result.data = self.fetch_job(job_id)
+                    cmd_result.data = self.fetch_task(job_id)
         except UnexpectedResponse as un:
             cmd_result.data = {
                 "Status": False,

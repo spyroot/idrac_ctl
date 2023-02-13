@@ -3,6 +3,11 @@ Standalone command line tool provide option to interact with Dell iDRAC via Redf
 REST API and execute typical workflow. It supports both asynchronous and synchronous options 
 to interact with iDRAC.
 
+Update.
+    After going deeper in redfish specification. I recognize that 
+    I already implemented major portion of specs. Thus, I will probably
+    de-couple redfish and idrac_ctl will be a plugin.
+
 * boot from remote location via http/https
 * boot from remote NFS/CIFS
 * optimize bios setting for real time workload.

@@ -1,6 +1,8 @@
 """iDRAC query jobs services
 
-Command  query jobs services.
+Command query jobs services.
+It  represents the properties for the job service
+and has links to jobs managed by the job service.
 
 Author Mus spyroot@gmail.com
 """
@@ -36,9 +38,20 @@ class JobServices(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
+                do_capability: Optional[bool]= False,
                 **kwargs) -> CommandResult:
         """Executes query job services.
-        python idrac_ctl.py query
+        python idrac_ctl.py
+
+        ServiceCapabilities": {
+                 "MaxJobs": 256,
+                 "MaxSteps": 1,
+                 "Scheduling": true
+             }
+
+        # return is capability , specifically  we can check if server capable to schedule jobs
+
+        :param do_capability:  return service ServiceCapabilities
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -51,5 +64,8 @@ class JobServices(IDracManager,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
+
+        if do_capability is True and 'ServiceCapabilities' in cmd_result.data:
+            CommandResult(cmd_result.data['ServiceCapabilities'], None, None, None)
 
         return CommandResult(cmd_result, None, None, None)

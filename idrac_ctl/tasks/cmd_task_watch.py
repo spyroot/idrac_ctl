@@ -78,7 +78,7 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
 
         data = {}
         try:
-            data = self.fetch_job(job_id)
+            data = self.fetch_task(job_id)
         except MissingResource as mr:
             warnings.warn(str(mr))
             pass

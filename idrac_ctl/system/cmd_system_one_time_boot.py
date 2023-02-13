@@ -135,7 +135,7 @@ class ImportOneTimeBoot(IDracManager,
                     self.job_id_from_respond(response)
                 if job_id is not None:
                     if not do_async:
-                        data = self.fetch_job(job_id)
+                        data = self.fetch_task(job_id)
                     else:
                         data = {"job_id": job_id}
 

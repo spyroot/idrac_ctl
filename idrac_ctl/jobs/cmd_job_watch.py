@@ -69,5 +69,5 @@ class JobWatch(IDracManager,
                   f"boot_source:{job_id} do_async:{do_async} filename:{filename}")
             print(f"the rest of args: {kwargs}")
 
-        data = self.fetch_job(job_id)
+        data = self.fetch_task(job_id)
         return CommandResult(data, None, None, None)

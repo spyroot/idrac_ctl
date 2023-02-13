@@ -22,8 +22,10 @@ class ChassisReset(IDracManager,
                    name='reboot',
                    metaclass=Singleton):
     """
+    This  action resets the chassis but does not reset systems
+    or other contained resources, although side effects can occur
+    that affect those resources.
     """
-
     def __init__(self, *args, **kwargs):
         super(ChassisReset, self).__init__(*args, **kwargs)
 
@@ -107,7 +109,7 @@ class ChassisReset(IDracManager,
                 job_id = self.parse_task_id(response)
                 self.logger.info(f"job id: {job_id}")
                 if len(job_id) > 0:
-                    self.fetch_job(job_id)
+                    self.fetch_task(job_id)
 
         except PostRequestFailed as prf:
             self.logger.error(prf)

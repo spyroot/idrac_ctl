@@ -121,7 +121,7 @@ class ChangeBootOrder(IDracManager,
             try:
                 job_id = self.parse_task_id(resp)
                 if job_id is not None:
-                    api_result.data = self.fetch_job(job_id)
+                    api_result.data = self.fetch_task(job_id)
             except UnexpectedResponse as ur:
                 self.logger.error(ur)
                 api_result.error = ur

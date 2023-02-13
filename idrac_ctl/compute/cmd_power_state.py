@@ -64,8 +64,55 @@ class RebootHost(IDracManager,
                                 required=False, dest="do_async",
                                 default=False, help="will use async call.")
 
+        cmd_parser.add_argument('-w', '--wait', action='store_true',
+                                required=False, dest="do_wait",
+                                default=False, help="wait for reboot.")
+
         help_text = "reboots the system"
         return cmd_parser, "reboot", help_text
+
+    def wait_for_reboot(self, sleep_time, max_retry):
+        """If we need wait or graceful shutdown failed.
+        :param sleep_time:
+        :param max_retry:
+        :return:
+        """
+        _reboot = 1
+        retry_counter = 0
+        while _reboot != 0:
+            if max_retry == 10:
+                self.logger.info("Power state, max retried reached, no pending reboot states.")
+                break
+
+            # get reboot reboot pending tasks
+            scheduled_jobs = self.sync_invoke(
+                ApiRequestType.Jobs, "jobs_sources_query",
+                reboot_pending=True,
+                job_type=JobTypes.REBOOT_NO_FORCE.value,
+                job_ids=True
+            )
+
+            if scheduled_jobs.error is not None:
+                return scheduled_jobs
+
+            if len(scheduled_jobs.data) == 0:
+                time.sleep(sleep_time)
+
+            try:
+                for job in scheduled_jobs.data:
+                    # reboot and wait for completion.
+                    self.logger.info(f"Reboot pending job created: task id {job}")
+                    data = self.fetch_task(job, wait_completion=True)
+                    self.default_json_printer(data)
+                    _reboot -= 1
+
+            except MissingResource as mr:
+                self.logger.error(str(mr))
+                time.sleep(sleep_time)
+
+            self.logger.info(f"Sleeping and waiting for reboot pending")
+            time.sleep(sleep_time)
+            retry_counter += 1
 
     def execute(self,
                 filename: Optional[str] = "",
@@ -77,14 +124,14 @@ class RebootHost(IDracManager,
                 boot_source_override_mode: Optional[str] = "",
                 interface_type: Optional[str] = "",
                 do_async: Optional[bool] = False,
-                sleep_time: Optional[int] = 2,
+                do_wait: Optional[bool] = False,
+                sleep_time: Optional[int] = 10,
                 max_retry: Optional[int] = 10,
                 **kwargs
                 ) -> CommandResult:
         """
-        :param do_async:
-        :param filename:
-        :param data_type:
+        :param do_wait: wait indicate to wait and confirm a action.
+        :param do_async: will issue asyncio request and won't block
         :param reset_type: "On, ForceOff, ForceRestart, GracefulShutdown, PushPowerButton, Nmi"
         :param power_state: On, null
         :param boot_source_override: "None, Pxe, Floppy,
@@ -95,6 +142,8 @@ class RebootHost(IDracManager,
         :param sleep_time wait for job to start
         :param max_retry maximum retry.  by default reboot task will wait task to finish.
         :param interface_type: TCM1_0, TPM2_0, TPM1_
+        :param filename:
+        :param data_type:
         :param kwargs:
         :return:
         """
@@ -143,63 +192,16 @@ class RebootHost(IDracManager,
             # if the client's request body contains.
             # if the client's request body contains
             # @Redfish.OperationApplyTime in the request.
-
-            request.
-            ok = self.default_post_success(self, response, expected=202)
+            ok = self.default_post_success(self, response)
         else:
             loop = asyncio.get_event_loop()
             ok, response = loop.run_until_complete(
                 self.async_post_until_complete(
-                    r, json.dumps(payload), headers
+                    r, json.dumps(payload), headers,
                 )
             )
 
-
-        if not ok {
-        }
-
-        _reboot = 1
-        retry_counter = 0
-        while _reboot != 0:
-            if max_retry == 10:
-                self.logger.info("Power state, max retried reached, no pending reboot states.")
-                break
-
-            # get reboot reboot pending tasks
-            scheduled_jobs = self.sync_invoke(
-                ApiRequestType.Jobs, "jobs_sources_query",
-                reboot_pending=True,
-                job_type=JobTypes.REBOOT_NO_FORCE.value,
-                job_ids=True
-            )
-
-            if scheduled_jobs.error is not None:
-                return scheduled_jobs
-
-            if len(scheduled_jobs.data) == 0:
-                time.sleep(sleep_time)
-
-            try:
-                for job in scheduled_jobs.data:
-                    # reboot and wait for completion.
-                    self.logger.info(f"Reboot pending job created: task id {job}")
-                    data = self.fetch_job(job, wait_completion=True)
-                    self.default_json_printer(data)
-                    _reboot -= 1
-
-            except MissingResource as mr:
-                self.logger.error(str(mr))
-                time.sleep(sleep_time)
-
-            self.logger.info(f"Sleeping and waiting for reboot pending")
-            time.sleep(sleep_time)
-            retry_counter += 1
-        try:
-            job_id = self.job_id_from_header(response)
-            if job_id is not None:
-                self.fetch_job(job_id)
-        except UnexpectedResponse as ur:
-            self.logger.error(ur)
-            err = ur
+        if do_wait and ok:
+            self.wait_for_reboot(sleep_time, max_retry)
 
         return CommandResult(self.api_success_msg(ok), None, None, err)

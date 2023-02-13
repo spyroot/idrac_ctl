@@ -5,13 +5,14 @@ Command provides the option to clear all the pending attributes values.
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
-import json
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult, FailedDiscoverAction
-from idrac_ctl.idrac_manager import PostRequestFailed
+from idrac_ctl import IDracManager
+from idrac_ctl import ApiRequestType
+from idrac_ctl import Singleton
+from idrac_ctl import CommandResult
+from idrac_ctl import FailedDiscoverAction
 
 
 class AttributeClearPending(IDracManager,
@@ -22,6 +23,7 @@ class AttributeClearPending(IDracManager,
     This cmd action is used to clear all the pending
     values currently in iDRAC.
     """
+
     def __init__(self, *args, **kwargs):
         super(AttributeClearPending, self).__init__(*args, **kwargs)
 
@@ -57,8 +59,9 @@ class AttributeClearPending(IDracManager,
             headers.update(self.json_content_type)
 
         target = None
-        attributes_cmd = self.sync_invoke(ApiRequestType.AttributesQuery,
-                                          "attribute_inventory", do_deep=True)
+        attributes_cmd = self.sync_invoke(
+            ApiRequestType.AttributesQuery,
+            "attribute_inventory", do_deep=True)
         if attributes_cmd.error is not None:
             return attributes_cmd
 
@@ -72,21 +75,11 @@ class AttributeClearPending(IDracManager,
         if target is None:
             raise FailedDiscoverAction("Failed discover clear pending attribute action.")
 
-        err = None
-        ok = False
-        try:
-            pd = {}
-            r = f"{self._default_method}{self.idrac_ip}{target}"
-            if not do_async:
-                response = self.api_post_call(r, json.dumps(pd), headers)
-                ok = self.default_post_success(self, response, expected=200)
-            else:
-                loop = asyncio.get_event_loop()
-                ok = loop.run_until_complete(
-                    self.async_post_until_complete(r, json.dumps(pd), headers)
-                )
-        except PostRequestFailed as pf:
-            self.logger.error(pf)
-            err = pf
+        cmd_result, api_resp = self.base_post(target, do_async=do_async)
+        if api_resp.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
 
-        return CommandResult(self.api_success_msg(ok), None, None, err)
+        return cmd_result

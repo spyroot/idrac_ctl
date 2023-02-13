@@ -1,13 +1,14 @@
 """iDRAC query chassis services
 
-Command provides raw query chassis and provide
-list of supported actions.
+Command provides raw query chassis
+and provide list of supported actions.
 
 Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.shared import IDRAC_API
 
 
 class ChassisQuery(IDracManager,
@@ -20,6 +21,10 @@ class ChassisQuery(IDracManager,
     def __init__(self, *args, **kwargs):
         super(ChassisQuery, self).__init__(*args, **kwargs)
 
+    @property
+    def help(self):
+        return '''The Chassis schema represents the physical components of a system'''
+
     @staticmethod
     @abstractmethod
     def register_subcommand(cls):
@@ -28,10 +33,10 @@ class ChassisQuery(IDracManager,
         :return:
         """
         cmd_parser = cls.base_parser()
-        cmd_parser.add_argument('--filter',
-                                required=False, dest="data_filter", type=str,
-                                default=False, help="filter on key. Example PowerState")
-
+        cmd_parser.add_argument(
+            '--filter', required=False, dest="data_filter", type=str,
+            default=False, help="filter on key. Example PowerState")
+        # The Chassis schema represents the physical components of a system
         help_text = "command query chassis services"
         return cmd_parser, "chassis", help_text
 
@@ -45,7 +50,7 @@ class ChassisQuery(IDracManager,
                 **kwargs) -> CommandResult:
         """Executes query for chassis.
         python idrac_ctl.py chassis
-        :param data_filter:
+        :param data_filter: a filter on set of keys
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -53,11 +58,10 @@ class ChassisQuery(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Chassis"
         if data_filter:
             do_expanded = True
 
-        cmd_result = self.base_query(target_api,
+        cmd_result = self.base_query(IDRAC_API.Chassis,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=do_expanded)

@@ -141,6 +141,20 @@ class BiosChangeSettings(IDracManager,
         help_text = "command change bios configuration attributes"
         return cmd_parser, "bios-change", help_text
 
+    def ok(self):
+        """Accepted; a Task has been generated"""
+        return 202
+
+    def accepted(self):
+        """Accepted; a Task has been generated"""
+        return 202
+
+    def success(self):
+        """Success, but no response data
+        :return:
+        """
+        return 204
+
     @staticmethod
     def crete_bios_config(current_config, attr_name, attr_val) -> dict:
         """Create new config for a bios.
@@ -182,41 +196,6 @@ class BiosChangeSettings(IDracManager,
                     bios_payload[IDRAC_JSON.Attributes][k] = int(v)
 
         return bios_payload
-
-    def do_reboot(self, result_data) -> CommandResult:
-        """Reboot
-        """
-        cmd_power_state = self.sync_invoke(
-            ApiRequestType.ChassisQuery,
-            "chassis_service_query",
-            data_filter="PowerState"
-        )
-
-        if cmd_power_state.error is not None:
-            return cmd_power_state
-
-        cmd_reboot = None
-        if isinstance(cmd_power_state.data, dict) and 'PowerState' in cmd_power_state.data:
-            pd_state = cmd_power_state.data['PowerState']
-            if pd_state == 'On':
-                # if state up, reboot
-                cmd_reboot = self.sync_invoke(
-                    ApiRequestType.RebootHost,
-                    "reboot", reset_type="ForceRestart"
-                )
-
-                if 'Status' in cmd_reboot.data:
-                    result_data.update(
-                        {
-                            "Reboot": cmd_reboot.data['Status']
-                        }
-                    )
-            else:
-                self.logger.info(f"Can't reboot a host, chassis power state {pd_state}")
-        else:
-            self.logger.info(f"Failed fetch chassis power state")
-
-        return cmd_reboot
 
     def execute(self,
                 attr_name: Optional[str] = None,
@@ -267,7 +246,8 @@ class BiosChangeSettings(IDracManager,
         registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
 
         if IDRAC_JSON.Attributes not in cmd_result.data:
-            return CommandResult({"Status": "Failed fetch attributes from bios registry"}, None, None, None)
+            return CommandResult(
+                {"Status": "Failed fetch attributes from bios registry"}, None, None, None)
         attribute_data = registry[IDRAC_JSON.Attributes]
 
         # we read either from a file or form args
@@ -280,8 +260,7 @@ class BiosChangeSettings(IDracManager,
                     attribute_data, attr_name, attr_value
                 )
             if len(payload) == 0:
-                return CommandResult(
-                    self.api_is_change_msg(False), None, None, None)
+                return CommandResult(self.api_is_change_msg(False), None, None, None)
         except json.decoder.JSONDecodeError as jde:
             raise InvalidJsonSpec(
                 "It looks like your JSON spec is invalid. "
@@ -315,16 +294,17 @@ class BiosChangeSettings(IDracManager,
                 )
 
         target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_SETTINGS}"
-        api_result = self.base_patch(
+        cmd_result, api_resp = self.base_patch(
             target_api, payload=payload,
-            do_async=do_async, expected_status=200
+            do_async=do_async
         )
 
-        if verbose:
-            resp = api_result.extra
-            print(f"api_result.data: hdr {resp.headers}")
-            print(f"api_result.data: states {resp.status_code}")
-            print(f"api_result.data: data {resp.json()}")
+        if api_resp.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
+
 
         result_data = api_result.data
 
@@ -340,7 +320,7 @@ class BiosChangeSettings(IDracManager,
                 job_id = self.job_id_from_header(resp)
                 if job_id is not None:
                     # fetch and update job status.
-                    data = self.fetch_job(job_id)
+                    data = self.fetch_task(job_id)
                     if isinstance(api_result.data, dict):
                         result_data.update(data)
 
