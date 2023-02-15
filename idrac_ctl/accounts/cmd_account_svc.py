@@ -33,7 +33,6 @@ class QueryAccountService(IDracManager,
         return cmd_parser, "account-svc", help_text
 
     def execute(self,
-                resource: str,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
@@ -43,7 +42,6 @@ class QueryAccountService(IDracManager,
         """Executes query command
         python idrac_ctl.py query
 
-        :param resource: path to a resource
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.

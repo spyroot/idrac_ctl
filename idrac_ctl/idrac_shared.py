@@ -365,6 +365,17 @@ class IDRAC_JSON:
     MaintenanceWindowStartTime = "MaintenanceWindowStartTime"
     ApplyTime = "ApplyTime"
 
+    # Accounts
+    Username = "UserName"
+    AccountEnabled = "Enabled"
+    AccountId = "Id"
+    AccountTypes = "AccountTypes"
+    AccountTypesOem = "OEMAccountTypes"
+    PasswordExpiration = "PasswordExpiration"
+    PasswordChangeRequired = "PasswordChangeRequired"
+    AccountRole = "Role"
+    AccountRoleId = "RoleId"
+
 
 class JobApplyTypes:
     """Job apply types"""

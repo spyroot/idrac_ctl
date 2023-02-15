@@ -279,7 +279,6 @@ class RedfishManager:
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        print(f"Req, {resource}")
         # for expanded
         if len(query_expansion) > 0:
             r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
@@ -288,7 +287,7 @@ class RedfishManager:
         else:
             r = f"{self._default_method}{self._redfish_ip}{resource}"
 
-        print(f"final req, {r}")
+        logging.debug(f"Sending request to {r}")
 
         if not do_async:
             response = self.api_get_call(r, headers)
@@ -324,7 +323,6 @@ class RedfishManager:
                 return err_resp
 
             err_data = err_resp['error']
-
             # on top of redfish error we copy status code and header
             # if we need analyze verbose error
             redfish_error = RedfishError(error_response.status_code)

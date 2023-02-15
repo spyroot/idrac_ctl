@@ -57,6 +57,7 @@ from idrac_ctl.idrac_shared import ScheduleJobType
 from .idrac_shared import JobState
 
 from .cmd_exceptions import AuthenticationFailed
+from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import PostRequestFailed
 from .cmd_exceptions import DeleteRequestFailed
 
@@ -593,6 +594,11 @@ class IDracManager(RedfishManager):
 
         if response.status_code == 401:
             raise AuthenticationFailed("Authentication failed.")
+        elif response.status_code == 403:
+            raise RedfishForbidden("access forbidden")
+        elif response.status_code == 404:
+            error_msg = RedfishManager.parse_error(response)
+            raise ResourceNotFound(error_msg)
         if 401 <= response.status_code < 500:
             # we try to parse error.
             self._redfish_error = IDracManager.parse_error(response)

@@ -1,15 +1,15 @@
 """iDRAC query command
 
-Command provides capability raw query based URI resource,
-in case specific action might not implement yet; hence it
-is easy to query.
+Command provides capability query
+particular account.
 
 Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.idrac_shared import IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_API, IDRAC_JSON
+from idrac_ctl.cmd_exceptions import InvalidArgumentFormat
 
 
 class QueryAccount(IDracManager,
@@ -31,26 +31,24 @@ class QueryAccount(IDracManager,
         """
         cmd_parser = cls.base_parser()
         cmd_parser.add_argument(
-            '--account', required=True, dest="resource",
+            '--account', required=True, dest="account",
             type=str, default=None,
             help="account id")
+
         help_text = "command query based on resource."
         return cmd_parser, "account", help_text
 
     def execute(self,
                 account: str,
-                resource: str,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Executes query command
-        python idrac_ctl.py query
+        """Executes query account cmd.
 
-        :param account:
-        :param resource: path to a resource
+        :param account:  account id
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -58,6 +56,20 @@ class QueryAccount(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
+
+        if account is None or len(account) == 0:
+            raise InvalidArgumentFormat("Account is empty string.")
+
+        # lookup by username
+        if not account.isnumeric():
+            query_result = self.sync_invoke(
+                ApiRequestType.QueryAccounts, "query_accounts", is_username_only=True)
+            usernames = query_result.data
+            accounts_id = [u[IDRAC_JSON.AccountId] for u in usernames
+                           if u[IDRAC_JSON.Username].lower() == account.lower()]
+            if len(accounts_id) > 0:
+                account = accounts_id[-1]
+
         return self.base_query(f"{IDRAC_API.ACCOUNT}{account}",
                                filename=filename,
                                do_async=do_async,

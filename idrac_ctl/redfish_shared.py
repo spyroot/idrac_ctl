@@ -28,11 +28,11 @@ class RedfishJsonSpec:
 
 
 class RedfishJson:
-    Actions = "Actions"
     Links = "Links"
     Members = "Members"
     Datatime = "DateTime"
     Location = "Location"
+    Actions = "Actions"
     Attributes = "Attributes"
     RegistryEntries = "RegistryEntries"
 

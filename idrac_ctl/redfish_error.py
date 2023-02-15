@@ -111,6 +111,10 @@ class RedfishError:
     def message(self, value) -> None:
         self._message = value
 
+    def __repr__(self) -> str:
+        msgs = [m.message for m in self._message_extended]
+        return "\n".join(msgs) + "\n"
+
     @message_extended.setter
     def message_extended(self, value) -> None:
         """a value must a list.
@@ -122,18 +126,17 @@ class RedfishError:
 
         for v in value:
             err_msg = RedfishErrorMessage()
-
-            if hasattr(v, "MessageId"):
-                err_msg.message_id = v.MessageId
-            if hasattr(v, "Message"):
-                err_msg.message = v.Message
-            if hasattr(v, "MessageArgs"):
-                err_msg.message_args = v.MessageArgs
-            if hasattr(v, "MessageSeverity"):
-                err_msg.message_severity = v.MessageSeverity
-            if hasattr(v, "Severity"):
-                err_msg.severity = v.Severity
-            if hasattr(v, "Resolution"):
-                err_msg.resolution = v.Resolution
-
+            if isinstance(v, dict):
+                if 'MessageId' in v:
+                    err_msg.message_id = v['MessageId']
+                if 'Message' in v:
+                    err_msg.message = v['Message']
+                if 'MessageArgs' in v:
+                    err_msg.message_args = v['MessageArgs']
+                if 'MessageSeverity' in v:
+                    err_msg.message_severity = v['MessageSeverity']
+                if 'Severity' in v:
+                    err_msg.severity = v['Severity']
+                if 'Resolution' in v:
+                    err_msg.resolution = v['Resolution']
             self._message_extended.append(err_msg)
