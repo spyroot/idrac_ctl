@@ -7,7 +7,7 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl.shared import IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_API
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
@@ -55,4 +55,3 @@ class QueryAccountService(IDracManager,
                                filename=filename,
                                do_async=do_async,
                                do_expanded=do_expanded)
-

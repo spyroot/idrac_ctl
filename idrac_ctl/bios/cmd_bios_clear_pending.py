@@ -5,14 +5,11 @@ pending values.
 
 Author Mus spyroot@gmail.com
 """
-import asyncio
-import json
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
 from idrac_ctl.cmd_exceptions import FailedDiscoverAction
-from idrac_ctl.idrac_manager import PostRequestFailed
 from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
 
 
@@ -76,20 +73,14 @@ class BiosClearPending(IDracManager,
             raise FailedDiscoverAction(
                 "Failed discover clear pending bios action.")
 
-        err = None
-        ok = False
-        try:
-            r = f"{self._default_method}{self.idrac_ip}{api_target}"
-            if not do_async:
-                response = self.api_post_call(r, json.dumps({}), headers)
-                ok = self.default_post_success(self, response, expected=200)
-            else:
-                loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(
-                    self.async_post_until_complete(r, json.dumps({}), headers)
-                )
-        except PostRequestFailed as pf:
-            err = pf
-            self.logger.error(pf)
+        cmd_result, api_resp = self.base_post(
+            api_target, payload={},
+            do_async=do_async
+        )
+        if api_resp.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
 
-        return CommandResult(self.api_success_msg(ok), None, None, err)
+        return CommandResult(self.api_success_msg(api_resp), None, None, None)

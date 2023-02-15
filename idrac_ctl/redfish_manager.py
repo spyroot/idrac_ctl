@@ -17,15 +17,21 @@ from typing import Optional, Dict
 
 import requests
 
+from .redfish_shared import RedfishApi
+from .redfish_shared import RedfishApiRespond
+from .redfish_shared import RedfishJsonSpec
+
 from .cmd_exceptions import AuthenticationFailed
 from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import TaskIdUnavailable
 from .cmd_utils import save_if_needed
 from .redfish_error import RedfishError
+
 from .redfish_exceptions import RedfishForbidden
 from .redfish_exceptions import RedfishMethodNotAllowed
 from .redfish_exceptions import RedfishNotAcceptable
-from .shared import RedfishApi, RedfishJson, RedfishJsonSpec, RedfishApiRespond
+from .redfish_exceptions import RedfishUnauthorized
+from .redfish_shared import RedfishJson
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
@@ -273,6 +279,7 @@ class RedfishManager:
         if data_type == "json":
             headers.update(self.json_content_type)
 
+        print(f"Req, {resource}")
         # for expanded
         if len(query_expansion) > 0:
             r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
@@ -280,6 +287,8 @@ class RedfishManager:
             r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
         else:
             r = f"{self._default_method}{self._redfish_ip}{resource}"
+
+        print(f"final req, {r}")
 
         if not do_async:
             response = self.api_get_call(r, headers)
@@ -333,21 +342,29 @@ class RedfishManager:
         return redfish_error
 
     @staticmethod
-    def default_error_handler(response) -> bool:
+    def default_error_handler(response) -> RedfishApiRespond:
         """Default error handler.
         :param response:
         :return:
         """
+        if response.status_code == 200:
+            return RedfishApiRespond.Ok
+        if response.status_code == 202:
+            return RedfishApiRespond.AcceptedTaskGenerated
+        if response.status_code == 204:
+            return RedfishApiRespond.Success
         if response.status_code >= 200 or response.status_code < 300:
-            return True
-
-        RedfishManager.redfish_error_handlers(response.status_code)
-
-        if response.status_code == 404:
-            error_msg, json_error = RedfishManager.parse_error(response)
+            return RedfishApiRespond.Success
+        if response.status_code == 401:
+            raise RedfishUnauthorized("Unauthorized access")
+        elif response.status_code == 403:
+            raise RedfishForbidden("access forbidden")
+        elif response.status_code == 404:
+            error_msg = RedfishManager.parse_error(response)
             raise ResourceNotFound(error_msg)
-
-        return False
+        else:
+            error_msg = RedfishManager.parse_error(response)
+            raise ResourceNotFound(error_msg)
 
     @staticmethod
     def value_from_json_list(json_obj, k: str):
@@ -441,7 +458,7 @@ class RedfishManager:
 
     def parse_task_id(self, data) -> str:
         """Parses input data and try to get a
-        job id from the header or http response.
+        job id from the http header or http response.
 
         :param data:  http response or CommandResult
         :return: job_id or empty string.

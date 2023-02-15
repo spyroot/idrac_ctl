@@ -11,7 +11,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
 
 
-class BootOptionsQuery(IDracManager, scm_type=ApiRequestType.BootOptionQuery,
+class BootOptionsQuery(IDracManager,
+                       scm_type=ApiRequestType.BootOptionQuery,
                        name='boot_options_query',
                        metaclass=Singleton):
     """

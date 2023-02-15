@@ -1,5 +1,7 @@
 # from bios import BiosQuery
 # from hardware import HardwareInventorQuery
+from .redfish_shared import *
+
 from .system.cmd_system import *
 from .system.cmd_system_config import *
 from .system.cmd_system_import import *
@@ -10,8 +12,8 @@ from .dell_lc.cmd_dell_lc_rs import *
 from .dell_lc.cmd_dell_lc_services import *
 
 from .compute.cmd_power_state import *
+from .idrac_shared import *
 from idrac_ctl.raid.cmd_raid_service import *
-
 # bios commands
 from .bios.cmd_bios import *
 from .bios.cmd_bios_clear_pending import *

@@ -11,11 +11,12 @@ import argparse
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl.idrac_manager import CommandResult, IDracManager
-from idrac_ctl.shared import ApiRequestType, Singleton
+from idrac_ctl.idrac_shared import ApiRequestType, Singleton
 from idrac_ctl.cmd_utils import save_if_needed
 
 
-class SystemQuery(IDracManager, scm_type=ApiRequestType.SystemQuery,
+class SystemQuery(IDracManager,
+                  scm_type=ApiRequestType.SystemQuery,
                   name='system_query',
                   metaclass=Singleton):
     """This main compute system query rest call.

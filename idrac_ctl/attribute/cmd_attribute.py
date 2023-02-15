@@ -10,13 +10,13 @@ python idrac_ctl.py --json attribute --filter ServerPwrMon.1.PeakCurrentTime
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_utils import save_if_needed, find_ids
+from idrac_ctl.redfish_shared import RedfishJson
 
 
 class AttributesQuery(IDracManager,
@@ -67,7 +67,8 @@ class AttributesQuery(IDracManager,
         help_text = "command fetch the attribute view"
         return cmd_arg, "attr", help_text
 
-    def execute(self, filename: Optional[str] = None,
+    def execute(self,
+                filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 do_deep: Optional[bool] = False,
                 verbose: Optional[bool] = False,
@@ -90,29 +91,23 @@ class AttributesQuery(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        t = "/redfish/v1/Managers/System.Embedded.1/Attributes"
-        r = f"{self._default_method}{self.idrac_ip}{t}"
-        if not do_async:
-            response = self.api_get_call(r, headers)
-            self.default_error_handler(response)
-        else:
-            loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(
-                self.api_async_get_until_complete(r, headers)
-            )
-
-        data = response.json()
+        r = "/redfish/v1/Managers/System.Embedded.1/Attributes"
+        cmd_result = self.base_query(r, do_async=do_async)
 
         # filter
-        data = self.filter_attribute(self, data, attr_filter)
+        data = self.filter_attribute(self, cmd_result.data, attr_filter)
         extra_actions = find_ids(data, "@odata.id")
         extra_data = None
+
         if do_deep:
             extra_data = [
                 self.api_get_call(
                     f"{self._default_method}{self.idrac_ip}{a}", headers).json()
                 for a in extra_actions
             ]
+
+        if attr_only:
+            data = data[RedfishJson.Attributes]
 
         save_if_needed(filename, data)
         return CommandResult(data, None, extra_data, None)

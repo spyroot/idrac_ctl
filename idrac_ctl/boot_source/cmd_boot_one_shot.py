@@ -19,7 +19,7 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 from idrac_ctl.cmd_exceptions import InvalidArgument, UnexpectedResponse
 from idrac_ctl.cmd_exceptions import TaskIdUnavailable
-from idrac_ctl.shared import IdracApiRespond
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class BootOneShot(IDracManager,

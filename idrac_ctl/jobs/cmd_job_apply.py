@@ -3,12 +3,14 @@
 Command provide option to trigger and apply current pending jobs.
 Author Mus spyroot@gmail.com
 """
+import logging
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl.cmd_exceptions import UnexpectedResponse
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.shared import JobTypes
+from idrac_ctl.redfish_manager import CommandResult
+from idrac_ctl.idrac_manager import IDracManager
+from idrac_ctl.idrac_shared import Singleton, ApiRequestType
+from idrac_ctl.idrac_shared import JobTypes, IdracApiRespond
 
 
 class JobApply(IDracManager,
@@ -84,31 +86,23 @@ class JobApply(IDracManager,
         # if we have scheduled job
         for job in scheduled_jobs.data:
             # reboot and wait for completion.
-            print(f"Applying job {job}")
             self.logger.info(f"Rebooting a host to apply pending job {job}")
-            self.reboot(do_watch=True)
-            data = self.fetch_task(job, wait_completion=True)
-            self.default_json_printer(data)
+            cmd_result = self.reboot(do_watch=True)
+            if cmd_result.error:
+                logging.info("Failed reboot a host")
+                break
+            task_state = self.fetch_task(job)
+            if task_state.value == task_state.Completed:
+                break
 
-        cmd_result = self.base_post(target_api, pd, do_async=do_async)
-        if cmd_result.error is not None:
-            return cmd_result
+        cmd_result, api_resp = self.base_post(target_api, pd, do_async=do_async)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
+        else:
+            if api_resp.Success or api_resp.Ok:
+                return cmd_result
 
-        job_id = ""
-        try:
-            if cmd_result.data is not None and cmd_result.data['Status']:
-                job_id = self.parse_task_id(cmd_result)
-                self.logger.info(f"job id", {job_id})
-                if do_watch:
-                    # if we need watch for a job, we first reboot and watch and wait.
-                    if do_reboot:
-                        self.reboot(do_watch)
-                    cmd_result.data = self.fetch_task(job_id)
-        except UnexpectedResponse as un:
-            cmd_result.data = {
-                "Status": False,
-                "Error": str(un)
-            }
-            self.logger.error(un)
-
-        return CommandResult(cmd_result.data, None, {"job_id": job_id}, None)
+        return cmd_result

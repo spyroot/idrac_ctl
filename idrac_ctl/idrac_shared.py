@@ -4,12 +4,15 @@ import json
 from enum import auto, Enum
 from typing import Optional
 from json import JSONEncoder
+from .redfish_shared import RedfishApiRespond
+from .redfish_shared import RedfishJsonSpec
+from .redfish_shared import RedfishApi
+from .redfish_shared import RedfishJson
 
 
 class ApiRequestType(Enum):
     """Each commands enum.
     """
-    JobApply = auto()
     BiosQueryPending = auto()
     ConvertToRaid = auto()
     ConvertNoneRaid = ()
@@ -33,10 +36,8 @@ class ApiRequestType(Enum):
     OemAttach = auto()
     DellOemActions = auto()
     QueryIdrac = auto()
-    JobDel = auto()
     AttributeClearPending = auto()
-    JobGet = auto()
-    Jobs = auto()
+
     BootOptions = auto()
     SystemConfigQuery = auto()
     BiosQuery = auto()
@@ -80,12 +81,17 @@ class ApiRequestType(Enum):
     BiosResetDefault = auto()
 
     QueryAccount = auto()
-    AccountQuery = auto()
+    QueryAccounts = auto()
     QueryAccountService = auto()
 
     ChassisQuery = auto()
     ChassisReset = auto()
     ChassisUpdate = auto()
+
+    JobGet = auto()
+    JobDel = auto()
+    Jobs = auto()
+    JobApply = auto()
 
 
 class ScheduleJobType(Enum):
@@ -271,39 +277,6 @@ class RestMethodMapping:
 
 # ChassisCollection.ChassisCollection
 
-class RedfishJson:
-    Actions = "Actions"
-    Links = "Links"
-    Members = "Members"
-    Datatime = "DateTime"
-    Location = "Location"
-    Attributes = "Attributes"
-    RegistryEntries = "RegistryEntries"
-
-    Id = "Id"
-    # Describes the source of the payload.
-    Data_id = "@odata.id"
-    # odata type
-    Data_type = "@odata.type"
-    # Displays the total number of Members in the Resource Collection
-    Data_count = "@odata.count"
-    # Describes the source of the payload.
-    Data_content = "@odata.context"
-    # Indicates the "nextLink" when the payload contains partial results
-    Data_next = "@odata.nextLink"
-
-    # This property is an array of references to the systems that this manager has control over.
-    ManagerServers = "ManagerForServers"
-    # This property is an array of references to the chassis that this manager has control over.
-    ManagerForChassis = "ManagerForChassis"
-    # Manager.Reset
-
-
-class RedfishActions(Enum):
-    BiosReset = "Bios.ResetBios"
-    ManagerReset = "#Manager.Reset"
-    ComputerSystemReset = "ComputerSystem.Reset"
-
 
 class SupportedScheduledJobs(Enum):
     actions = {
@@ -317,31 +290,6 @@ class SupportedScheduledJobs(Enum):
 # /redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.Reset
 # /redfish/v1/Systems/System.Embedded.1/Storage/Volumes/(instance-id)/Actions/Volume.CheckConsistency
 # /redfish/v1/Managers/(ID)/LogServices/Sel/Actions/LogService.ClearLog
-
-class RedfishApi:
-    """
-    """
-    Version = "/redfish/v1"
-    Managers = f"{Version}/Managers"
-    Systems = f"{Version}/Systems"
-    Chassis = f"{Version}/Chassis"
-
-    UpdateService = f"{Version}/UpdateService"
-    UpdateServiceAction = f"{Version}/{UpdateService}/Actions/SimpleUpdate"
-
-    ManagerAccount = f"{Version}/AccountService"
-    COMPUTE_RESET = "/Actions/ComputerSystem.Reset"
-    BIOS_RESET = "/Bios/Settings/Actions/Bios.ResetBios"
-    BIOS_SETTINGS = "/Bios/Settings"
-    BIOS = "/Bios"
-    CHASSIS = "/Chassis"
-    # Bios.ChangePassword
-
-
-class RedfishJsonSpec:
-    Links = "Links"
-    Location = "Links"
-    WwwAuthentication = "WWW-Authenticate"
 
 
 class RedfishSupermicro:
@@ -368,7 +316,7 @@ class IDRAC_API:
 
     # /redfish/v1/AccountService/Roles/{RoleId}
     # The value of the Id property of the Role resource
-    BIOS_SETTINGS = RedfishApi.BIOS_SETTINGS
+    BiosSettings = RedfishApi.BIOS_SETTINGS
     COMPUTE_RESET = RedfishApi.COMPUTE_RESET
     BIOS = RedfishApi.BIOS
 
@@ -393,7 +341,7 @@ class IDRAC_JSON:
     Members = "Members"
     Datatime = "DateTime"
     Location = "Location"
-    Attributes = "Attributes"
+    Attributes = RedfishJson.Attributes
     RegistryEntries = "RegistryEntries"
 
     #
@@ -424,10 +372,6 @@ class JobApplyTypes:
     AtMaintenance = "AtMaintenanceWindowStart"
     OnReset = "OnReset"
     Immediate = "Immediate"
-
-
-class RedfishApiRespond:
-    AcceptedTaskGenerated = auto()
 
 
 class IdracApiRespond(RedfishApiRespond):

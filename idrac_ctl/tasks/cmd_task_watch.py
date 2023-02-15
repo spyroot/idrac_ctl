@@ -13,7 +13,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.idrac_manager import CommandResult, MissingResource
+from idrac_ctl.idrac_manager import CommandResult
 
 
 class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,

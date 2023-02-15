@@ -7,9 +7,8 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl import CommandResult
-from idrac_ctl.cmd_exceptions import UnexpectedResponse
+from idrac_ctl import IDracManager, ApiRequestType, Singleton
 
 
 class ChangeBootOrder(IDracManager,
@@ -108,22 +107,21 @@ class ChangeBootOrder(IDracManager,
             }
         }
 
-        target_patch_api = "/redfish/v1/Systems/System.Embedded.1"
-        api_result = self.base_patch(
+        target_patch_api = f"{self.idrac_manage_chassis}"
+
+        cmd_result, api_resp = self.base_patch(
             target_patch_api, payload=payload,
             do_async=do_async, expected_status=202)
 
-        if api_result.error is not None:
-            return api_result
+        if api_resp.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
 
-        if api_result.extra is not None:
-            resp = api_result.extra
-            try:
-                job_id = self.parse_task_id(resp)
-                if job_id is not None:
-                    api_result.data = self.fetch_task(job_id)
-            except UnexpectedResponse as ur:
-                self.logger.error(ur)
-                api_result.error = ur
+        # else:
+        # here we have 4 mutually exclusive option
+        # either we commit all pending, reset jobs, or cancel or just submit.
+        # if api_resp.Error:
 
-        return api_result
+        return CommandResult(self.api_success_msg(api_resp), None, None, None)

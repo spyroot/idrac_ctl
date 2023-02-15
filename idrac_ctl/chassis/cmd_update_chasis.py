@@ -12,31 +12,26 @@ accessible to software that runs on the system.
 
 Author Mus spyroot@gmail.com
 """
-import asyncio
 import json
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import CommandResult
-from idrac_ctl.cmd_exceptions import FailedDiscoverAction, InvalidJsonSpec
-from idrac_ctl.cmd_exceptions import PostRequestFailed
-from idrac_ctl.cmd_exceptions import UnsupportedAction
-from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.shared import IDRAC_API
+from idrac_ctl.cmd_exceptions import InvalidJsonSpec, InvalidArgument
 from idrac_ctl.cmd_utils import from_json_spec
+from idrac_ctl.idrac_shared import IDRAC_API
 
 
-class ChassisReset(IDracManager,
-                   scm_type=ApiRequestType.ChassisReset,
-                   name='update_chassis',
-                   metaclass=Singleton):
+class ChassisUpdate(IDracManager,
+                    scm_type=ApiRequestType.ChassisUpdate,
+                    name='update_chassis',
+                    metaclass=Singleton):
     """
     This  action update chassis .
     """
-
     def __init__(self, *args, **kwargs):
-        super(ChassisReset, self).__init__(*args, **kwargs)
+        super(ChassisUpdate, self).__init__(*args, **kwargs)
 
     @property
     def accepted(self):
@@ -83,6 +78,7 @@ class ChassisReset(IDracManager,
                 **kwargs
                 ) -> CommandResult:
         """
+        Update chassis from spec file
         :param chassis_id of the property of the Chassis resource
         :param from_spec:  a path to json spec file
         :param do_async: optional for asyncio
@@ -95,49 +91,28 @@ class ChassisReset(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-
         try:
-            if from_spec is not None and len(from_spec) > 0:
-                payload = from_json_spec(from_spec)
-                if len(payload) == 0:
-                    return CommandResult(
-                        self.api_is_change_msg(False), None, None, None)
+            if from_spec is None or len(from_spec) > 0:
+                raise InvalidArgument("Invalid from_spec")
 
-                r = f"{IDRAC_API.Chassis}{chassis_id}"
-                self.base_patch(r, payload=payload, do_async=do_async, data_type=data_type)
         except json.decoder.JSONDecodeError as jde:
             raise InvalidJsonSpec(
                 "It looks like your JSON spec is invalid. "
                 "JSONlint the file and check..".format(str(jde)))
 
+        payload = from_json_spec(from_spec)
+        r = f"{IDRAC_API.Chassis}{chassis_id}"
+        cmd_result, api_resp = self.base_patch(
+            r, payload=payload, do_async=do_async, data_type=data_type)
 
-        self.ba
-        payload = {'ResetType': reset_type}
-        ok = False
-        try:
-            if not do_async:
-                response = self.api_patch_call(
-                    r, json.dumps(payload), headers
-                )
-                ok = self.api_patch_call(
-                    self, response, ignore_error_code=409
-                )
-            else:
-                loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(
-                    self.async_post_until_complete(
-                        r, json.dumps(payload), headers,
-                        ignore_error_code=409
-                    )
-                )
+        if api_resp.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
+            # else:
+            # here we have 4 mutually exclusive option
+            # either we commit all pending, reset jobs, or cancel or just submit.
+            # if api_resp.Error:
 
-            if ok:
-                job_id = self.parse_task_id(response)
-                self.logger.info(f"job id: {job_id}")
-                if len(job_id) > 0:
-                    self.fetch_task(job_id)
-
-        except PostRequestFailed as prf:
-            self.logger.error(prf)
-
-        return CommandResult(self.api_success_msg(ok), None, None, None)
+        return CommandResult(self.api_success_msg(api_resp), None, None, None)

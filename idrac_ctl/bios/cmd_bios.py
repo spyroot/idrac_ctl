@@ -35,7 +35,7 @@ from idrac_ctl import ApiRequestType, CommandResult
 from idrac_ctl.cmd_utils import save_if_needed, find_ids, from_json_spec
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
-from idrac_ctl.shared import IDRAC_JSON, IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_JSON, IDRAC_API
 
 
 class BiosQuery(IDracManager,

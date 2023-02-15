@@ -35,28 +35,36 @@ from typing import Optional, Tuple, Dict
 import requests
 from tqdm import tqdm
 
+from .redfish_exceptions import RedfishException
+from .redfish_exceptions import RedfishUnauthorized
+from .redfish_exceptions import RedfishForbidden
+
+from .redfish_manager import RedfishManager
+from .redfish_task_state import TaskState
+from .redfish_task_state import TaskStatus
+
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.redfish_manager import CommandResult
-from idrac_ctl.shared import ApiRequestType, HTTPMethod
-from idrac_ctl.shared import ApiRespondString
-from idrac_ctl.shared import IDRAC_API
-from idrac_ctl.shared import IDRAC_JSON
-from idrac_ctl.shared import IdracApiRespond
-from idrac_ctl.shared import JobApplyTypes
-from idrac_ctl.shared import RedfishAction
-from idrac_ctl.shared import ResetType as ResetType
-from idrac_ctl.shared import ScheduleJobType
-from .cmd_exceptions import AuthenticationFailed, PostRequestFailed, DeleteRequestFailed
+from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod
+from idrac_ctl.idrac_shared import ApiRespondString
+from idrac_ctl.idrac_shared import IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_JSON
+from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import JobApplyTypes
+from idrac_ctl.idrac_shared import RedfishAction
+from idrac_ctl.idrac_shared import ResetType as ResetType
+from idrac_ctl.idrac_shared import ScheduleJobType
+from .idrac_shared import JobState
+
+from .cmd_exceptions import AuthenticationFailed
+from .cmd_exceptions import PostRequestFailed
+from .cmd_exceptions import DeleteRequestFailed
+
 from .cmd_exceptions import InvalidArgumentFormat
 from .cmd_exceptions import MissingMandatoryArguments
 from .cmd_exceptions import PatchRequestFailed
 from .cmd_exceptions import UnexpectedResponse
 from .cmd_exceptions import UnsupportedAction
-from .redfish_exceptions import RedfishException, RedfishUnauthorized, RedfishForbidden
-from .redfish_manager import RedfishManager
-from .redfish_task_state import TaskState
-from .redfish_task_state import TaskStatus
-from .shared import JobState
 
 module_logger = logging.getLogger('idrac_ctl.idrac_manager')
 
@@ -1387,7 +1395,7 @@ class IDracManager(RedfishManager):
             self,
             do_watch: Optional[bool] = False,
             power_state_attr: Optional[str] = "PowerState",
-            default_reboot_type: Optional[ResetType.ForceRestart] = ResetType.ForceRestart) -> CommandResult:
+            default_reboot_type: Optional[ResetType] = ResetType.ForceRestart) -> CommandResult:
         """Reboot a chassis, if chassis in power down state.
 
         Reboot on power down state is no op, method return
@@ -1500,6 +1508,16 @@ class IDracManager(RedfishManager):
         else:
             self.logger.error("")
         return ""
+
+    @cached_property
+    def idrac_members(self) -> str:
+        """Shared method return idrac manage members servers list as json
+        /redfish/v1/Managers/iDRAC.Embedded.1
+        after first cal , result cached all follow-up call will return cached result.
+        :return:
+        """
+        cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
+        return self.value_from_json_list(cmd_result.data, IDRAC_JSON.Data_id)
 
     @cached_property
     def idrac_members(self) -> str:

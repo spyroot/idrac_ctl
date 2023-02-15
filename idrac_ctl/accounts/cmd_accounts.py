@@ -7,11 +7,11 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.shared import IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_API
 
 
 class QueryAccounts(IDracManager,
-                    scm_type=ApiRequestType.QueryAccount,
+                    scm_type=ApiRequestType.QueryAccounts,
                     name='query_accounts',
                     metaclass=Singleton):
     """A command query iDRAC resource based on a resource path.
@@ -27,12 +27,11 @@ class QueryAccounts(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = cls.base_parser()
+        cmd_parser = cls.base_parser(is_async=True)
         help_text = "command query accounts."
         return cmd_parser, "accounts", help_text
 
     def execute(self,
-                resource: str,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
@@ -40,9 +39,8 @@ class QueryAccounts(IDracManager,
                 do_expanded: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Executes query command
-        python idrac_ctl.py query
+        python idrac_ctl.py
 
-        :param resource: path to a resource
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.

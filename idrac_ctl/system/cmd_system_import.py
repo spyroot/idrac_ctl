@@ -18,7 +18,8 @@ from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl.idrac_manager import PostRequestFailed
 
 
-class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
+class ImportSystemConfig(IDracManager,
+                         scm_type=ApiRequestType.ImportSystem,
                          name='import_sysconfig',
                          metaclass=Singleton):
     """
@@ -148,22 +149,15 @@ class ImportSystemConfig(IDracManager, scm_type=ApiRequestType.ImportSystem,
 
         data = {}
 
-        try:
-            response = self.api_post_call(r, json.dumps(payload), headers)
-            ok = self.default_post_success(self, response, expected=202)
+        cmd_result, api_resp = self.base_post(r, payload)
+        if api_resp.AcceptedTaskGenerated:
+            job_id = cmd_result.data['job_id']
+            task_state = self.fetch_task(cmd_result.data['job_id'])
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = job_id
 
-            if ok:
-                job_id = self.job_id_from_header(response)
-                if job_id is not None:
-                    if not do_async:
-                        data = self.fetch_task(job_id)
-                    else:
-                        data = {"job_id": job_id}
+        if do_reboot:
+            reboot_result = self.reboot()
+            data.update(reboot_result)
 
-            if do_reboot:
-                reboot_result = self.reboot()
-                data.update(reboot_result)
-        except PostRequestFailed as prf:
-            print(prf)
-
-        return CommandResult(data, None, None, None)
+        return cmd_result

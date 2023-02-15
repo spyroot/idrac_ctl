@@ -106,7 +106,7 @@ class BiosRegistry(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/BiosRegistry"
+        target_api = f"{self.idrac_manage_chassis}/Bios/BiosRegistry"
         cmd_result = self.base_query(target_api,
                                      filename=None,
                                      do_async=do_async,

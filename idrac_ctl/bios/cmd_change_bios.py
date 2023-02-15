@@ -24,15 +24,12 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-import requests
-
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl.cmd_exceptions import InvalidJsonSpec
 from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
-from idrac_ctl.cmd_exceptions import InvalidArgument
-from idrac_ctl.cmd_exceptions import UnexpectedResponse
 from idrac_ctl.cmd_utils import from_json_spec
-from idrac_ctl.shared import IDRAC_JSON, IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_JSON, IDRAC_API
 
 
 class BiosChangeSettings(IDracManager,
@@ -141,14 +138,17 @@ class BiosChangeSettings(IDracManager,
         help_text = "command change bios configuration attributes"
         return cmd_parser, "bios-change", help_text
 
+    @property
     def ok(self):
         """Accepted; a Task has been generated"""
         return 202
 
+    @property
     def accepted(self):
         """Accepted; a Task has been generated"""
         return 202
 
+    @property
     def success(self):
         """Success, but no response data
         :return:
@@ -293,7 +293,8 @@ class BiosChangeSettings(IDracManager,
                     "Please apply changes first."
                 )
 
-        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_SETTINGS}"
+        # update bios.
+        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BiosSettings}"
         cmd_result, api_resp = self.base_patch(
             target_api, payload=payload,
             do_async=do_async
@@ -304,42 +305,31 @@ class BiosChangeSettings(IDracManager,
             task_state = self.fetch_task(cmd_result.data['job_id'])
             cmd_result.data['task_state'] = task_state
             cmd_result.data['task_id'] = job_id
-
-
-        result_data = api_result.data
-
-        if api_result.extra is not None:
-            resp = api_result.extra
-            try:
-                if not isinstance(resp, requests.models.Response):
-                    raise UnexpectedResponse("Expected response object.")
-                json_data = resp.json()
-                if verbose:
-                    self.default_json_printer(json_data)
-                # we got job id, no apply required.
-                job_id = self.job_id_from_header(resp)
-                if job_id is not None:
-                    # fetch and update job status.
-                    data = self.fetch_task(job_id)
-                    if isinstance(api_result.data, dict):
-                        result_data.update(data)
-
-                # for committed request.
+        else:
+            # here we have 4 mutually exclusive option
+            # either we commit all pending, reset jobs, or cancel or just submit.
+            if api_resp.Success or api_resp.Ok:
                 if do_commit:
                     # we commit with a reboot
                     cmd_apply = self.sync_invoke(
                         ApiRequestType.JobApply,
-                        "job_apply",
-                        do_reboot=do_reboot,
-                        do_watch=True,
+                        "job_apply", do_reboot=do_reboot, do_watch=True,
                     )
                     if cmd_apply.error is not None:
                         return cmd_apply
-            except UnexpectedResponse as ur:
-                self.logger.error(ur)
+            # if do_reset:
+            #     cmd_apply = self.sync_invoke(
+            #         ApiRequestType.JobApply,
+            #         "job_apply", do_reboot=do_reboot, do_watch=True,
+            #     )
+            # if do_cancel:
+            #     cmd_apply = self.sync_invoke(
+            #         ApiRequestType.JobApply,
+            #         "job_apply", do_reboot=do_reboot, do_watch=True,
+            #     )
+            # if just_do:
 
-        #
         if do_reboot:
-            self.do_reboot(result_data)
+            self.reboot()
 
-        return CommandResult(api_result.data, None, None, None)
+        return cmd_result

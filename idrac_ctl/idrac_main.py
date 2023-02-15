@@ -31,7 +31,9 @@ except ImportError as ie:
 from pygments.formatters.terminal256 import Terminal256Formatter
 
 from idrac_ctl.cmd_utils import save_if_needed
-from idrac_ctl.shared import RedfishAction, RedfishActionEncoder
+from idrac_ctl.idrac_shared import RedfishAction, RedfishActionEncoder
+from idrac_ctl.cmd_exceptions import MissingResource
+from idrac_ctl.cmd_exceptions import TaskIdUnavailable
 from idrac_ctl.cmd_exceptions import UnsupportedAction
 from idrac_ctl.cmd_exceptions import InvalidArgument, FailedDiscoverAction
 from idrac_ctl.cmd_exceptions import AuthenticationFailed, ResourceNotFound
@@ -39,8 +41,7 @@ from idrac_ctl.cmd_exceptions import InvalidJsonSpec, MissingMandatoryArguments
 from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
 from idrac_ctl.cmd_exceptions import JsonHttpError
 from idrac_ctl.idrac_manager import IDracManager
-from idrac_ctl.idrac_manager import MissingResource
-from idrac_ctl.idrac_manager import TaskIdUnavailable
+
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl import version
 
@@ -439,5 +440,3 @@ def idrac_main_ctl():
         console_error_printer(f"Error: {http_error}")
     except ssl.SSLCertVerificationError as ssl_err:
         console_error_printer(f"Error: {ssl_err}")
-
-

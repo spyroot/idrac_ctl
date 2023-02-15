@@ -8,7 +8,7 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.shared import IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_API
 
 
 class ChassisQuery(IDracManager,

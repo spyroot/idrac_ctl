@@ -21,10 +21,11 @@ from typing import Optional
 
 from idrac_ctl import CommandResult, save_if_needed, InvalidArgument
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.idrac_manager import ResourceNotFound
+from idrac_ctl.cmd_exceptions import ResourceNotFound
 
 
-class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
+class VirtualDiskQuery(IDracManager,
+                       scm_type=ApiRequestType.VirtualDiskQuery,
                        name='virtual_disk_query',
                        metaclass=Singleton):
     """iDRACs REST API Virtual Disk Query Command, fetch virtual disk, caller can save
@@ -42,13 +43,15 @@ class VirtualDiskQuery(IDracManager, scm_type=ApiRequestType.VirtualDiskQuery,
         :return:
         """
         cmd_arg = argparse.ArgumentParser(add_help=False)
-        cmd_arg.add_argument('--device_id', required=False, type=str,
-                             default="", help="storage device id. "
-                                              "Example NonRAID.Slot.6-1.")
+        cmd_arg.add_argument(
+            '--device_id', required=False, type=str,
+            default="", help="storage device id. "
+                             "Example NonRAID.Slot.6-1.")
 
-        cmd_arg.add_argument('-f', '--filename', required=False, type=str,
-                             default="",
-                             help="filename if we need to save a respond to a file.")
+        cmd_arg.add_argument(
+            '-f', '--filename', required=False, type=str,
+            default="",
+            help="filename if we need to save a respond to a file.")
 
         help_text = "fetch the virtual disk data"
         return cmd_arg, "volumes", help_text

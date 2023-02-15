@@ -8,15 +8,14 @@ Author Mus spyroot@gmail.com
 import argparse
 import asyncio
 import json
+import time
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl.redfish_manager import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl import UnexpectedResponse
 from idrac_ctl.cmd_exceptions import InvalidArgument, MissingResource
-from idrac_ctl.shared import JobTypes, IDRAC_API
-import time
+from idrac_ctl.idrac_shared import JobTypes, IDRAC_API
+from idrac_ctl.redfish_manager import CommandResult
 
 
 class RebootHost(IDracManager,
@@ -52,21 +51,24 @@ class RebootHost(IDracManager,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--reset_type',
-                                required=False, dest='reset_type',
-                                default="GracefulRestart", type=str,
-                                help="Reset On, ForceOff, "
-                                     "ForceRestart, GracefulRestart, "
-                                     "GracefulShutdown, "
-                                     "PushPowerButton, Nmi, PowerCycle.")
+        cmd_parser.add_argument(
+            '--reset_type',
+            required=False, dest='reset_type',
+            default="GracefulRestart", type=str,
+            help="Reset On, ForceOff, "
+                 "ForceRestart, GracefulRestart, "
+                 "GracefulShutdown, "
+                 "PushPowerButton, Nmi, PowerCycle.")
 
-        cmd_parser.add_argument('-a', '--async', action='store_true',
-                                required=False, dest="do_async",
-                                default=False, help="will use async call.")
+        cmd_parser.add_argument(
+            '-a', '--async', action='store_true',
+            required=False, dest="do_async",
+            default=False, help="will use async call.")
 
-        cmd_parser.add_argument('-w', '--wait', action='store_true',
-                                required=False, dest="do_wait",
-                                default=False, help="wait for reboot.")
+        cmd_parser.add_argument(
+            '-w', '--wait', action='store_true',
+            required=False, dest="do_wait",
+            default=False, help="wait for reboot.")
 
         help_text = "reboots the system"
         return cmd_parser, "reboot", help_text
@@ -171,10 +173,9 @@ class RebootHost(IDracManager,
                 target = ra['target']
 
         if reset_type not in allowed_reset_types:
-            raise InvalidArgument(f"Invalid reset type"
-                                  f" {reset_type}, "
-                                  f"supported reset types "
-                                  f"{allowed_reset_types}")
+            raise InvalidArgument(
+                f"Invalid reset type {reset_type}, "
+                f"supported reset types {allowed_reset_types}")
 
         r = f"{self._default_method}{self.idrac_ip}{target}"
         payload = {

@@ -9,11 +9,11 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.shared import IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_API
 
 
 class QueryAccount(IDracManager,
-                   scm_type=ApiRequestType.AccountQuery,
+                   scm_type=ApiRequestType.QueryAccount,
                    name='query_account',
                    metaclass=Singleton):
     """A command query iDRAC resource based on a resource path.

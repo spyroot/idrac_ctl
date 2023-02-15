@@ -197,6 +197,15 @@ class JobList(IDracManager,
         if reboot_pending:
             reboot_pending_jobs = [job for job in data['Members'] if job['JobState'] == 'RebootPending']
             filtered_data += reboot_pending_jobs
+        if filter_completed:
+            completed_jobs = [job for job in data['Members'] if job['JobState'] == 'RebootFailed']
+            filtered_data += completed_jobs
+        if filter_completed:
+            completed_jobs = [job for job in data['Members'] if job['JobState'] == 'Waiting']
+            filtered_data += completed_jobs
+        if filter_completed:
+            completed_jobs = [job for job in data['Members'] if job['JobState'] == 'Paused']
+            filtered_data += completed_jobs
         if failed:
             reboot_pending_jobs = [job for job in data['Members'] if job['JobState'] == 'Failed']
             filtered_data += reboot_pending_jobs

@@ -10,7 +10,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class DellLcQuery(IDracManager, scm_type=ApiRequestType.DellLcQuery,
+class DellLcQuery(IDracManager,
+                  scm_type=ApiRequestType.DellLcQuery,
                   name='dell_lc_services',
                   metaclass=Singleton):
     """A command query Dell LC services.

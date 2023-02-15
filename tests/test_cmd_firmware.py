@@ -2,7 +2,7 @@ import json
 import os
 from unittest import TestCase
 from idrac_ctl.idrac_manager import IDracManager, CommandResult
-from idrac_ctl.shared import ApiRequestType
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class TestFirmware(TestCase):
