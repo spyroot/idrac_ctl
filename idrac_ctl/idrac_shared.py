@@ -36,13 +36,11 @@ class ApiRequestType(Enum):
     OemAttach = auto()
     DellOemActions = auto()
     QueryIdrac = auto()
-    AttributeClearPending = auto()
 
     BootOptions = auto()
     SystemConfigQuery = auto()
     BiosQuery = auto()
     IDracQuery = auto()
-    AttributesQuery = auto()
     BootQuery = auto()
     FirmwareQuery = auto()
     FirmwareInventoryQuery = auto()
@@ -73,6 +71,11 @@ class ApiRequestType(Enum):
     DellOemNetIsoBoot = ()
     DellOemDetach = auto()
     TaskGet = auto()
+
+    # attribute
+    AttributesQuery = auto()
+    AttributeClearPending = auto()
+    AttributesUpdate = auto()
 
     # idrac manager
     ManagerQuery = auto()
@@ -385,7 +388,7 @@ class JobApplyTypes:
     Immediate = "Immediate"
 
 
-class IdracApiRespond(RedfishApiRespond):
+class IdracApiRespond(Enum):
     """We need report to a client either redfish created task and accepted
     or ok and success.  Note that some API has mismatch between
     200/204  hence it better differentiate each case

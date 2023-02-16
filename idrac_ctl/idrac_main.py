@@ -191,13 +191,13 @@ def process_respond(cmd_args, command_result):
 
     if command_result.data is not None:
         query_request["data"] = command_result.data
-        query_request["idrac-data-description"] = "# idrac data for the command:"
+        query_request["idrac-data-description"] = "# idrac respond data for the command:"
 
     # extra data for deep walks
     if command_result.extra is not \
             None and cmd_args.no_extra is False:
         query_request["extra"] = command_result.extra
-        query_request["idrac-extra-description"] = "# idrac extra data for the command:"
+        query_request["idrac-extra-description"] = "# idrac respond extra data for the command:"
         # save extra as separate files.
         if hasattr(cmd_args, 'do_save') and cmd_args.do_save:
             for extra_k in command_result.extra.keys():

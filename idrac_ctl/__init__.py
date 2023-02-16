@@ -25,6 +25,7 @@ from .bios.cmd_bios_reset_default import *
 
 from .attribute.cmd_attribute import *
 from .attribute.cmd_attribute_clear_pending import *
+from .attribute.cmd_attribute_update import *
 
 
 # jobs command

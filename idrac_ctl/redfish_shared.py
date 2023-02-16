@@ -7,7 +7,7 @@ class RedfishActions(Enum):
     ComputerSystemReset = "ComputerSystem.Reset"
 
 
-class RedfishApiRespond:
+class RedfishApiRespond(Enum):
     """This base redfish api error.
     IDRAC overwrite so in case of different semantics
     we don't have special cases.
@@ -56,8 +56,6 @@ class RedfishJson:
     # This property is an array of references to the chassis that this manager has control over.
     ManagerForChassis = "ManagerForChassis"
     # Manager.Reset
-
-    Attributes = "Attributes"
 
 
 class RedfishApi:

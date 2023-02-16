@@ -1061,13 +1061,13 @@ class IDracManager(RedfishManager):
         :raise RedfishException if HTTP method failed.
         """
         if response.status_code == expected:
-            return self._api_respond_to_string[response.status_code]
+            return self._http_code_mapping[response.status_code]
 
         if ignore_error_code > 0 and ignore_error_code == response.status_code:
-            return self._api_respond_to_string[response.status_code]
+            return self._http_code_mapping[response.status_code]
 
         if 200 <= response.status_code < 300:
-            return self._api_respond_to_string[response.status_code]
+            return self._http_code_mapping[response.status_code]
 
         self._redfish_error = IDracManager.parse_error(response)
         if 300 <= response.status_code < 500:
@@ -1295,9 +1295,9 @@ class IDracManager(RedfishManager):
         # if task id available we fetch result.
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
             task_id = self.job_id_from_header(response)
-            return CommandResult({"task_id": task_id}, None, response, err), api_resp
+            return CommandResult({"task_id": task_id}, None, response, None), api_resp
 
-        return CommandResult(self.api_success_msg(api_resp), None, response, err), api_resp
+        return CommandResult(self.api_success_msg(api_resp), None, None, err), api_resp
 
     def base_post(self,
                   resource: str,
@@ -1333,13 +1333,14 @@ class IDracManager(RedfishManager):
             expected_status=expected_status, ignore_error_code=ignore_error_code,
         )
 
-    def base_patch(self,
-                   resource: str,
-                   payload: Optional[dict] = None,
-                   do_async: Optional[bool] = False,
-                   data_type: Optional[str] = "json",
-                   expected_status: Optional[int] = 204,
-                   ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
+    def base_patch(
+            self,
+            resource: str,
+            payload: Optional[dict] = None,
+            do_async: Optional[bool] = False,
+            data_type: Optional[str] = "json",
+            expected_status: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
         """Base http post request for redfish remote api.
 
         Returns CommandResult and data field contain a data payload.
@@ -1367,13 +1368,14 @@ class IDracManager(RedfishManager):
             expected_status=expected_status, ignore_error_code=ignore_error_code,
         )
 
-    def base_delete(self,
-                    resource: str,
-                    payload: Optional[dict] = None,
-                    do_async: Optional[bool] = False,
-                    data_type: Optional[str] = "json",
-                    expected_status: Optional[int] = 204,
-                    ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
+    def base_delete(
+            self,
+            resource: str,
+            payload: Optional[dict] = None,
+            do_async: Optional[bool] = False,
+            data_type: Optional[str] = "json",
+            expected_status: Optional[int] = 204,
+            ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
         """Base http delete request for redfish remote api.
 
         Returns CommandResult and data field contain a data payload.
@@ -1796,3 +1798,28 @@ class IDracManager(RedfishManager):
             ValueError("Unknown apply time")
 
         return {}
+
+    def api_success_msg(self,
+                        api_respond: IdracApiRespond,
+                        message_key: Optional[str] = "message",
+                        message=None) -> Dict:
+        """A default api success respond,
+        Return dict contains Status, and it describes whether rest return
+        ok, accepted or success.
+
+        if message and msg key provide msg key added to a dict.
+        for example if we want to add extra information about success.
+
+        :param api_respond: respond enum. we report to upper ok, accepted, success.
+        :param message_key: key we need add extra
+        :param message: message information data
+        :return: a dict
+        """
+        return_dict = {
+            "Status": self._api_respond_to_string[api_respond]
+        }
+
+        if message is not None:
+            return_dict[message_key] = message
+
+        return return_dict

@@ -29,7 +29,9 @@ from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl.cmd_exceptions import InvalidJsonSpec
 from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
 from idrac_ctl.cmd_utils import from_json_spec
-from idrac_ctl.idrac_shared import IDRAC_JSON, IDRAC_API
+from idrac_ctl.idrac_shared import IDRAC_JSON
+from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import IDRAC_API
 
 
 class BiosChangeSettings(IDracManager,
@@ -242,7 +244,8 @@ class BiosChangeSettings(IDracManager,
             self.default_json_printer(cmd_result.data)
 
         if IDRAC_JSON.RegistryEntries not in cmd_result.data:
-            return CommandResult({"Status": "Failed fetch bios registry"}, None, None, None)
+            return CommandResult(
+                {"Status": "Failed fetch bios registry"}, None, None, None)
         registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
 
         if IDRAC_JSON.Attributes not in cmd_result.data:
@@ -300,8 +303,8 @@ class BiosChangeSettings(IDracManager,
             do_async=do_async
         )
 
-        if api_resp.AcceptedTaskGenerated:
-            job_id = cmd_result.data['job_id']
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            job_id = cmd_result.data['task_id']
             task_state = self.fetch_task(cmd_result.data['job_id'])
             cmd_result.data['task_state'] = task_state
             cmd_result.data['task_id'] = job_id
