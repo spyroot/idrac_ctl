@@ -922,13 +922,14 @@ class IDracManager(RedfishManager):
             await response, expected=expected, ignore_error_code=ignore_error_code)
         return await response, api_respond_status
 
-    async def async_post_until_complete(
+    async def api_async_post_until_complete(
             self, r: str,
             payload: str,
             hdr: Dict,
             loop=None,
             expected: Optional[int] = 204,
-            ignore_error_code: Optional[int] = 0) -> Tuple[requests.models.Response, IdracApiRespond]:
+            ignore_error_code: Optional[int] = 0
+    ) -> Tuple[requests.models.Response, IdracApiRespond]:
         """Make async post api request until completion , it issues post with x-auth
         authentication header or idrac_ctl. Caller can use this in asyncio routine.
 
@@ -1069,14 +1070,17 @@ class IDracManager(RedfishManager):
             return self._api_respond_to_string[response.status_code]
 
         self._redfish_error = IDracManager.parse_error(response)
-
-        if 300 <= response.status_code < 400:
+        if 300 <= response.status_code < 500:
+            if response.status_code == 400:
+                raise RedfishException(self._redfish_error)
             if response.status_code == 401:
                 raise RedfishUnauthorized("Authorization failed.")
             if response.status_code == 403:
                 raise RedfishForbidden("Authorization failed.")
+            if response.status_code == 404:
+                raise RedfishForbidden(self._redfish_error)
             return IdracApiRespond.Error
-        elif 400 <= response.status_code < 500:
+        elif response.status_code >= 500:
             raise RedfishException(
                 f"{self._redfish_error.message} HTTP Status code: "
                 f"{response.status_code}")
@@ -1243,7 +1247,7 @@ class IDracManager(RedfishManager):
                     response = self.api_delete_call(
                         r, headers
                     )
-                    api_resp = self.default_post_success(
+                    api_resp = self.default_delete_success(
                         response, expected=expected_status,
                         ignore_error_code=ignore_error_code
                     )
@@ -1259,7 +1263,7 @@ class IDracManager(RedfishManager):
                     )
                 if method == HTTPMethod.POST:
                     api_resp, response = loop.run_until_complete(
-                        self.api_async_patch_until_complete(
+                        self.api_async_post_until_complete(
                             r, json.dumps(pd), headers,
                             expected=expected_status,
                             ignore_error_code=ignore_error_code
@@ -1267,7 +1271,7 @@ class IDracManager(RedfishManager):
                     )
                 if method == HTTPMethod.DELETE:
                     api_resp, response = loop.run_until_complete(
-                        self.api_async_patch_until_complete(
+                        self.api_async_delete_until_complete(
                             r, json.dumps(pd), headers,
                             expected=expected_status,
                             ignore_error_code=ignore_error_code

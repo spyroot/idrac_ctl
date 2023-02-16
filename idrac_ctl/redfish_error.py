@@ -139,4 +139,5 @@ class RedfishError:
                     err_msg.severity = v['Severity']
                 if 'Resolution' in v:
                     err_msg.resolution = v['Resolution']
+
             self._message_extended.append(err_msg)

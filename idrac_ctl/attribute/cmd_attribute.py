@@ -92,7 +92,7 @@ class AttributesQuery(IDracManager,
             headers.update(self.json_content_type)
 
         r = "/redfish/v1/Managers/System.Embedded.1/Attributes"
-        cmd_result = self.base_query(r, do_async=do_async)
+        cmd_result = self.base_query(r, do_async=do_async, do_expanded=do_deep)
 
         # filter
         data = self.filter_attribute(self, cmd_result.data, attr_filter)

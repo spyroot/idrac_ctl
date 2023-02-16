@@ -43,7 +43,7 @@ from idrac_ctl.cmd_exceptions import JsonHttpError
 from idrac_ctl.idrac_manager import IDracManager
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl import version
+from idrac_ctl import version, redfish_exceptions
 
 try:
     from urllib3.exceptions import InsecureRequestWarning
@@ -263,6 +263,8 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         processed_data = process_respond(cmd_args, command_result)
         if json_printer:
             json_printer(processed_data, cmd_args, colorized=cmd_args.nocolor)
+    except redfish_exceptions.RedfishException as redfish_err:
+        console_error_printer(f"Error: {redfish_err}")
     except TaskIdUnavailable as tid:
         console_error_printer(f"Error: {tid}")
     except MissingResource as mr:
