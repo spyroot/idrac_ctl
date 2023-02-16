@@ -14,10 +14,11 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import CommandResult
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from idrac_ctl import IDracManager, Singleton
 from idrac_ctl.cmd_exceptions import InvalidArgumentFormat
 from idrac_ctl.cmd_utils import from_json_spec
 from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class AttributesUpdate(IDracManager,
@@ -62,12 +63,12 @@ class AttributesUpdate(IDracManager,
                 do_async: Optional[bool] = False,
                 from_spec: Optional[str] = "",
                 **kwargs) -> CommandResult:
-        """Queries attributes from iDRAC.
-        :param from_spec:
-        :param do_async:
-        :param verbose:
+        """Update idrac attributes
+        :param from_spec: a spec file container a key value pair for attribute
+        :param do_async: if we do asyncio
         :param filename: if filename indicate call will save a bios setting to a file.
         :param data_type:
+        :param verbose: verbose debug output
         :return:
         :raise: AuthenticationFailed, UnexpectedResponse
         """
@@ -76,7 +77,9 @@ class AttributesUpdate(IDracManager,
             headers.update(self.json_content_type)
 
         if from_spec is None or len(from_spec) == 0:
-            raise InvalidArgumentFormat("from_spec is empty string")
+            raise InvalidArgumentFormat(
+                "from_spec is empty string"
+            )
 
         api_target = "/redfish/v1/Managers/System.Embedded.1/Attributes"
 

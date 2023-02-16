@@ -11,6 +11,7 @@ from typing import Optional
 from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
 from idrac_ctl.cmd_exceptions import FailedDiscoverAction
 from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class BiosClearPending(IDracManager,
@@ -71,16 +72,18 @@ class BiosClearPending(IDracManager,
 
         if api_target is None:
             raise FailedDiscoverAction(
-                "Failed discover clear pending bios action.")
+                "Failed discover clear pending bios action."
+            )
 
         cmd_result, api_resp = self.base_post(
             api_target, payload={},
             do_async=do_async
         )
-        if api_resp.AcceptedTaskGenerated:
-            job_id = cmd_result.data['job_id']
-            task_state = self.fetch_task(cmd_result.data['job_id'])
+
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
             cmd_result.data['task_state'] = task_state
-            cmd_result.data['task_id'] = job_id
+            cmd_result.data['task_id'] = task_id
 
         return CommandResult(self.api_success_msg(api_resp), None, None, None)

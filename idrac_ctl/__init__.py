@@ -93,7 +93,7 @@ from .boot_source.cmd_boot_one_shot import *
 from .boot_source.cmd_boot_source_enable import *
 from .boot_source.cmd_boot_sources_list import *
 from .boot_source.cmd_boot_source_get import *
-from .boot_source.cmd_boot_options import *
+from .boot_source.cmd_query_boot_options import *
 from .boot_source.cmd_boot_settings import *
 from .boot_source.cmd_clear_pending import *
 

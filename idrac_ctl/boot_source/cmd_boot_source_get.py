@@ -36,20 +36,25 @@ class EnableBootOptions(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False,
-                                             description="command fetch the boot source for device/devices")
+        cmd_parser = argparse.ArgumentParser(
+            add_help=False,
+            description="command fetch the boot source for device/devices")
+
         # idrac_ctl.py boot-source-get --dev NIC.Slot.8-1
-        cmd_parser.add_argument('--async', action='store_true', required=False,
-                                dest="do_async", default=False,
-                                help="will use async task and will not wait")
+        cmd_parser.add_argument(
+            '--async', action='store_true', required=False,
+            dest="do_async", default=False,
+            help="will use async task and will not wait")
 
-        cmd_parser.add_argument('--dev', required=False, dest="boot_source",
-                                type=str, default=None,  metavar="DEVICE",
-                                help="fetch verbose information for a device. Example --dev NIC.Slot.8-1")
+        cmd_parser.add_argument(
+            '--dev', required=False, dest="boot_source",
+            type=str, default=None, metavar="DEVICE",
+            help="fetch verbose information for a device. Example --dev NIC.Slot.8-1")
 
-        cmd_parser.add_argument('-f', '--filename', required=False,
-                                type=str, default="",
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser.add_argument(
+            '-f', '--filename', required=False,
+            type=str, default="",
+            help="filename if we need to save a respond to a file.")
 
         help_text = "command fetch the boot source for device/devices"
         return cmd_parser, "boot-source-get", help_text

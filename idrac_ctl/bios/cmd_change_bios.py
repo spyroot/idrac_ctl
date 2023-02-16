@@ -304,10 +304,10 @@ class BiosChangeSettings(IDracManager,
         )
 
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
-            job_id = cmd_result.data['task_id']
-            task_state = self.fetch_task(cmd_result.data['job_id'])
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
             cmd_result.data['task_state'] = task_state
-            cmd_result.data['task_id'] = job_id
+            cmd_result.data['task_id'] = task_id
         else:
             # here we have 4 mutually exclusive option
             # either we commit all pending, reset jobs, or cancel or just submit.

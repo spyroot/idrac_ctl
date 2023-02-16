@@ -119,8 +119,9 @@ class BiosQuery(IDracManager,
                 **kwargs) -> CommandResult:
         """Query bios settings from iDRAC.
 
-        It supports filtering via coma separate list or from a
-        JSON file that contains a list of keys
+        It supports filtering via coma separate list bios attributes
+        or caller can pass a json file
+        each attribute read form JSON file that contains a list of keys
         python idrac_ctl.py --nocolor bios --from_file specs/bios_query.json
 
         :param attr_filter: Filters by BIOS attributes. Each value is a JSON key.

@@ -11,14 +11,12 @@ caller can save to a file and consume asynchronously or synchronously.
 
 Author Mus spyroot@gmail.com
 """
-import json
 
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.cmd_exceptions import InvalidArgument, UnexpectedResponse
-from idrac_ctl.cmd_exceptions import TaskIdUnavailable
+from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl.idrac_shared import IdracApiRespond
 
 
@@ -42,17 +40,20 @@ class BootOneShot(IDracManager,
         """
         cmd_parser = cls.base_parser(is_reboot=True, is_expanded=False)
 
-        cmd_parser.add_argument('--device', required=False, type=str,
-                                default="Cd",
-                                help="boot device Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard etc")
+        cmd_parser.add_argument(
+            '--device', required=False, type=str,
+            default="Cd",
+            help="boot device Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard etc")
 
-        cmd_parser.add_argument('--power_on', action='store_true',
-                                required=False, dest="do_power_on",
-                                help="will power on a chassis., if current state in power-down.")
+        cmd_parser.add_argument(
+            '--power_on', action='store_true',
+            required=False, dest="do_power_on",
+            help="will power on a chassis., if current state in power-down.")
 
-        cmd_parser.add_argument('--uefi_target', required=False, type=str,
-                                default=None,
-                                help="uefi_target")
+        cmd_parser.add_argument(
+            '--uefi_target', required=False, type=str,
+            default=None,
+            help="uefi_target")
 
         help_text = "command change one shoot boot"
         return cmd_parser, "boot-one-shot", help_text
@@ -97,11 +98,11 @@ class BootOneShot(IDracManager,
         # power on first if a client requested.
         if do_power_on:
             current_boot = self.sync_invoke(
-                ApiRequestType.ChassisReset,
-                "reboot",
+                ApiRequestType.ChassisReset, "reboot",
                 reset_type="On"
             )
 
+        # query for a power state
         current_boot = self.sync_invoke(
             ApiRequestType.CurrentBoot,
             "current_boot_query"
@@ -110,8 +111,9 @@ class BootOneShot(IDracManager,
             'BootSourceOverrideTarget@Redfish.AllowableValues'
         ]
         if device not in boot_device:
-            raise InvalidArgument(f"Invalid boot device {device}, "
-                                  f"supported device {boot_device}")
+            raise InvalidArgument(
+                f"Invalid boot device {device}, "
+                f"supported device {boot_device}")
 
         if uefi_target is not None:
             current_boot = self.sync_invoke(
@@ -120,8 +122,9 @@ class BootOneShot(IDracManager,
             uefi_devs = [d['UefiDevicePath'] for d
                          in current_boot.extra['Members'] if 'UefiDevicePath' in d]
             if uefi_target not in uefi_devs:
-                raise InvalidArgument(f"Invalid uefi device path {uefi_target},"
-                                      f" supported uefi devices {boot_device}")
+                raise InvalidArgument(
+                    f"Invalid uefi device path {uefi_target},"
+                    f" supported uefi devices {boot_device}")
 
         payload = {
             "Boot": {
@@ -130,35 +133,24 @@ class BootOneShot(IDracManager,
             }
         }
 
-        r = f"{self._default_method}{self.idrac_ip}/{self.idrac_manage_servers}"
+        # r = f"{self._default_method}{self.idrac_ip}/{self.idrac_manage_servers}"
         for key, value in dict(payload['Boot']).items():
             if value is None:
                 del payload['Boot'][key]
 
-        response = self.api_patch_call(
-            r, json.dumps(payload), headers)
-        api_result = {}
-        api_resp = self.default_patch_success(self, response)
-        if self.default_patch_success(self, response):
-            api_result = self.api_success_msg(True)
+        cmd_result, api_resp = self.base_patch(
+            self.idrac_manage_servers, payload=payload,
+            do_async=do_async
+        )
 
-        try:
-            if api_resp == IdracApiRespond.AcceptedTaskGenerated:
-                json_data = response.json()
-                if verbose:
-                    self.default_json_printer(json_data)
-                job_id = self.job_id_from_header(response)
-                if job_id is not None:
-                    data = self.fetch_task(job_id)
-                    api_result.update(data)
-        except TaskIdUnavailable as _:
-            pass
-        except UnexpectedResponse as ur:
-            self.logger.critical(ur, exc_info=True)
-            pass
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            cmd_result.data['task_id'] = task_id
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
 
         if do_reboot:
             reboot_result = self.reboot(do_watch=True)
-            api_result.update(reboot_result)
+            cmd_result.data.update(reboot_result)
 
-        return CommandResult(api_result, None, None, None)
+        return cmd_result

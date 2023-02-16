@@ -12,6 +12,8 @@ from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_exceptions import FailedDiscoverAction
 from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl.cmd_exceptions import UnsupportedAction
+from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import IDRAC_JSON
 
 
 class ChassisReset(IDracManager,
@@ -44,30 +46,32 @@ class ChassisReset(IDracManager,
         return cmd_parser, "chassis-reset", help_text
 
     def discover_reset(self, reset_type) -> str:
-        """Discover reset action, and return target api
+        """Method discover reset action, and return target api
+        in order invoke reset.
         :param reset_type:
         :return: discovered action
         :raise InvalidArgument if reset type unknown
         """
         chassis_data = self.sync_invoke(
-            ApiRequestType.ChassisQuery,
-            "chassis_service_query",
+            ApiRequestType.ChassisQuery, "chassis_service_query",
             do_expanded=True
         )
 
         if 'Reset' not in chassis_data.discovered:
             raise UnsupportedAction(
-                "Failed to discover the reset chassis action")
+                "Failed to discover the reset chassis action"
+            )
 
-        redfish_action = chassis_data.discovered['Reset']
+        redfish_action = chassis_data.discovered[IDRAC_JSON.Reset]
         target_api = redfish_action.target
         args = redfish_action.args
-        args_options = args['ResetType']
+        args_options = args[IDRAC_JSON.ResetType]
 
         if reset_type not in args_options:
             raise InvalidArgument(
                 f"Unsupported reset type {reset_type} "
-                f"supported reset options {args_options}.")
+                f"supported reset options {args_options}."
+            )
 
         return target_api
 
@@ -79,7 +83,7 @@ class ChassisReset(IDracManager,
                 **kwargs
                 ) -> CommandResult:
         """
-        Execute command
+        Execute command and change chassis power state.
         :param do_async: async or not
         :param data_type:
         :param reset_type: "On, ForceOff"
@@ -96,21 +100,20 @@ class ChassisReset(IDracManager,
 
         if target_api is None:
             FailedDiscoverAction(
-                "Failed discover reset chassis actions.")
+                "Failed discover reset chassis actions."
+            )
 
-        payload = {'ResetType': reset_type}
+        payload = {IDRAC_JSON.ResetType: reset_type}
         cmd_result, api_resp = self.base_post(
             target_api, payload=payload, do_async=do_async
         )
 
-        if api_resp.AcceptedTaskGenerated:
-            job_id = cmd_result.data['job_id']
-            task_state = self.fetch_task(cmd_result.data['job_id'])
-            cmd_result.data['task_state'] = task_state
-            cmd_result.data['task_id'] = job_id
-        # else:
-        # here we have 4 mutually exclusive option
-        # either we commit all pending, reset jobs, or cancel or just submit.
-        # if api_resp.Error:
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            cmd_result.data['task_id'] = task_id
+
+            if do_watch:
+                task_state = self.fetch_task(task_id)
+                cmd_result.data['task_state'] = task_state
 
         return CommandResult(self.api_success_msg(api_resp), None, None, None)

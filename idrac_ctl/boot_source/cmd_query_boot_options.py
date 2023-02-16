@@ -55,23 +55,21 @@ class BootOptionsQuery(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
-
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
 
         target_api = "/redfish/v1/Systems/System.Embedded.1/BootOptions"
         r = f"https://{self.idrac_ip}{target_api}{self.expanded()}"
+
         if not do_async:
             response = self.api_get_call(r, headers)
             self.default_error_handler(response)
         else:
             loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
+            response = loop.run_until_complete(
+                self.api_async_get_until_complete(r, headers)
+            )
 
         data = response.json()
         save_if_needed(filename, data)

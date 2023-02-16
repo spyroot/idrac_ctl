@@ -14,7 +14,10 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
+from idrac_ctl import Singleton, IDracManager, save_if_needed
+from idrac_ctl.redfish_shared import RedfishJson
+from idrac_ctl.idrac_shared import ApiRequestType
+from idrac_ctl.redfish_manager import CommandResult
 
 
 class BiosRegistry(IDracManager,
@@ -106,17 +109,16 @@ class BiosRegistry(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = f"{self.idrac_manage_chassis}/Bios/BiosRegistry"
+        target_api = f"{self.idrac_manage_servers}/Bios/BiosRegistry"
         cmd_result = self.base_query(target_api,
                                      filename=None,
                                      do_async=do_async,
                                      do_expanded=do_expanded)
-
         filtered_result = []
         attribute_names = None
 
         registry = cmd_result.data['RegistryEntries']
-        data = registry['Attributes']
+        data = registry[RedfishJson.Attributes]
 
         if attr_list and isinstance(data, list):
             attribute_names = [d['AttributeName'] for d in data]
@@ -164,6 +166,8 @@ class BiosRegistry(IDracManager,
 
         # filter only value choices
         if is_value_only:
-            data = [entry['Value'] for entry in data if isinstance(entry, dict) and 'Value' in entry][0]
+            data = [entry['Value'] for
+                    entry in data
+                    if isinstance(entry, dict) and 'Value' in entry][0]
 
         return CommandResult(data, None, attribute_names, None)

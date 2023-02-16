@@ -74,8 +74,8 @@ class ApiRequestType(Enum):
 
     # attribute
     AttributesQuery = auto()
-    AttributeClearPending = auto()
     AttributesUpdate = auto()
+    AttributeClearPending = auto()
 
     # idrac manager
     ManagerQuery = auto()
@@ -305,6 +305,9 @@ class RedfishSupermicro:
 
 
 class IDRAC_API:
+    """
+    Idrac api supported actions
+    """
     IDRAC_MANAGER = RedfishApi.Managers
     IDRAC_DELL_MANAGERS = f"{RedfishApi.Version}/Dell/Managers"
     Tasks = f"{RedfishApi.Version}/TaskService/Tasks/"
@@ -322,6 +325,7 @@ class IDRAC_API:
     BiosSettings = RedfishApi.BIOS_SETTINGS
     COMPUTE_RESET = RedfishApi.COMPUTE_RESET
     BIOS = RedfishApi.BIOS
+    BootOptions = "BootOptions"
 
 
 class IDRAC_JSON:
@@ -340,20 +344,21 @@ class IDRAC_JSON:
     Data_next = "@odata.nextLink"
 
     Actions = "Actions"
-    Links = RedfishJsonSpec.Links
     Members = "Members"
     Datatime = "DateTime"
     Location = "Location"
+    Links = RedfishJsonSpec.Links
     Attributes = RedfishJson.Attributes
     RegistryEntries = "RegistryEntries"
 
+
     #
+    DateTimeLocalOffset = "DateTimeLocalOffset"
     FirmwareVersion = "FirmwareVersion"
     ManagerServers = "ManagerForServers"
     ManageChassis = "ManagerForChassis"
     LastResetTime = "LastResetTime"
     TimezoneName = "TimeZoneName"
-    DateTimeLocalOffset = "DateTimeLocalOffset"
     PowerState = "PowerState"
     UUID = "UUID"
 
@@ -363,21 +368,25 @@ class IDRAC_JSON:
     TaskStatus = "TaskStatus"
     PercentComplete = "PercentComplete"
 
-    RedfishSettingsApplyTime = "@Redfish.SettingsApplyTime"
-    MaintenanceWindowDuration = "MaintenanceWindowDurationInSeconds"
-    MaintenanceWindowStartTime = "MaintenanceWindowStartTime"
     ApplyTime = "ApplyTime"
+    RedfishSettingsApplyTime = "@Redfish.SettingsApplyTime"
+    MaintenanceWindowStartTime = "MaintenanceWindowStartTime"
+    MaintenanceWindowDuration = "MaintenanceWindowDurationInSeconds"
 
     # Accounts
+    AccountId = "Id"
     Username = "UserName"
     AccountEnabled = "Enabled"
-    AccountId = "Id"
     AccountTypes = "AccountTypes"
     AccountTypesOem = "OEMAccountTypes"
     PasswordExpiration = "PasswordExpiration"
     PasswordChangeRequired = "PasswordChangeRequired"
     AccountRole = "Role"
     AccountRoleId = "RoleId"
+
+    # Chassis
+    Reset = "Reset"
+    ResetType = "ResetType"
 
 
 class JobApplyTypes:

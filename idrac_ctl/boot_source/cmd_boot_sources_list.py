@@ -30,7 +30,8 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 
 
-class BootOptionsList(IDracManager, scm_type=ApiRequestType.BootOptions,
+class BootOptionsList(IDracManager,
+                      scm_type=ApiRequestType.BootOptions,
                       name='boot_sources_query',
                       metaclass=Singleton):
     """
@@ -48,17 +49,20 @@ class BootOptionsList(IDracManager, scm_type=ApiRequestType.BootOptions,
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument('--async', action='store_true', required=False, dest="do_async",
-                                default=False, help="Will create a task and will not wait.")
+        cmd_parser.add_argument(
+            '--async', action='store_true', required=False, dest="do_async",
+            default=False, help="Will create a task and will not wait.")
 
-        cmd_parser.add_argument('-f', '--filename', required=False, type=str,
-                                default="",
-                                help="filename if we need to save a respond to a file.")
+        cmd_parser.add_argument(
+            '-f', '--filename', required=False, type=str,
+            default="",
+            help="filename if we need to save a respond to a file.")
 
         help_text = "command fetch the boot source list"
         return cmd_parser, "boot-source-list", help_text
 
-    def execute(self, filename: [str] = None,
+    def execute(self,
+                filename: [str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False, **kwargs) -> CommandResult:

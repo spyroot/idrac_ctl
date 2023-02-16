@@ -6,7 +6,10 @@ from idrac_ctl.idrac_shared import ApiRequestType
 from idrac_ctl.redfish_shared import RedfishJson
 
 
-class TestAttribute(TestCase):
+class TestReboot(TestCase):
+    """
+     Test reboot cmd
+    """
     redfish_api = None
 
     @classmethod

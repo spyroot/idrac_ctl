@@ -9,6 +9,7 @@ from typing import Optional
 
 from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from idrac_ctl.redfish_shared import RedfishJson
 
 
 class ChangeBootOrder(IDracManager,
@@ -95,7 +96,7 @@ class ChangeBootOrder(IDracManager,
         if cmd_query.error is not None:
             return cmd_query
 
-        current_boot_mode = cmd_query.data['Attributes']['SetBootOrderEn']
+        current_boot_mode = cmd_query.data[RedfishJson.Attributes]['SetBootOrderEn']
         self.logger.info("Current boot mode", current_boot_mode)
 
         if boot_order is not None:
@@ -114,14 +115,9 @@ class ChangeBootOrder(IDracManager,
             do_async=do_async, expected_status=202)
 
         if api_resp.AcceptedTaskGenerated:
-            job_id = cmd_result.data['job_id']
-            task_state = self.fetch_task(cmd_result.data['job_id'])
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
             cmd_result.data['task_state'] = task_state
-            cmd_result.data['task_id'] = job_id
-
-        # else:
-        # here we have 4 mutually exclusive option
-        # either we commit all pending, reset jobs, or cancel or just submit.
-        # if api_resp.Error:
+            cmd_result.data['task_id'] = task_id
 
         return CommandResult(self.api_success_msg(api_resp), None, None, None)

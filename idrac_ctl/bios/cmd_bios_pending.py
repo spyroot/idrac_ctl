@@ -8,6 +8,7 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.redfish_shared import RedfishJson
 
 
 class BiosQueryPending(IDracManager,
@@ -29,10 +30,8 @@ class BiosQueryPending(IDracManager,
         """
         cmd_parser = cls.base_parser()
         cmd_parser.add_argument(
-            '-r', '--filter',
-            required=False,
-            dest="data_filter", type=str,
-            default="",
+            '-r', '--filter', required=False,
+            dest="data_filter", type=str, default="",
             help="filter on pending value. (Example -r SriovGlobalEnable)"
         )
 
@@ -48,7 +47,7 @@ class BiosQueryPending(IDracManager,
                 data_filter: Optional[str] = None,
                 **kwargs) -> CommandResult:
         """Executes bios for pending changes.
-        python idrac_ctl.py chassis
+
         :param data_filter:
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
@@ -61,19 +60,21 @@ class BiosQueryPending(IDracManager,
         if data_filter:
             do_expanded = True
 
-        cmd_result = self.base_query(target_api,
-                                     filename=filename,
-                                     do_async=do_async,
-                                     do_expanded=do_expanded)
+        cmd_result = self.base_query(
+            target_api, filename=filename,
+            do_async=do_async, do_expanded=do_expanded
+        )
         if cmd_result.error is not None:
             return cmd_result
 
-        if cmd_result.data is not None and 'Attributes' in cmd_result.data:
-            attr_data = cmd_result.data['Attributes']
+        if cmd_result.data is not None and RedfishJson.Attributes in cmd_result.data:
+            attr_data = cmd_result.data[RedfishJson.Attributes]
             attr_cmd = CommandResult(attr_data, None, None, None)
             if data_filter is not None and len(data_filter) > 0:
                 if data_filter in attr_data:
-                    return CommandResult(attr_data[data_filter], None, None, None)
+                    return CommandResult(
+                        attr_data[data_filter], None, None, None
+                    )
             else:
                 cmd_result = attr_cmd
 

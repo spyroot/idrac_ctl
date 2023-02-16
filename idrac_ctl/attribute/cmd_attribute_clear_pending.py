@@ -13,6 +13,8 @@ from idrac_ctl import ApiRequestType
 from idrac_ctl import Singleton
 from idrac_ctl import CommandResult
 from idrac_ctl import FailedDiscoverAction
+from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import RedfishJson
 
 
 class AttributeClearPending(IDracManager,
@@ -36,9 +38,10 @@ class AttributeClearPending(IDracManager,
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
 
-        cmd_parser.add_argument('--async', default=False, required=False,
-                                action='store_true', dest="do_async",
-                                help="Will use asyncio.")
+        cmd_parser.add_argument(
+            '--async', default=False, required=False,
+            action='store_true', dest="do_async",
+            help="Will use asyncio.")
 
         help_text = "command clear attribute pending values"
         return cmd_parser, "attr-clear-pending", help_text
@@ -61,25 +64,28 @@ class AttributeClearPending(IDracManager,
         target = None
         attributes_cmd = self.sync_invoke(
             ApiRequestType.AttributesQuery,
-            "attribute_inventory", do_deep=True)
+            "attribute_inventory", do_deep=True
+        )
         if attributes_cmd.error is not None:
             return attributes_cmd
 
         if isinstance(attributes_cmd.extra, list):
             for extra in attributes_cmd.extra:
-                if 'Actions' in extra:
-                    actions = extra['Actions']
+                if RedfishJson.Actions in extra:
+                    actions = extra[RedfishJson.Actions]
                     if '#DellManager.ClearPending' in actions:
                         target = actions['#DellManager.ClearPending']['target']
 
         if target is None:
-            raise FailedDiscoverAction("Failed discover clear pending attribute action.")
+            raise FailedDiscoverAction(
+                "Failed discover clear pending attribute action."
+            )
 
         cmd_result, api_resp = self.base_post(target, do_async=do_async)
-        if api_resp.AcceptedTaskGenerated:
-            job_id = cmd_result.data['job_id']
-            task_state = self.fetch_task(cmd_result.data['job_id'])
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
             cmd_result.data['task_state'] = task_state
-            cmd_result.data['task_id'] = job_id
+            cmd_result.data['task_id'] = task_id
 
         return cmd_result

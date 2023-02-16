@@ -583,7 +583,8 @@ class IDracManager(RedfishManager):
 
         return task_state
 
-    def default_error_handler(self, response: requests.models.Response) -> IdracApiRespond:
+    def default_error_handler(
+            self, response: requests.models.Response) -> IdracApiRespond:
         """Default error handler.
         :param response:
         :return:
@@ -1429,7 +1430,8 @@ class IDracManager(RedfishManager):
 
         if cmd_chassis.error is not None:
             self.logger.info(
-                f"Failed to fetch a chassis power state")
+                f"Failed to fetch a chassis power state"
+            )
             return cmd_chassis
 
         if isinstance(cmd_chassis.data, dict) and 'PowerState' in cmd_chassis.data:
