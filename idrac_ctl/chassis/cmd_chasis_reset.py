@@ -45,10 +45,10 @@ class ChassisReset(IDracManager,
         help_text = "command change power state of a chassis"
         return cmd_parser, "chassis-reset", help_text
 
-    def discover_reset(self, reset_type) -> str:
+    def discover_reset(self, reset_type: str) -> str:
         """Method discover reset action, and return target api
         in order invoke reset.
-        :param reset_type:
+        :param reset_type: On , or ForceOff
         :return: discovered action
         :raise InvalidArgument if reset type unknown
         """
@@ -85,8 +85,8 @@ class ChassisReset(IDracManager,
         """
         Execute command and change chassis power state.
         :param do_async: async or not
-        :param data_type:
         :param reset_type: "On, ForceOff"
+        :param data_type: json or xml
         :param do_watch: wait and watch progress.
         :param kwargs: args passwd downstream
         :return: return cmd result
@@ -111,9 +111,8 @@ class ChassisReset(IDracManager,
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
             task_id = cmd_result.data['task_id']
             cmd_result.data['task_id'] = task_id
-
             if do_watch:
                 task_state = self.fetch_task(task_id)
                 cmd_result.data['task_state'] = task_state
 
-        return CommandResult(self.api_success_msg(api_resp), None, None, None)
+        return cmd_result

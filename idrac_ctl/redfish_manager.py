@@ -232,6 +232,36 @@ class RedfishManager:
         await self.async_default_error_handler(await response)
         return await response
 
+    @cached_property
+    def redfish_version(self) -> str:
+        """Return version remote endpoint implemented
+        :return:
+        """
+        api_resp = self.base_query("/redfish/v1/")
+        if api_resp.data is not None and "RedfishVersion" in api_resp.data:
+            return api_resp.data["RedfishVersion"]
+        return ""
+
+    @cached_property
+    def redfish_vendor(self) -> str:
+        """Return remote vendor
+        :return:
+        """
+        api_resp = self.base_query("/redfish/v1/")
+        if api_resp.data is not None and "Vendor" in api_resp.data:
+            return api_resp.data["Vendor"]
+        return ""
+
+    @cached_property
+    def redfish_system(self) -> str:
+        """Return system path
+        :return:
+        """
+        api_resp = self.base_query("/redfish/v1/")
+        if api_resp.data is not None and "Systems" in api_resp.data:
+            return api_resp.data["Systems"]["@odata.id"]
+        return ""
+
     def base_query(self,
                    resource: str,
                    filename: Optional[str] = None,
@@ -400,8 +430,8 @@ class RedfishManager:
 
     @abstractmethod
     def redfish_manage_servers(self) -> str:
-        """Shared method return who remote endpoint managed servers and list as json
-        ManagerForServers
+        """Shared method return who remote endpoint managed servers
+        and list as json ManagerForServers
         :return: return manager
         """
         api_resp = self.base_query(self.members, key=RedfishJson.Links)
@@ -418,20 +448,25 @@ class RedfishManager:
 
     @staticmethod
     def job_id_from_header(
-            response: requests.models.Response) -> str:
+            response: requests.models.Response, strict: Optional[bool] = True) -> str:
         """Returns job id from the response header.
+        :param strict:
         :param response: a response that should have job id information in the header.
         :return: job id from the Location header
         :raise TaskIdUnavailable if header not present.
         """
+        job_id = ""
         resp_hdr = response.headers
         if RedfishJsonSpec.Location not in resp_hdr:
-            raise TaskIdUnavailable(
-                "There is no location in the response header. "
-                "(not all api create job id)"
-            )
-        location = response.headers[RedfishJsonSpec.Location]
-        job_id = location.split("/")[-1]
+            if strict:
+                raise TaskIdUnavailable(
+                    "There is no location in the response header. "
+                    "(not all api create job id)"
+                )
+        else:
+            location = response.headers[RedfishJsonSpec.Location]
+            job_id = location.split("/")[-1]
+
         return job_id
 
     @staticmethod

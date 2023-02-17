@@ -1,30 +1,30 @@
-"""iDRAC command clear boot source pending values.
+"""iDRAC command clear boot options pending values.
 
-Command provides the option to clear boot source pending values.
-if values un committed.
+Command provides the option to clear boot source pending values
+via dell oem.  If boot options change boot order
+or boot options flags.
 
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
-import json
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
-from idrac_ctl.idrac_manager import PostRequestFailed
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
-class BootSourceClearPending(IDracManager, scm_type=ApiRequestType.BootSourceClear,
-                             name='clear_pending',
-                             metaclass=Singleton):
+class BootOptionsClearPending(IDracManager,
+                              scm_type=ApiRequestType.BootOptionsClearPending,
+                              name='clear_pending',
+                              metaclass=Singleton):
     """
     This cmd action is used to clear all BIOS pending
     values currently in iDRAC.
     """
 
     def __init__(self, *args, **kwargs):
-        super(BootSourceClearPending, self).__init__(*args, **kwargs)
+        super(BootOptionsClearPending, self).__init__(*args, **kwargs)
 
     @staticmethod
     @abstractmethod
@@ -34,13 +34,13 @@ class BootSourceClearPending(IDracManager, scm_type=ApiRequestType.BootSourceCle
         :return:
         """
         cmd_parser = argparse.ArgumentParser(add_help=False)
-
-        cmd_parser.add_argument('--async', default=False, required=False,
-                                action='store_true', dest="do_async",
-                                help="will use asyncio.")
+        cmd_parser.add_argument(
+            '--async', default=False, required=False,
+            action='store_true', dest="do_async",
+            help="will use asyncio.")
 
         help_text = "command clear boot source pending values"
-        return cmd_parser, "boot-clear-pending", help_text
+        return cmd_parser, "boot-options-clear", help_text
 
     def execute(self,
                 do_async: Optional[bool] = False,
@@ -58,24 +58,20 @@ class BootSourceClearPending(IDracManager, scm_type=ApiRequestType.BootSourceCle
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        api_target = "/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellBootSources" \
+        api_target = f"{self.idrac_manage_servers}/Oem/Dell/DellBootSources" \
                      "/Settings/Actions/DellManager.ClearPending"
 
-        ok = False
-        api_req_result = {}
-        try:
-            pd = {}
-            r = f"https://{self.idrac_ip}{api_target}"
-            if not do_async:
-                response = self.api_post_call(r, json.dumps(pd), headers)
-                ok = self.default_post_success(self, response, expected=200)
-                api_req_result["Response"] = response.status_code
-            else:
-                loop = asyncio.get_event_loop()
-                ok, response = loop.run_until_complete(self.async_post_until_complete(r, json.dumps(pd), headers))
-        except PostRequestFailed as pf:
-            print("Error:", pf)
-            pass
+        cmd_result, api_resp = self.base_post(
+            api_target, payload={},
+            do_async=do_async
+        )
 
-        api_result = {"Status": ok}
-        return CommandResult(api_result, None, None, None)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        return cmd_result
+
+

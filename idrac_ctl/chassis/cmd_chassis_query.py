@@ -15,9 +15,8 @@ class ChassisQuery(IDracManager,
                    scm_type=ApiRequestType.ChassisQuery,
                    name='chassis_service_query',
                    metaclass=Singleton):
-    """A command query job_service_query.
+    """A command query chassis.
     """
-
     def __init__(self, *args, **kwargs):
         super(ChassisQuery, self).__init__(*args, **kwargs)
 
@@ -36,6 +35,7 @@ class ChassisQuery(IDracManager,
         cmd_parser.add_argument(
             '--filter', required=False, dest="data_filter", type=str,
             default=False, help="filter on key. Example PowerState")
+
         # The Chassis schema represents the physical components of a system
         help_text = "command query chassis services"
         return cmd_parser, "chassis", help_text
@@ -58,6 +58,7 @@ class ChassisQuery(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
+        # for a filter we query on level deep
         if data_filter:
             do_expanded = True
 

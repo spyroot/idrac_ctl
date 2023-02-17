@@ -1,3 +1,15 @@
+"""This a unit test for query bios registry. filtering
+ read only , none read only , subset etc
+
+ Before you run unit test.
+IDRAC_IP=IP
+IDRAC_PASSWORD=PASS
+IDRAC_USERNAME=root
+# set PYTHONWARNINGS as well, so it will not output warning about insecure.
+PYTHONWARNINGS=ignore:Unverified HTTPS request
+
+Author Mus spyroot@gmail.com
+"""
 import json
 import os
 import pathlib

@@ -252,7 +252,16 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
 
         # invoke cmd
         command_result = redfish_api.sync_invoke(
-            cmd.type, cmd.name, **arg_dict)
+            cmd.type, cmd.name, **arg_dict
+        )
+
+        if redfish_api.redfish_vendor == "Dell":
+            if isinstance(command_result.data, dict):
+                command_result.data["idrac_version"] = redfish_api.idrac_manager_version
+                command_result.data["redfish_version"] = redfish_api.redfish_version
+            # if isinstance(command_result.data, list) and len(command_result.data) > 0:
+            #     command_result.data[0]["idrac_version"] = redfish_api.idrac_manager_version
+            #     command_result.data[0]["redfish_version"] = redfish_api.redfish_version
 
         if command_result.error is not None:
             json_printer(command_result.data, cmd_args, colorized=cmd_args.nocolor)
@@ -263,6 +272,7 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         processed_data = process_respond(cmd_args, command_result)
         if json_printer:
             json_printer(processed_data, cmd_args, colorized=cmd_args.nocolor)
+
     except redfish_exceptions.RedfishException as redfish_err:
         console_error_printer(f"Error: {redfish_err}")
     except TaskIdUnavailable as tid:
@@ -375,6 +385,9 @@ def idrac_main_ctl():
     verbose_group.add_argument(
         '--verbose', action='store_true', required=False, default=False,
         help="enables verbose output.")
+    verbose_group.add_argument(
+        '--log', required=False, default=logging.NOTSET,
+        help="log level.")
 
     # controls for output
     output_controllers = parser.add_argument_group('output', '# output controller options')
@@ -410,7 +423,7 @@ def idrac_main_ctl():
     cmd_dict = create_cmd_tree(parser)
     args = parser.parse_args()
     if args.debug:
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(args.log)
 
     if args.idrac_ip is None or len(args.idrac_ip) == 0:
         print(
@@ -433,8 +446,8 @@ def idrac_main_ctl():
             "(export IDRAC_PASSWORD=ip_address)"
         )
         sys.exit(1)
-
     try:
+
         main(args, cmd_dict)
     except AuthenticationFailed as af:
         console_error_printer(f"Error: {af}")

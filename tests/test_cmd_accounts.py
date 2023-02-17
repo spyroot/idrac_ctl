@@ -1,5 +1,17 @@
+"""This a unit test for query accounts in redfish/idrac
+
+Before you run unit test.
+IDRAC_IP=IP
+IDRAC_PASSWORD=PASS
+IDRAC_USERNAME=root
+# set PYTHONWARNINGS as well, so it will not output warning about insecure.
+PYTHONWARNINGS=ignore:Unverified HTTPS request
+
+Author Mus spyroot@gmail.com
+"""
 import json
 import os
+from json import JSONDecodeError
 from unittest import TestCase
 from idrac_ctl.idrac_manager import IDracManager, CommandResult
 from idrac_ctl.idrac_shared import ApiRequestType
@@ -39,7 +51,9 @@ class TestAccounts(TestCase):
         self.assertIsInstance(query_result.data, dict)
         try:
             json.dumps(query_result.data, sort_keys=True, indent=4)
-        except Exception as _:
+        except TypeError as _:
+            self.fail("raised exception")
+        except JSONDecodeError as _:
             self.fail("raised exception")
 
         self.assertTrue(RedfishJson.Members in query_result.data,
@@ -61,7 +75,9 @@ class TestAccounts(TestCase):
         self.assertIsInstance(query_result.data, dict)
         try:
             json.dumps(query_result.data, sort_keys=True, indent=4)
-        except Exception as _:
+        except TypeError as _:
+            self.fail("raised exception")
+        except JSONDecodeError as _:
             self.fail("raised exception")
 
         self.assertTrue(RedfishJson.Members in query_result.data,
@@ -103,8 +119,12 @@ class TestAccounts(TestCase):
         self.assertIsInstance(query_result.data, dict)
         try:
             json.dumps(query_result.data, sort_keys=True, indent=4)
-        except Exception as _:
+        except TypeError as _:
+            self.fail("raised exception")
+        except JSONDecodeError as _:
             self.fail("raised exception")
 
-        self.assertTrue(RedfishJson.Members in query_result.data,
-                        f"Failed to fetch mandatory {RedfishJson.Members} key")
+        self.assertTrue(
+            RedfishJson.Members in query_result.data,
+            f"Failed to fetch mandatory {RedfishJson.Members} key"
+        )

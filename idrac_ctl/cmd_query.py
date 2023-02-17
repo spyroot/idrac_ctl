@@ -31,8 +31,8 @@ class QueryIDRAC(IDracManager,
         cmd_parser = cls.base_parser()
         cmd_parser.add_argument(
             '-r', '--resource', required=True, dest="resource",
-                                type=str, default=None,
-                                help="Job id. Example /redfish/v1/Managers")
+            type=str, default=None,
+            help="Job id. Example /redfish/v1/Managers")
         help_text = "command query based on resource."
         return cmd_parser, "query", help_text
 

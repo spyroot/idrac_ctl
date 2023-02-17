@@ -1,9 +1,7 @@
-import json
 import os
 from unittest import TestCase
-from idrac_ctl.idrac_manager import IDracManager, CommandResult
+from idrac_ctl.idrac_manager import IDracManager
 from idrac_ctl.idrac_shared import ApiRequestType
-from idrac_ctl.redfish_shared import RedfishJson
 
 
 class TestPowerState(TestCase):

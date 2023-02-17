@@ -1,0 +1,54 @@
+{
+  "Attributes": {
+    "BootSeq": [
+      {
+        "Enabled": true,
+        "Id": "BIOS.Setup.1-1#BootSeq#HardDisk.List.1-1#81dc1ab05577b0942967953640301e64",
+        "Index": 0,
+        "Name": "HardDisk.List.1-1"
+      },
+      {
+        "Enabled": false,
+        "Id": "BIOS.Setup.1-1#BootSeq#NIC.Integrated.1-1-1#a2e7518397d0426e1ba74a57e5596eeb",
+        "Index": 1,
+        "Name": "NIC.Integrated.1-1-1"
+      },
+      {
+        "Enabled": true,
+        "Id": "BIOS.Setup.1-1#BootSeq#NIC.Slot.8-1#4f5d8523dbaffba918182fe3adb15032",
+        "Index": 2,
+        "Name": "NIC.Slot.8-1"
+      },
+      {
+        "Enabled": true,
+        "Id": "BIOS.Setup.1-1#BootSeq#NIC.Slot.8-1#b432014730eaa565988dc83ed79a83e9",
+        "Index": 3,
+        "Name": "NIC.Slot.8-1"
+      },
+      {
+        "Enabled": true,
+        "Id": "BIOS.Setup.1-1#BootSeq#NIC.Slot.8-1#f42a2c08cca97d8b03dc8775b68b44a0",
+        "Index": 4,
+        "Name": "NIC.Slot.8-1"
+      },
+      {
+        "Enabled": false,
+        "Id": "BIOS.Setup.1-1#BootSeq#NIC.Slot.8-1#8e84e3a4e9ae0c87ce412f402aa8247e",
+        "Index": 5,
+        "Name": "NIC.Slot.8-1"
+      }
+    ],
+    "HddSeq": [
+      {
+        "Id": "BIOS.Setup.1-1#HddSeq#AHCI.Slot.4-1#7a487120f0461040651d129a45c0d656",
+        "Index": 0,
+        "Name": "AHCI.Slot.4-1"
+      },
+      {
+        "Id": "BIOS.Setup.1-1#HddSeq#NonRAID.Slot.6-1#264b33cc40ae359413454392dbe6aa43",
+        "Index": 1,
+        "Name": "NonRAID.Slot.6-1"
+      }
+    ]
+  }
+}

@@ -245,12 +245,18 @@ class BiosChangeSettings(IDracManager,
 
         if IDRAC_JSON.RegistryEntries not in cmd_result.data:
             return CommandResult(
-                {"Status": "Failed fetch bios registry"}, None, None, None)
+                {
+                    "Status": "Failed fetch bios registry"
+                }, None, None, None
+            )
         registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
 
         if IDRAC_JSON.Attributes not in cmd_result.data:
             return CommandResult(
-                {"Status": "Failed fetch attributes from bios registry"}, None, None, None)
+                {
+                    "Status": "Failed fetch attributes from bios registry"
+                }, None, None, None
+            )
         attribute_data = registry[IDRAC_JSON.Attributes]
 
         # we read either from a file or form args
@@ -263,7 +269,12 @@ class BiosChangeSettings(IDracManager,
                     attribute_data, attr_name, attr_value
                 )
             if len(payload) == 0:
-                return CommandResult(self.api_is_change_msg(False), None, None, None)
+                return CommandResult(
+                    {
+                        "Status": "Empty bios spec."
+                    },
+                    None, None, None
+                )
         except json.decoder.JSONDecodeError as jde:
             raise InvalidJsonSpec(
                 "It looks like your JSON spec is invalid. "
@@ -287,12 +298,12 @@ class BiosChangeSettings(IDracManager,
             if commit_pending:
                 cmd_apply = self.sync_invoke(
                     ApiRequestType.JobApply,
-                    "job_apply", do_reboot=True, setting="bios",
+                    "job_apply", do_reboot=True, do_watch=True, setting="bios",
                 )
                 print("Applied change", cmd_apply.data)
             else:
                 raise UncommittedPendingChanges(
-                    "BIOS contains pending changes in the queue. "
+                    "BIOS contains uncommitted pending changes in the queue. "
                     "Please apply changes first."
                 )
 
@@ -308,29 +319,16 @@ class BiosChangeSettings(IDracManager,
             task_state = self.fetch_task(task_id)
             cmd_result.data['task_state'] = task_state
             cmd_result.data['task_id'] = task_id
-        else:
-            # here we have 4 mutually exclusive option
-            # either we commit all pending, reset jobs, or cancel or just submit.
-            if api_resp.Success or api_resp.Ok:
-                if do_commit:
-                    # we commit with a reboot
-                    cmd_apply = self.sync_invoke(
-                        ApiRequestType.JobApply,
-                        "job_apply", do_reboot=do_reboot, do_watch=True,
-                    )
-                    if cmd_apply.error is not None:
-                        return cmd_apply
-            # if do_reset:
-            #     cmd_apply = self.sync_invoke(
-            #         ApiRequestType.JobApply,
-            #         "job_apply", do_reboot=do_reboot, do_watch=True,
-            #     )
-            # if do_cancel:
-            #     cmd_apply = self.sync_invoke(
-            #         ApiRequestType.JobApply,
-            #         "job_apply", do_reboot=do_reboot, do_watch=True,
-            #     )
-            # if just_do:
+        elif api_resp.Success or api_resp.Ok:
+            if do_commit:
+                self.logger.info(f"Commit changes and rebooting.")
+                # we commit with a reboot
+                cmd_apply = self.sync_invoke(
+                    ApiRequestType.JobApply,
+                    "job_apply", do_reboot=True, do_watch=True,
+                )
+                if cmd_apply.error is not None:
+                    return cmd_apply
 
         if do_reboot:
             self.reboot()

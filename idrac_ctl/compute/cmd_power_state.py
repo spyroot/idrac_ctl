@@ -6,20 +6,19 @@ Command provides the option to reboot, and change power state.
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
-import json
 import time
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_exceptions import InvalidArgument, MissingResource
-from idrac_ctl.idrac_shared import JobTypes, IDRAC_API
+from idrac_ctl.idrac_shared import CliJobTypes, IDRAC_API, IdracApiRespond
+from idrac_ctl.redfish_exceptions import RedfishException
 from idrac_ctl.redfish_manager import CommandResult
 
 
 class RebootHost(IDracManager,
-                 scm_type=ApiRequestType.RebootHost,
+                 scm_type=ApiRequestType.ComputerSystemReset,
                  name='reboot',
                  metaclass=Singleton):
     """
@@ -74,7 +73,10 @@ class RebootHost(IDracManager,
         return cmd_parser, "reboot", help_text
 
     def wait_for_reboot(self, sleep_time, max_retry):
-        """If we need wait or graceful shutdown failed.
+        """If we need wait or graceful shutdown.  It will wait for reboot task
+        and wait for reboot to complete. It makes sense to call this method
+        only if reset already called.
+
         :param sleep_time:
         :param max_retry:
         :return:
@@ -83,17 +85,19 @@ class RebootHost(IDracManager,
         retry_counter = 0
         while _reboot != 0:
             if max_retry == 10:
-                self.logger.info("Power state, max retried reached, no pending reboot states.")
+                self.logger.info(
+                    "Power state, max retried reached, "
+                    "no pending reboot states."
+                )
                 break
 
             # get reboot reboot pending tasks
             scheduled_jobs = self.sync_invoke(
                 ApiRequestType.Jobs, "jobs_sources_query",
                 reboot_pending=True,
-                job_type=JobTypes.REBOOT_NO_FORCE.value,
+                job_type=CliJobTypes.RebootNoForce.value,
                 job_ids=True
             )
-
             if scheduled_jobs.error is not None:
                 return scheduled_jobs
 
@@ -104,15 +108,17 @@ class RebootHost(IDracManager,
                 for job in scheduled_jobs.data:
                     # reboot and wait for completion.
                     self.logger.info(f"Reboot pending job created: task id {job}")
-                    data = self.fetch_task(job, wait_completion=True)
-                    self.default_json_printer(data)
+                    task_state = self.fetch_task(job)
                     _reboot -= 1
-
             except MissingResource as mr:
                 self.logger.error(str(mr))
                 time.sleep(sleep_time)
+            except RedfishException as re:
+                self.logger.error(str(re))
+                time.sleep(sleep_time)
 
-            self.logger.info(f"Sleeping and waiting for reboot pending")
+            self.logger.info(f"Sleeping {sleep_time} sec "
+                             f"and waiting for reboot pending")
             time.sleep(sleep_time)
             retry_counter += 1
 
@@ -177,32 +183,21 @@ class RebootHost(IDracManager,
                 f"Invalid reset type {reset_type}, "
                 f"supported reset types {allowed_reset_types}")
 
-        r = f"{self._default_method}{self.idrac_ip}{target}"
         payload = {
             'ResetType': reset_type
         }
 
-        err = None
-        if not do_async:
-            response = self.api_post_call(
-                r, json.dumps(payload), headers
-            )
-            # Service that support the @ Redfish.OperationApplyTime annotation for a resource collection, action,
-            # or multipart HTTP POST operation shall create a task, and respond with the HTTP 202 Accepted
-            # status code with a Location header set to the URI of a task monitor,
-            # if the client's request body contains.
-            # if the client's request body contains
-            # @Redfish.OperationApplyTime in the request.
-            ok = self.default_post_success(self, response)
-        else:
-            loop = asyncio.get_event_loop()
-            ok, response = loop.run_until_complete(
-                self.async_post_until_complete(
-                    r, json.dumps(payload), headers,
-                )
-            )
+        self.logger.info(f"issuing reset request {payload}")
 
-        if do_wait and ok:
+        cmd_result, api_resp = self.base_post(target, payload=payload, expected_status=202)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            self.logger.info(f"received task id {task_id}, fetch task state")
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        if do_wait:
             self.wait_for_reboot(sleep_time, max_retry)
 
-        return CommandResult(self.api_success_msg(ok), None, None, err)
+        return cmd_result

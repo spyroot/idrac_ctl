@@ -46,7 +46,7 @@ class GetNetworkIsoAttachStatus(IDracManager,
         "ISOAttachStatus": "NotAttached"
         }
         python idrac_ctl.py chassis
-        :param do_reboot:
+        :param do_reboot: reboot
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -58,15 +58,15 @@ class GetNetworkIsoAttachStatus(IDracManager,
         redfish_action = cmd_result.discovered['GetNetworkISOImageConnectionInfo']
         target_api = redfish_action.target
 
-        api_result = self.base_post(target_api, do_async=do_async)
+        cmd_result, api_resp = self.base_post(target_api, do_async=do_async)
         result = {}
         resp_keys = ["HostAttachedStatus",
                      "HostBootedFromISO",
                      "IPAddr", "ISOConnectionStatus",
                      "ImageName", "ShareName", "UserName"]
 
-        if api_result is not None and api_result.extra is not None:
-            data = api_result.extra.json()
+        if cmd_result is not None and cmd_result.extra is not None:
+            data = cmd_result.extra.json()
             for rk in resp_keys:
                 if rk in data:
                     result[rk] = data[rk]
@@ -74,6 +74,10 @@ class GetNetworkIsoAttachStatus(IDracManager,
         if do_reboot:
             cmd_reboot = self.reboot()
             if 'Status' in cmd_reboot:
-                result.update({"Reboot": cmd_reboot['Status']})
+                result.update(
+                    {
+                        "Reboot": cmd_reboot['Status']
+                     }
+                )
 
         return CommandResult(result, None, None, None)

@@ -75,7 +75,7 @@ class BootOneShot(IDracManager,
         VenHw(986D1755-B9D0-4F8D-A0DA-D1DB18672045)
 
         :param do_reboot:  will reboot host
-        :param do_power_on: will power on server.
+        :param do_power_on: will power on server if server in power down state.
         :param uefi_target:
         :param device:  get the list of supported device.
                         For example None, Pxe,Cd,Hdd,BiosSetup,UefiTarget,SDCard,UefiHttp
@@ -87,9 +87,9 @@ class BootOneShot(IDracManager,
         :return: CommandResult and if filename provide will save to a file.
         """
         if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(f"cmd args data_type: {data_type} "
+                              f"do_async:{do_async} filename:{filename}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":
@@ -113,14 +113,16 @@ class BootOneShot(IDracManager,
         if device not in boot_device:
             raise InvalidArgument(
                 f"Invalid boot device {device}, "
-                f"supported device {boot_device}")
+                f"supported device {boot_device}"
+            )
 
         if uefi_target is not None:
             current_boot = self.sync_invoke(
                 ApiRequestType.BootOptions, "boot_sources_query"
             )
             uefi_devs = [d['UefiDevicePath'] for d
-                         in current_boot.extra['Members'] if 'UefiDevicePath' in d]
+                         in current_boot.extra['Members']
+                         if 'UefiDevicePath' in d]
             if uefi_target not in uefi_devs:
                 raise InvalidArgument(
                     f"Invalid uefi device path {uefi_target},"

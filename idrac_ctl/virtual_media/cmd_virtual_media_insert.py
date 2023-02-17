@@ -80,6 +80,7 @@ from typing import Optional
 from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
 from idrac_ctl.cmd_exceptions import InvalidArgument
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class VirtualMediaInsert(IDracManager,
@@ -132,6 +133,7 @@ class VirtualMediaInsert(IDracManager,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Execute command, inserts a virtual media eject.
+
         :param device_id: virtual media device id 1 or 1
         :param remote_username:  username for remote authentication
         :param remote_password:  password for remote authentication
@@ -189,15 +191,16 @@ class VirtualMediaInsert(IDracManager,
             if value is None:
                 del payload[key]
 
-        api_result = self.base_post(
-            target, payload=payload, do_async=do_async,
-            expected_status=204, verbose=verbose
+        cmd_result, api_resp = self.base_post(
+            target, payload=payload,
+            do_async=do_async, expected_status=202
         )
 
-        if api_result.data['Status']:
-            resp = self.parse_task_id(api_result)
-            api_result.data.update(resp)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            self.logger.info(f"Fetching task {task_id} state.")
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
 
-        # response = self.api_post_call(r, json.dumps(payload), headers)
-        # ok = self.default_post_success(self, response, expected=204)
-        return api_result
+        return cmd_result

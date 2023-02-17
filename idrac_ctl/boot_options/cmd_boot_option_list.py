@@ -59,14 +59,28 @@ class BootOptionsList(IDracManager,
             help="filename if we need to save a respond to a file.")
 
         help_text = "command fetch the boot source list"
-        return cmd_parser, "boot-source-list", help_text
+        return cmd_parser, "boot-sources", help_text
 
     def execute(self,
                 filename: [str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False, **kwargs) -> CommandResult:
-        """List boot source from idrac
+        """List boot source from idrac.
+
+        The data payload contain list of all devices.
+
+        "data": [
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/HardDisk.List.1-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Integrated.1-1-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.Slot.8-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/Optical.iDRACVirtual.1-1",
+        "/redfish/v1/Systems/System.Embedded.1/BootOptions/Optical.vFlash.ISOIMG-1"
+        ]
+
         :param do_async:
         :param verbose:
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -84,7 +98,6 @@ class BootOptionsList(IDracManager,
         data = response.json()
         extra = data
         self.default_error_handler(response)
-
         if 'Members' in data:
             data = data['Members']
             data = [d['@odata.id'] for d in data]

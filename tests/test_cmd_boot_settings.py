@@ -9,19 +9,20 @@ PYTHONWARNINGS=ignore:Unverified HTTPS request
 
 Author Mus spyroot@gmail.com
 """
-import json
 import os
-from json import JSONDecodeError
+import json
+import logging
+
 from unittest import TestCase
+from json import JSONDecodeError
 from idrac_ctl.idrac_manager import IDracManager, CommandResult
 from idrac_ctl.idrac_shared import ApiRequestType
-import logging
 
 logging.basicConfig()
 log = logging.getLogger("LOG")
 
 
-class TestAccounts(TestCase):
+class TestBootSettings(TestCase):
     """
     Account cmd unit test.
     """
@@ -47,7 +48,7 @@ class TestAccounts(TestCase):
         """
         manager = self.setUpClass()
         query_result = manager.sync_invoke(
-            ApiRequestType.QueryAccount, "query_account", account=1)
+            ApiRequestType.QueryBootOption, "boot_settings_query")
 
         self.assertIsInstance(query_result, CommandResult)
         self.assertIsInstance(query_result.data, dict)
@@ -58,5 +59,3 @@ class TestAccounts(TestCase):
         except JSONDecodeError as _:
             self.fail("raised exception")
 
-        self.assertTrue("AccountTypes" in query_result.data,
-                        f"Failed to fetch mandatory AccountTypes key")

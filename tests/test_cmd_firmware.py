@@ -1,8 +1,21 @@
+"""
+
+Before you run unit test.
+IDRAC_IP=IP
+IDRAC_PASSWORD=PASS
+IDRAC_USERNAME=root
+# set PYTHONWARNINGS as well, so it will not output warning about insecure.
+PYTHONWARNINGS=ignore:Unverified HTTPS request
+
+Author Mus spyroot@gmail.com
+
+"""
 import json
 import os
 from unittest import TestCase
-from idrac_ctl.idrac_manager import IDracManager, CommandResult
+from idrac_ctl.idrac_manager import IDracManager
 from idrac_ctl.idrac_shared import ApiRequestType
+from idrac_ctl.idrac_manager import CommandResult
 
 
 class TestFirmware(TestCase):
@@ -23,6 +36,10 @@ class TestFirmware(TestCase):
         self.assertTrue(len(os.environ.get('IDRAC_PASSWORD', '')) > 0, "IDRAC_PASSWORD is none")
 
     def test_firmware_query(self):
+        """
+
+        :return:
+        """
         manager = self.setUpClass()
         result = manager.sync_invoke(
             ApiRequestType.FirmwareQuery, "firmware_query")
@@ -35,6 +52,10 @@ class TestFirmware(TestCase):
         self.assertTrue('Members' in result.data, "Failed to fetch mandatory key")
 
     def test_firmware_deep_query(self):
+        """
+
+        :return:
+        """
         manager = self.setUpClass()
         result = manager.sync_invoke(
             ApiRequestType.FirmwareQuery, "firmware_query", do_deep=True)
@@ -45,5 +66,6 @@ class TestFirmware(TestCase):
         except Exception as _:
             self.fail("raised exception")
 
-        self.assertTrue('Members' in result.data,
-                        f"Failed to fetch mandatory key, keys {result.data.keys()}")
+        self.assertTrue(
+            'Members' in result.data,
+            f"Failed to fetch mandatory key, keys {result.data.keys()}")

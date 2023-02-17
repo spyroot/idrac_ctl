@@ -13,24 +13,26 @@ from .redfish_shared import RedfishJson
 class ApiRequestType(Enum):
     """Each commands enum.
     """
-    BiosQueryPending = auto()
+    ComputeUpdate = auto()
+    ComputeQuery = auto()
+    ComputerSystemReset = auto()
+
     ConvertToRaid = auto()
     ConvertNoneRaid = ()
     Drives = auto()
     VolumeInit = auto()
     VolumeQuery = auto()
     ImportOneTimeBoot = auto()
+
+    # dell oem
     DellOemTask = auto()
-    DellOemDisconnect = auto()
-    RemoteServicesRssAPIStatus = auto()
     DellLcQuery = auto()
+    DellOemDisconnect = auto()
+
+    RemoteServicesRssAPIStatus = auto()
     RemoteServicesAPIStatus = auto()
-    JobRmDellServices = auto()
-    JobDellServices = auto()
     TasksList = auto()
-    JobWatch = auto()
-    BiosChangeSettings = auto()
-    BiosRegistry = auto()
+
     ChangeBootOrder = auto()
     GetNetworkIsoAttachStatus = auto()
     OemAttach = auto()
@@ -39,33 +41,45 @@ class ApiRequestType(Enum):
 
     BootOptions = auto()
     SystemConfigQuery = auto()
-    BiosQuery = auto()
     IDracQuery = auto()
-    BootQuery = auto()
+
+    # firmware
     FirmwareQuery = auto()
     FirmwareInventoryQuery = auto()
     PciDeviceQuery = auto()
-    RebootHost = auto()
     SystemQuery = auto()
     VirtualDiskQuery = auto()
     RaidServiceQuery = auto()
-    EnableBootOptions = auto()
     StorageQuery = auto()
     Tasks = auto()
     GetTask = auto()
     ImportSystem = auto()
+
+    # virtual media
     VirtualMediaGet = auto()
     VirtualMediaInsert = auto()
     VirtualMediaEject = auto()
     CurrentBoot = auto()
-    BootOneShot = auto()
+
+    # storage
     StorageViewQuery = auto()
     StorageListQuery = auto()
-    BiosClearPending = auto()
+
+    #
     BootOptionQuery = auto()
+    BootOptionsClearPending = auto()
+    BootOptionsPending = auto()
+
+    QueryBootOption = auto()
+    BootOneShot = auto()
     BootSettingsQuery = auto()
+    EnableBootOptions = auto()
+
+    # boot sources
+    BootSourcePending = auto()
+    BootSourceUpdate = auto()
     BootSourceClear = auto()
-    JobServices = auto()
+    BootQuery = auto()
 
     GetAttachStatus = auto()
     DellOemNetIsoBoot = ()
@@ -81,8 +95,15 @@ class ApiRequestType(Enum):
     ManagerQuery = auto()
     ManagerReset = auto()
 
+    # bios related
+    BiosRegistry = auto()
+    BiosChangeSettings = auto()
     BiosResetDefault = auto()
+    BiosClearPending = auto()
+    BiosQueryPending = auto()
+    BiosQuery = auto()
 
+    # query account
     QueryAccount = auto()
     QueryAccounts = auto()
     QueryAccountService = auto()
@@ -95,6 +116,13 @@ class ApiRequestType(Enum):
     JobDel = auto()
     Jobs = auto()
     JobApply = auto()
+    JobWatch = auto()
+    JobServices = auto()
+
+    #  dell services
+    JobRmDellServices = auto()
+    JobDellServices = auto()
+
 
 
 class ScheduleJobType(Enum):
@@ -208,6 +236,7 @@ class ResetType(Enum):
     # redfish
     ForceOn = "ForceOn"
     ForceRestart = "ForceRestart"
+    PowerCycle = "PowerCycle"
 
 
 class PowerState(Enum):
@@ -237,11 +266,21 @@ class JobState(Enum):
     Unknown = "Unknown"
 
 
-class JobTypes(Enum):
-    """IDRAC job types"""
-    BIOS_CONFIG = "bios_config"
-    FIRMWARE_UPDATE = "firmware_update"
-    REBOOT_NO_FORCE = "reboot_no_force"
+class CliJobTypes(Enum):
+    """cli option for job types"""
+    OsDeploy = "os"
+    Bios_Config = "bios_config"
+    FirmwareUpdate = "firmware_update"
+    RebootNoForce = "reboot_no_force"
+
+
+class IDRACJobType(Enum):
+    """idrac job types
+    """
+    BIOSConfiguration = "BIOSConfiguration"
+    FirmwareUpdate = "FirmwareUpdate"
+    RebootNoForce = "RebootNoForce"
+    OSDeploy = "OSDeploy"
 
 
 class HTTPMethod(Enum):
@@ -318,7 +357,7 @@ class IDRAC_API:
     Accounts = "/redfish/v1/AccountService/Accounts"
     ACCOUNT = "/redfish/v1/AccountService/Accounts/"
 
-    Chassis = f"/redfish/v1/Chassis/"
+    Chassis = f"/redfish/v1/Chassis"
 
     # /redfish/v1/AccountService/Roles/{RoleId}
     # The value of the Id property of the Role resource
@@ -347,10 +386,10 @@ class IDRAC_JSON:
     Members = "Members"
     Datatime = "DateTime"
     Location = "Location"
+    IDracFirmwareVersion = "FirmwareVersion"
     Links = RedfishJsonSpec.Links
     Attributes = RedfishJson.Attributes
     RegistryEntries = "RegistryEntries"
-
 
     #
     DateTimeLocalOffset = "DateTimeLocalOffset"
@@ -359,7 +398,6 @@ class IDRAC_JSON:
     ManageChassis = "ManagerForChassis"
     LastResetTime = "LastResetTime"
     TimezoneName = "TimeZoneName"
-    PowerState = "PowerState"
     UUID = "UUID"
 
     # Job states
@@ -387,6 +425,9 @@ class IDRAC_JSON:
     # Chassis
     Reset = "Reset"
     ResetType = "ResetType"
+
+    # chassis schema
+    PowerState = "PowerState"
 
 
 class JobApplyTypes:
@@ -419,3 +460,14 @@ class ApiRespondString:
     Created = "created"
     Success = "success"
     AcceptedTaskGenerated = "accepted"
+
+
+class BootSourceOverrideEnabled(Enum):
+    Disabled = "Disabled"
+    Continuous = "Continuous"
+    Once = "Once"
+
+
+class BootSourceOverrideMode(Enum):
+    UEFI = "UEFI"
+    Legacy = "Legacy"

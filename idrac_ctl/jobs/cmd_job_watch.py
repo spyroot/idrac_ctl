@@ -47,27 +47,22 @@ class JobWatch(IDracManager,
         help_text = "command watch a job"
         return cmd_parser, "job-watch", help_text
 
-    def execute(self, job_id: str,
+    def execute(self,
+                job_id: str,
                 filename: Optional[str] = None,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Executes delete job from iDRAC action
-
-        python idrac_ctl.py del_job --job_id RID_744980379189
+        """Watch current job state and monitor progress.
+        python idrac_ctl job-watch --j JID_766061334802
 
         :param job_id: iDRAC job_id JID_744718373591
         :param do_async: note async will subscribe to an event loop.
         :param verbose: enables verbose output
-        :param filename: if filename indicate call will save a bios setting to a file.
         :param data_type: json or xml
+        :param filename: if filename indicate call will save a bios setting to a file.
         :return: CommandResult and if filename provide will save to a file.
         """
-        if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"boot_source:{job_id} do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
-
         data = self.fetch_task(job_id)
         return CommandResult(data, None, None, None)

@@ -1,18 +1,15 @@
 """iDRAC delete job from iDRAC action
 
-Command provides the option to delete a
-job from iDRAC.
+Command provides the option to delete a job from iDRAC.
 
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
-
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
-from idrac_ctl.idrac_manager import DeleteRequestFailed
+from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class JobDel(IDracManager,
@@ -32,21 +29,13 @@ class JobDel(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = argparse.ArgumentParser(add_help=False)
-        cmd_parser.add_argument(
-            '--async', action='store_true', required=False, dest="do_async",
-            default=False, help="Will create a task and will not wait.")
+        cmd_parser = cls.base_parser(is_reboot=False, is_file_save=False)
 
         cmd_parser.add_argument(
             '-j', '--job_id', required=True, dest="job_id", type=str,
             default=None, help="Job id. Example JID_744718373591")
 
-        cmd_parser.add_argument(
-            '-f', '--filename', required=False, type=str,
-            default="",
-            help="filename if we need to save a respond to a file.")
-
-        help_text = "command delete a job"
+        help_text = "command deletes an existing job"
         return cmd_parser, "job-rm", help_text
 
     def execute(self, job_id: str,
@@ -66,31 +55,17 @@ class JobDel(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        if verbose:
-            print(f"cmd args data_type: {data_type} "
-                  f"boot_source:{job_id} do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
+        req = f"{self.idrac_members}/Oem/Dell/Jobs/{job_id}"
+        self.logger.info(f"Sending request to {req}")
+        cmd_result, api_resp = self.base_delete(
+            req, payload={},
+            do_async=do_async
+        )
 
-        headers = {}
-        if data_type == "json":
-            headers.update(self.json_content_type)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
-            f"Oem/Dell/Jobs/{job_id}"
-
-        ok = False
-        try:
-            if not do_async:
-                response = self.api_delete_call(r, headers)
-                ok = self.default_delete_success(response)
-            else:
-                loop = asyncio.get_event_loop()
-                response = loop.run_until_complete(
-                    self.api_async_del_until_complete(r, headers)
-                )
-                data = response.json()
-                save_if_needed(filename, data)
-        except DeleteRequestFailed as drq:
-            print(drq)
-
-        return CommandResult(self.api_success_msg(ok), None, None, None)
+        return cmd_result

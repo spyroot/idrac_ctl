@@ -42,10 +42,11 @@ from .redfish_exceptions import RedfishForbidden
 from .redfish_manager import RedfishManager
 from .redfish_task_state import TaskState
 from .redfish_task_state import TaskStatus
+from .redfish_shared import RedfishJsonSpec, RedfishJson
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.redfish_manager import CommandResult
-from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod
+from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes, IDRACJobType
 from idrac_ctl.idrac_shared import ApiRespondString
 from idrac_ctl.idrac_shared import IDRAC_API
 from idrac_ctl.idrac_shared import IDRAC_JSON
@@ -83,7 +84,8 @@ class IDracManager(RedfishManager):
                  idrac_password: Optional[str] = "",
                  insecure: Optional[bool] = False,
                  x_auth: Optional[str] = None,
-                 is_debug: Optional[bool] = False):
+                 is_debug: Optional[bool] = False,
+                 log_level=logging.NOTSET):
         """Default constructor for idrac requires credentials.
            By default, iDRAC Manager uses json to serialize a data to callee
            and uses json content type.
@@ -108,6 +110,8 @@ class IDracManager(RedfishManager):
         self._is_debug = is_debug
         self._default_method = "https://"
         self.logger = logging.getLogger(__name__)
+        self._logger_level = log_level
+        self.logger.setLevel(self._logger_level)
 
         self.content_type = {'Content-Type': 'application/json; charset=utf-8'}
         self.json_content_type = {'Content-Type': 'application/json; charset=utf-8'}
@@ -138,8 +142,8 @@ class IDracManager(RedfishManager):
         self._http_code_mapping = {
             200: IdracApiRespond.Ok,
             201: IdracApiRespond.Created,
-            202: IdracApiRespond.Success,
-            204: IdracApiRespond.AcceptedTaskGenerated
+            202: IdracApiRespond.AcceptedTaskGenerated,
+            204: IdracApiRespond.Success,
         }
 
         # mapping a string state to enum, so each cmd can just check a state
@@ -165,6 +169,7 @@ class IDracManager(RedfishManager):
         # without doing any string if else branches.
         self._task_state_mapping = {
             "New": TaskState.New,
+            "Running": TaskState.Starting,
             "Starting": TaskState.Starting,
             "Suspended": TaskState.Suspended,
             "Interrupted": TaskState.Interrupted,
@@ -178,11 +183,19 @@ class IDracManager(RedfishManager):
             "Cancelled": TaskState.Cancelled
         }
 
+        # mapping from cli to job types
+        self._cli_job_type_mapping = {
+            CliJobTypes.Bios_Config.value: IDRACJobType.BIOSConfiguration.value,
+            CliJobTypes.OsDeploy.value: IDRACJobType.OSDeploy.value,
+            CliJobTypes.FirmwareUpdate.value: IDRACJobType.FirmwareUpdate.value,
+            CliJobTypes.RebootNoForce.value: IDRACJobType.RebootNoForce.value
+        }
+
         # mapping from string to task status enum
         self._task_status_mapping = {
-            "Ok": TaskStatus.Ok,
-            "Warning": TaskStatus.Warning,
-            "Critical": TaskStatus.Critical
+            "ok": TaskStatus.Ok,
+            "warning": TaskStatus.Warning,
+            "critical": TaskStatus.Critical
         }
 
         self._redfish_error = None
@@ -432,22 +445,26 @@ class IDracManager(RedfishManager):
         try:
             resp_data = resp.json()
         except requests.exceptions.JSONDecodeError as json_err:
-            self.logger.error(f"failed parse response to get a task state. {str(json_err)}")
+            self.logger.error(
+                f"failed parse response to get a task state. {str(json_err)}"
+            )
             return TaskState.Unknown, TaskStatus.Warning
 
         # dodge case
         if IDRAC_JSON.TaskStatus not in resp_data or IDRAC_JSON.TaskState not in resp_data:
             raise UnexpectedResponse(f"IDRAC returned a {resp_data}, neither task state nor status is present..")
 
-        # update state and status.
-        task_state = self._task_state_mapping[IDRAC_JSON.TaskState]
-        task_status = self._task_state_mapping[IDRAC_JSON.TaskStatus]
+        resp_state = resp_data[IDRAC_JSON.TaskState]
+        resp_status = resp_data[IDRAC_JSON.TaskStatus]
 
+        # update state and status.
+        task_state = self._task_state_mapping[resp_state]
+        task_status = self._task_status_mapping[resp_status.lower()]
         return task_state, task_status
 
     def fetch_task(self,
                    task_id: str,
-                   sleep_time: Optional[int] = 2,
+                   sleep_time: Optional[int] = 10,
                    wait_for: Optional[int] = 0,
                    wait_for_state: Optional[TaskState] = TaskState.Unknown) -> TaskState:
 
@@ -490,11 +507,13 @@ class IDracManager(RedfishManager):
         # if job scheduler or scheduling it make sense to wait otherwise we return state
         # we expect a JobState
         if IDRAC_JSON.JobState in jb:
+
             current_state = jb[IDRAC_JSON.JobState]
             if current_state not in self._job_state_mapping:
                 raise UnexpectedResponse(f"IDRAC returned a {current_state} job type that we don't know.")
             _ = self._job_state_mapping[current_state]
-            if current_state == JobState.Scheduled.value or current_state == JobState.Scheduling:
+            if current_state == JobState.Scheduled.value or current_state == JobState.Scheduling.value \
+                    or current_state == JobState.Running.value:
                 self.logger.info(f"Job {task_id} is {current_state}.. waiting for completion.")
             else:
                 self.logger.info(f"Job {task_id} is {current_state}..bouncing off.")
@@ -510,10 +529,10 @@ class IDracManager(RedfishManager):
                 resp = self.api_get_call(f"{self._default_method}{self.idrac_ip}"
                                          f"{IDRAC_API.Tasks}{task_id}", hdr={})
 
-                if 'Retry-After' in resp.headers["Retry-After"]:
+                if 'Retry-After' in resp.headers:
                     retry_after = int(resp.headers["Retry-After"])
                     self.logger.info(f"Remote server responded with Retry-After {retry_after}")
-
+                print(f"fetch status code {resp.status_code}")
                 if resp.status_code == 401:
                     self.logger.error(f"task service returned 401")
                     AuthenticationFailed("Authentication failed.")
@@ -536,7 +555,6 @@ class IDracManager(RedfishManager):
                 # when the client performs a GET request on the task monitor URI.
                 elif resp.status_code == 202:
                     self.logger.info(f"task service returned 202")
-
                     # state acquisition and update state
                     resp_data = resp.json()
                     task_state, task_status = self.get_task_state(resp)
@@ -545,7 +563,7 @@ class IDracManager(RedfishManager):
 
                     # update description so caller see.
                     pbar.set_description(task_state.value)
-                    if task_status == TaskStatus.Critical or TaskStatus.Warning:
+                    if task_status == TaskStatus.Critical or task_status == TaskStatus.Warning:
                         # we bounce, if status not ok
                         break
 
@@ -1061,6 +1079,14 @@ class IDracManager(RedfishManager):
         :return: IdracApiRespond if httm method request succeed
         :raise RedfishException if HTTP method failed.
         """
+        # if location in the header , job created
+        print("Response code", response.status_code)
+
+        if response.headers is not None \
+                and RedfishJsonSpec.Location in response.headers:
+            print("Response code", response.headers[RedfishJsonSpec.Location])
+            return IdracApiRespond.AcceptedTaskGenerated
+
         if response.status_code == expected:
             return self._http_code_mapping[response.status_code]
 
@@ -1408,7 +1434,7 @@ class IDracManager(RedfishManager):
             self,
             do_watch: Optional[bool] = False,
             power_state_attr: Optional[str] = "PowerState",
-            default_reboot_type: Optional[ResetType] = ResetType.ForceRestart) -> CommandResult:
+            default_reboot_type: Optional[ResetType] = ResetType.ForceRestart.value) -> CommandResult:
         """Reboot a chassis, if chassis in power down state.
 
         Reboot on power down state is no op, method return
@@ -1424,23 +1450,24 @@ class IDracManager(RedfishManager):
         """
         # state of chassis
         cmd_chassis = self.sync_invoke(
-            ApiRequestType.ChassisQuery, "chassis_service_query",
+            ApiRequestType.ChassisQuery,
+            "chassis_service_query",
             data_filter=power_state_attr
         )
 
         if cmd_chassis.error is not None:
             self.logger.info(
-                f"Failed to fetch a chassis power state"
+                f"Failed to fetch a chassis power state. Chassis return error."
             )
             return cmd_chassis
 
-        if isinstance(cmd_chassis.data, dict) and 'PowerState' in cmd_chassis.data:
+        if isinstance(cmd_chassis.data, dict) and IDRAC_JSON.PowerState in cmd_chassis.data:
             pd_state = cmd_chassis.data[power_state_attr]
-            if pd_state == 'On':
+            if pd_state.lower() == 'on':
                 return self.sync_invoke(
-                    ApiRequestType.RebootHost, "reboot",
+                    ApiRequestType.ComputerSystemReset, "reboot",
                     reset_type=default_reboot_type,
-                    do_watch=do_watch
+                    do_wait=do_watch
                 )
             else:
                 self.logger.info(
@@ -1450,7 +1477,8 @@ class IDracManager(RedfishManager):
                 return CommandResult({}, None, None, None)
         else:
             self.logger.info(
-                f"Failed to acquire current power state.")
+                f"Failed to acquire current power state."
+            )
 
         return cmd_chassis
 
@@ -1524,10 +1552,43 @@ class IDracManager(RedfishManager):
         return ""
 
     @cached_property
+    def idrac_managers_count(self) -> str:
+        """Return manager count. typically it 1
+        :return:
+        """
+        cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}")
+        return cmd_result.data["Members@odata.count"]
+
+    @cached_property
+    def idrac_manager_version(self) -> str:
+        """Remote idrac version.
+        :return:
+        """
+        cmd_result = self.base_query(
+            f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
+
+        # idrac ctl only manage one instance.
+        member_list = cmd_result.data
+        if len(member_list) > 1:
+            logging.warning("idrac manage more than one entity")
+        elif len(member_list) == 1:
+            member = member_list[-1]
+            if RedfishJson.Data_id in member:
+                member_target = member[RedfishJson.Data_id]
+                cmd_result = self.base_query(
+                    member_target,
+                    key=IDRAC_JSON.IDracFirmwareVersion
+                )
+                return cmd_result.data
+        else:
+            raise
+
+    @cached_property
     def idrac_members(self) -> str:
         """Shared method return idrac manage members servers list as json
         /redfish/v1/Managers/iDRAC.Embedded.1
-        after first cal , result cached all follow-up call will return cached result.
+
+        Upon first call , result cached all follow-up call will return cached result.
         :return:
         """
         cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
@@ -1542,6 +1603,12 @@ class IDracManager(RedfishManager):
         """
         cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
         return self.value_from_json_list(cmd_result.data, IDRAC_JSON.Data_id)
+
+    def computer_system_id(self):
+        """alias name for idrac_manage_servers to match v6.0 docs
+        :return: str: computer_system_id "/redfish/v1/Systems/System.Embedded.1"
+        """
+        return self.idrac_manage_servers
 
     @cached_property
     def idrac_manage_servers(self) -> str:

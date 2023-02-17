@@ -8,7 +8,6 @@ to a file and consume asynchronously or synchronously.
 Author Mus spyroot@gmail.com
 """
 import argparse
-import warnings
 from abc import abstractmethod
 from typing import Optional
 
@@ -74,13 +73,9 @@ class GetTask(IDracManager, scm_type=ApiRequestType.GetTask,
 
         data = self.sync_invoke(
             ApiRequestType.ChassisQuery,
-            "chassis_service_query")
+            "chassis_service_query"
+        )
 
         data = {}
-        try:
-            data = self.fetch_task(job_id)
-        except MissingResource as mr:
-            warnings.warn(str(mr))
-            pass
-
+        data = self.fetch_task(job_id)
         return CommandResult(data, None, None, None)

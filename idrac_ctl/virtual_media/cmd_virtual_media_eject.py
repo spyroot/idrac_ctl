@@ -10,13 +10,14 @@ Will eject virtual device id 1
 Author Mus spyroot@gmail.com
 """
 import argparse
-import json
 import warnings
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult, InvalidArgument
+from idrac_ctl import CommandResult
+from idrac_ctl.cmd_exceptions import InvalidArgument
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class VirtualMediaEject(IDracManager,
@@ -26,6 +27,7 @@ class VirtualMediaEject(IDracManager,
     """iDRACs cmd ejects virtual media
     Virtual medial must be inserted, otherwise command throw exception.
     """
+
     def __init__(self, *args, **kwargs):
         super(VirtualMediaEject, self).__init__(*args, **kwargs)
 
@@ -75,28 +77,39 @@ class VirtualMediaEject(IDracManager,
             warnings.warn("Old api")
 
         members = virtual_media.data['Members']
-        actions = [self.discover_redfish_actions(self, m) for m
-                   in members if m['Id'] == device_id]
+        actions = [
+            self.discover_redfish_actions(self, m) for m
+            in members if m['Id'] == device_id
+        ]
         if len(actions) == 0:
             valid_dev_id = [m['Id'] for m in members]
             raise InvalidArgument(f"Invalid device id {device_id}, "
                                   f"supported device id {valid_dev_id}")
 
         # if another image already mounted.
-        inserted = {'image': m['Image'] for
-                    m in members if m['Id'] == device_id
-                    and m['Inserted'] is False}
+        inserted = {
+            'image': m['Image'] for m
+            in members if m['Id'] == device_id and m['Inserted'] is False
+        }
 
         if 'image' in inserted:
             raise InvalidArgument(f"Image already ejected")
 
         eject_rest = [a['EjectMedia'].target for a in actions][-1]
-        r = f"https://{self.idrac_ip}{eject_rest}"
 
-        api_result = {}
+        # r = f"https://{self.idrac_ip}{eject_rest}"
+
         payload = {}
-        response = self.api_post_call(r, json.dumps(payload), headers)
-        if self.default_post_success(self, response):
-            api_result = self.api_success_msg(True)
+        cmd_result, api_resp = self.base_post(
+            eject_rest, payload=payload,
+            do_async=do_async, expected_status=202
+        )
 
-        return CommandResult(api_result, None, None, None)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            self.logger.info(f"Fetching task {task_id} state.")
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        return cmd_result

@@ -4,13 +4,14 @@ Command provide option to trigger and apply current pending jobs.
 Author Mus spyroot@gmail.com
 """
 import logging
+import time
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl.redfish_manager import CommandResult
 from idrac_ctl.idrac_manager import IDracManager
-from idrac_ctl.idrac_shared import Singleton, ApiRequestType
-from idrac_ctl.idrac_shared import JobTypes, IdracApiRespond
+from idrac_ctl.idrac_shared import CliJobTypes, IdracApiRespond
+from idrac_ctl.idrac_shared import Singleton, ApiRequestType, ResetType, JobState
+from idrac_ctl.redfish_manager import CommandResult
 
 
 class JobApply(IDracManager,
@@ -19,6 +20,7 @@ class JobApply(IDracManager,
                metaclass=Singleton):
     """A command query job_service_query.
     """
+
     def __init__(self, *args, **kwargs):
         super(JobApply, self).__init__(*args, **kwargs)
 
@@ -31,7 +33,7 @@ class JobApply(IDracManager,
         """
         cmd_parser = cls.base_parser(is_reboot=True)
         cmd_parser.add_argument(
-            'setting', choices=['bios', 'attribute', 'raid'],
+            'setting', choices=['bios', 'boot-option', 'attribute', 'raid'],
             default="bios",
             help="what setting we apply a change. (bios, raid, etc)"
         )
@@ -52,10 +54,15 @@ class JobApply(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 setting: Optional[str] = "bios",
-                do_watch: Optional[bool] = False,
+                do_watch: Optional[bool] = True,
                 do_reboot: Optional[bool] = False,
+                sleep_time: Optional[int] = 15,
+                default_reboot_type: Optional[str] = ResetType.PowerCycle.value,
                 **kwargs) -> CommandResult:
         """Executes apply job and trigger execution.
+
+        :param default_reboot_type:  a default reset type applied in order clean all scheduled jobs
+        :param sleep_time:  a default sleep time, in sync mode we wait to see task moved on
         :param do_async: note async will subscribe to an event loop.
         :param filename: if filename indicate call will save a bios setting to a file.
         :param verbose: enables verbose output
@@ -66,43 +73,70 @@ class JobApply(IDracManager,
         :return: CommandResult and if filename provide will save to a file.
         """
         target_api = "/redfish/v1/Managers/iDRAC.Embedded.1/Jobs"
-        bios = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
+        bios = f"{self.idrac_manage_servers}/Bios/Settings"
+        boot_options = f"{self.idrac_manage_servers}/BootOptions"
 
+        job_type = None
         if setting == "bios":
             pd = {
                 "TargetSettingsURI": bios
             }
+            job_type = CliJobTypes.Bios_Config.value
+        elif setting == "boot-option":
+            pd = {
+                "TargetSettingsURI": boot_options
+            }
+            job_type = CliJobTypes.Bios_Config.value
         else:
             pd = {}
 
         scheduled_jobs = self.sync_invoke(
             ApiRequestType.Jobs, "jobs_sources_query",
-            filter_scheduled=True, job_type=JobTypes.BIOS_CONFIG, job_ids=True
+            filter_scheduled=True,
+            job_type=job_type,
+            job_ids=True
         )
 
         if scheduled_jobs.error is not None:
             return scheduled_jobs
 
-        # if we have scheduled job
+        # if we have at least one scheduled job
+        rebooted = {}
+        _do_watch = False if do_async else do_watch
+
         for job in scheduled_jobs.data:
             # reboot and wait for completion.
-            self.logger.info(f"Rebooting a host to apply pending job {job}")
-            cmd_result = self.reboot(do_watch=True)
-            if cmd_result.error:
-                logging.info("Failed reboot a host")
+            self.logger.info(
+                f"Rebooting a host to apply pending job {job}")
+
+            if job not in rebooted:
+                cmd_result = self.reboot(
+                    do_watch=_do_watch,
+                    default_reboot_type=ResetType.PowerCycle.value
+                )
+                if cmd_result.error:
+                    logging.info("Failed reboot a host")
+                    break
+                rebooted[job] = True
+
+            # in async case we reboot and will not wait.
+            if do_async:
                 break
-            task_state = self.fetch_task(job)
-            if task_state.value == task_state.Completed:
-                break
+
+            jb = self.get_job(job)
+            if 'JobState' in jb:
+                job_state = jb['JobState']
+                # we wait for job change to change a state
+                if job_state == JobState.Scheduled or job_state == JobState.Scheduling:
+                    time.sleep(sleep_time)
+                else:
+                    self.fetch_task(job)
 
         cmd_result, api_resp = self.base_post(target_api, pd, do_async=do_async)
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
-            job_id = cmd_result.data['job_id']
-            task_state = self.fetch_task(cmd_result.data['job_id'])
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
             cmd_result.data['task_state'] = task_state
-            cmd_result.data['task_id'] = job_id
-        else:
-            if api_resp.Success or api_resp.Ok:
-                return cmd_result
+            cmd_result.data['task_id'] = task_id
 
         return cmd_result

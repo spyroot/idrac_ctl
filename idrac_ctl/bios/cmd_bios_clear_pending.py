@@ -8,10 +8,10 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
+from idrac_ctl.idrac_shared import IdracApiRespond
 from idrac_ctl.cmd_exceptions import FailedDiscoverAction
 from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
-from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
 
 
 class BiosClearPending(IDracManager,
@@ -86,4 +86,4 @@ class BiosClearPending(IDracManager,
             cmd_result.data['task_state'] = task_state
             cmd_result.data['task_id'] = task_id
 
-        return CommandResult(self.api_success_msg(api_resp), None, None, None)
+        return cmd_result

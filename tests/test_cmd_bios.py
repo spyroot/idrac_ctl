@@ -1,3 +1,19 @@
+"""This a unit test for query bios in redfish/idrac
+endpoint.
+
+Test all cmd options.  (Filter / Saving etc)
+Filtering from command line, single or list of bios attributes
+Filtering from query json file etc.
+
+Before you run unit test.
+IDRAC_IP=IP
+IDRAC_PASSWORD=PASS
+IDRAC_USERNAME=root
+# set PYTHONWARNINGS as well, so it will not output warning about insecure.
+PYTHONWARNINGS=ignore:Unverified HTTPS request
+
+Author Mus spyroot@gmail.com
+"""
 import json
 import os
 import pathlib
@@ -5,7 +21,8 @@ from json import JSONDecodeError
 from unittest import TestCase
 
 import idrac_ctl
-from idrac_ctl.idrac_manager import IDracManager, CommandResult
+from idrac_ctl.idrac_manager import IDracManager
+from idrac_ctl.idrac_manager import CommandResult
 from idrac_ctl.idrac_shared import ApiRequestType
 from idrac_ctl import save_if_needed
 import logging
@@ -48,7 +65,7 @@ class TestBios(TestCase):
 
     def test_save_bios_query(
             self, bios_filename="/tmp/bios_test01.json"):
-        """test basic query
+        """Test query a bios and save to a file respond.
         :return:
         """
         manager = self.setUpClass()
@@ -76,7 +93,7 @@ class TestBios(TestCase):
         generated_file.unlink()
 
     def test_save_bios_query_filter_single(self):
-        """test basic bios query single bios entity
+        """Test query and filter single bios attribute
         :return:
         """
         manager = self.setUpClass()
@@ -102,7 +119,7 @@ class TestBios(TestCase):
         )
 
     def test_save_bios_query_filter_list(self):
-        """test basic bios query on list of keys
+        """Test query based on list of bios attributes.
         :return:
         """
         manager = self.setUpClass()
@@ -122,7 +139,7 @@ class TestBios(TestCase):
         self.assertTrue("SysMemSize" in query_data, "query must contain filtered key")
 
     def test_save_bios_query_filter_and_save(
-            self,  filename="/tmp/bios_filter_save.json"):
+            self, filename="/tmp/bios_filter_save.json"):
         """test basic bios query on list of keys
         and save result to a file.
         :return:
@@ -160,19 +177,23 @@ class TestBios(TestCase):
         )
 
     def test_save_bios_query_from_file(
-            self,  filename="/tmp/bios_filter_save.json"):
+            self,
+            query_file_name="/tmp/bios_query.json"):
         """test basic bios query on list of keys
         and save result to a file.
         :return:
         """
         manager = self.setUpClass()
+        # key saved as query in json file
         key_list = ["ProcCStates,SysMemSize"]
         # save query to a file and use to , query bios
-        query_file_name = "/tmp/bios_query.json"
         save_if_needed(query_file_name, key_list)
 
         generated_file = pathlib.Path(query_file_name)
-        self.assertTrue(generated_file.exists(), "generated query must exists")
+        self.assertTrue(
+            generated_file.exists(),
+            "generated query must exists"
+        )
 
         query_result = manager.sync_invoke(
             ApiRequestType.BiosQuery, "bios_inventory",

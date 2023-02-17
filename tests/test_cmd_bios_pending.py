@@ -1,3 +1,15 @@
+"""This a unit test for query
+and clear bios pending values.
+
+Before you run unit test.
+IDRAC_IP=IP
+IDRAC_PASSWORD=PASS
+IDRAC_USERNAME=root
+# set PYTHONWARNINGS as well, so it will not output warning about insecure.
+PYTHONWARNINGS=ignore:Unverified HTTPS request
+
+Author Mus spyroot@gmail.com
+"""
 import json
 import os
 import pathlib
@@ -5,7 +17,8 @@ from json import JSONDecodeError
 from unittest import TestCase
 
 import idrac_ctl
-from idrac_ctl.idrac_manager import IDracManager, CommandResult
+from idrac_ctl.idrac_manager import IDracManager
+from idrac_ctl.idrac_manager import CommandResult
 from idrac_ctl.idrac_shared import ApiRequestType
 import logging
 
@@ -96,8 +109,7 @@ class TestBiosPending(TestCase):
         self.assertTrue(
             generated_file.exists(), "cmd must save a file")
 
-        json_file = idrac_ctl.from_json_spec(
-            filename)
+        json_file = idrac_ctl.from_json_spec(filename)
         try:
             _ = json.dumps(json_file, sort_keys=True)
         except JSONDecodeError as _:

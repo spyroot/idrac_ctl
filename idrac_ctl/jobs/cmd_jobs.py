@@ -18,6 +18,7 @@ from abc import abstractmethod
 from typing import Optional
 from datetime import datetime
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.cmd_exceptions import InvalidArgumentFormat
 
 
 class JobList(IDracManager,
@@ -181,6 +182,7 @@ class JobList(IDracManager,
         data = response.json()
         self.default_error_handler(response)
         filtered_data = []
+
         if filter_scheduled:
             scheduled_jobs = [job for job in data['Members'] if job['JobState'] == 'Scheduled'
                               or job['JobState'] == 'Scheduling']
@@ -215,20 +217,31 @@ class JobList(IDracManager,
             filtered_data = data
 
         if sort_by_time:
-            if isinstance(filtered_data, dict) and 'Member' in filtered_data:
+            if isinstance(filtered_data, dict) and 'Members' in filtered_data:
                 member_data = filtered_data['Members']
             elif isinstance(filtered_data, list):
                 member_data = filtered_data
             else:
                 member_data = [filtered_data]
+            # sort
             filtered_data = sorted(
                 member_data, reverse=True, key=lambda
                     x: datetime.fromisoformat(x['StartTime']).timestamp()
                 if 'ActualRunningStartTime' in x else None
             )
-        job_type = self.resolve_job_type(job_type)
+
         if job_type is not None and len(job_type) > 0:
-            filtered_data = [d for d in filtered_data if 'JobType' in d and d['JobType'] == job_type]
+            if job_type in self._cli_job_type_mapping:
+                idrac_job_type = self._cli_job_type_mapping[job_type]
+            else:
+                supported = self._cli_job_type_mapping.keys()
+                # supported = supported
+                raise InvalidArgumentFormat(f"{job_type} unknown job type, supported {supported}")
+
+            if isinstance(filtered_data, list):
+                filtered_data = [d for d in filtered_data
+                                 if 'JobType' in d and d['JobType'] == idrac_job_type
+                                 ]
 
         if job_ids:
             filtered_data = [f["Id"] for f in filtered_data if "Id" in f]

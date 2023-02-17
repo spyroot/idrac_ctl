@@ -1,7 +1,7 @@
 """iDRAC query chassis services
 
-Command provides raw query chassis and provide
-list of supported actions.
+Command provides option to query boot source for
+pending values.
 
 Author Mus spyroot@gmail.com
 """
@@ -11,15 +11,14 @@ from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 from idrac_ctl.redfish_shared import RedfishJson
 
 
-class BiosQueryPending(IDracManager,
-                       scm_type=ApiRequestType.BiosQueryPending,
-                       name='bios_query_pending',
-                       metaclass=Singleton):
-    """A command query job_service_query.
+class BootSourcePending(IDracManager,
+                        scm_type=ApiRequestType.BootSourcePending,
+                        name='query_pending',
+                        metaclass=Singleton):
+    """A command query dell OEM for boot source pending changes.
     """
-
     def __init__(self, *args, **kwargs):
-        super(BiosQueryPending, self).__init__(*args, **kwargs)
+        super(BootSourcePending, self).__init__(*args, **kwargs)
 
     @staticmethod
     @abstractmethod
@@ -28,15 +27,15 @@ class BiosQueryPending(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = cls.base_parser()
+        cmd_parser = cls.base_parser(is_reboot=False)
         cmd_parser.add_argument(
             '-r', '--filter', required=False,
             dest="data_filter", type=str, default="",
-            help="filter on pending value. (Example -r SriovGlobalEnable)"
+            help="filters on pending value."
         )
 
-        help_text = "command query for bios pending values"
-        return cmd_parser, "bios-pending", help_text
+        help_text = "command query for boot source a current pending values"
+        return cmd_parser, "boot-pending", help_text
 
     def execute(self,
                 filename: Optional[str] = None,
@@ -46,9 +45,11 @@ class BiosQueryPending(IDracManager,
                 do_expanded: Optional[bool] = False,
                 data_filter: Optional[str] = None,
                 **kwargs) -> CommandResult:
-        """Executes bios for pending changes.
+        """Executes and query boot source pending.
 
-        :param data_filter:
+        BootSources settings,  require a system reset to apply.
+
+        :param data_filter: filter applied to find specific device.
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded: will do expand query
         :param filename: if filename indicate call will save a bios setting to a file.
@@ -56,9 +57,7 @@ class BiosQueryPending(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
-        if data_filter:
-            do_expanded = True
+        target_api = f"{self.idrac_manage_servers}/Oem/Dell/DellBootSources/Settings"
 
         cmd_result = self.base_query(
             target_api, filename=filename,

@@ -1,0 +1,17 @@
+{
+  "Boot": {
+    "BootOrder": [
+      "HardDisk.List.1-1",
+      "NIC.Integrated.1-1-1",
+      "NIC.Slot.8-1",
+      "NIC.Slot.8-1",
+      "NIC.Slot.8-1",
+      "NIC.Slot.8-1",
+      "Optical.iDRACVirtual.1-1",
+      "Optical.vFlash.ISOIMG-1"
+    ],
+    "BootSourceOverrideEnabled": "Enable",
+    "BootSourceOverrideMode": "Legacy",
+    "BootSourceOverrideTarget": "None"
+  }
+}

@@ -61,8 +61,10 @@ class DrivesQuery(IDracManager,
         :return: named tuple CommandResult
         :raise: AuthenticationFailed, UnexpectedResponse
         """
-        drives = self.sync_invoke(ApiRequestType.StorageViewQuery,
-                                  "storage_get", controller=controller, data_filter="Drives")
+        drives = self.sync_invoke(
+            ApiRequestType.StorageViewQuery,
+            "storage_get", controller=controller, data_filter="Drives"
+        )
 
         odata_ids = find_ids(drives.data, "@odata.id")
         final_data = []
@@ -91,4 +93,4 @@ class DrivesQuery(IDracManager,
         final_data.append({"disk_ids": disk_ids})
         final_data.append({"none_raid_disk_ids": none_raid_disk_ids})
         final_data.append({"raid_disk_ids": raid_disk_ids})
-        return CommandResult(final_data,  None, None, None)
+        return CommandResult(final_data, None, None, None)

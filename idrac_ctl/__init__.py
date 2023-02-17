@@ -11,14 +11,18 @@ from .dell_lc.cmd_dell_lc_api import *
 from .dell_lc.cmd_dell_lc_rs import *
 from .dell_lc.cmd_dell_lc_services import *
 
+# compute
 from .compute.cmd_power_state import *
+from .compute.cmd_compute_setting import *
+
 from .idrac_shared import *
-from idrac_ctl.raid.cmd_raid_service import *
+from .raid.cmd_raid_service import *
+
 # bios commands
 from .bios.cmd_bios import *
 from .bios.cmd_bios_clear_pending import *
 from .bios.cmd_bios_pending import *
-from .bios.cmd_boot_order import *
+from .bios.cmd_change_boot_order import *
 from .bios.bios_registry import *
 from .bios.cmd_change_bios import *
 from .bios.cmd_bios_reset_default import *
@@ -65,8 +69,10 @@ from .storage.cmd_drives import *
 from .storage.cmd_convert_none_raid import *
 from .storage.cmd_convert_to_raid import *
 
+# chassis cmd
 from .chassis.cmd_chassis_query import *
 from .chassis.cmd_chasis_reset import *
+from .chassis.cmd_update_chasis import *
 
 # dell oem attach
 from .delloem.delloem_attach_status import *
@@ -88,14 +94,19 @@ from .volumes.cmd_initilize import *
 from .volumes.cmd_volumes import *
 from .volumes.cmd_virtual_disk import *
 
+# boot options
+from .boot_options.cmd_boot_option_list import *
+from .boot_options.cmd_boot_options_query import *
+
+
 # boot sources
 from .boot_source.cmd_boot_one_shot import *
-from .boot_source.cmd_boot_source_enable import *
-from .boot_source.cmd_boot_sources_list import *
-from .boot_source.cmd_boot_source_get import *
-from .boot_source.cmd_query_boot_options import *
 from .boot_source.cmd_boot_settings import *
+from .boot_source.cmd_boot_source_get import *
 from .boot_source.cmd_clear_pending import *
+from .boot_source.cmd_pending import *
+from .boot_source.cmd_enable import *
+from .boot_source.cmd_update import *
 
 # account
 from .accounts.cmd_accounts import *
