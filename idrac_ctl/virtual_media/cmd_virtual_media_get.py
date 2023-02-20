@@ -71,7 +71,8 @@ class VirtualMediaGet(IDracManager,
                 filter_key: Optional[str] = "",
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Execute command and fetch virtual media.
+        """Execute command and fetch virtual media status
+
         :param device_id: filter based on device
         :param filter_key filter based on key.
         :param verbose: enables verbose output
@@ -103,14 +104,18 @@ class VirtualMediaGet(IDracManager,
                     target_device = e
                     break
             if target_device is None:
-                return CommandResult({"result": f"device id {device_id} not found"}, None, None, None)
+                return CommandResult(
+                    {"Status": f"device id {device_id} not found"}, None, None, None)
             else:
                 data = target_device
 
-        if filter_key is not None and \
-                len(filter_key) > 0:
+        if filter_key is not None and len(filter_key) > 0:
             if filter_key.strip() not in data:
-                return CommandResult({"result": f"key {filter_key} not found"}, None, None, None)
+                return CommandResult(
+                    {
+                        "Status": f"key {filter_key} not found"
+                    }, None, None, None
+                )
             data = data[filter_key]
 
         save_if_needed(filename, data)

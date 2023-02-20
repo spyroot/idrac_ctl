@@ -2,12 +2,12 @@
 """
 import json
 from enum import auto, Enum
-from typing import Optional
 from json import JSONEncoder
-from .redfish_shared import RedfishApiRespond
-from .redfish_shared import RedfishJsonSpec
+from typing import Optional
+
 from .redfish_shared import RedfishApi
 from .redfish_shared import RedfishJson
+from .redfish_shared import RedfishJsonSpec
 
 
 class ApiRequestType(Enum):
@@ -463,11 +463,23 @@ class ApiRespondString:
 
 
 class BootSourceOverrideEnabled(Enum):
+    """IDRAC boot source override modes
+    """
     Disabled = "Disabled"
     Continuous = "Continuous"
     Once = "Once"
 
 
 class BootSourceOverrideMode(Enum):
+    """Boot source
+    """
     UEFI = "UEFI"
     Legacy = "Legacy"
+
+
+class MediaTypes(Enum):
+    """IDRAC virtual media types
+    """
+    CD = "CD"
+    DVD = "DVD"
+    USBStick = "USBStick"

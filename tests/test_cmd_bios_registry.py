@@ -63,7 +63,10 @@ class TestBiosRegistry(TestCase):
         """
         manager = self.setUpClass()
         query_result = manager.sync_invoke(
-            ApiRequestType.BiosRegistry, "bios_registry", filename="/tmp/bios_registry.json")
+            ApiRequestType.BiosRegistry,
+            "bios_registry",
+            filename="/tmp/bios_registry.json"
+        )
 
         self.assertIsInstance(query_result, CommandResult)
         self.assertIsInstance(query_result.data, list)
@@ -84,7 +87,8 @@ class TestBiosRegistry(TestCase):
 
         generated_file.unlink()
 
-    def test_save_bios_save_no_read_only(self, filename="/tmp/bios_registry_no_read_only.json"):
+    def test_save_bios_save_no_read_only(
+            self, filename="/tmp/bios_registry_no_read_only.json"):
         """test basic query
         :return:
         """

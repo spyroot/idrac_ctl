@@ -120,6 +120,11 @@ class VirtualMediaInsert(IDracManager,
                              default="1",
                              help="Default device id. Example 1 or 2")
 
+        cmd_arg.add_argument('--eject',
+                             action='store_true',
+                             required=False, dest="do_eject",
+                             help="Ejects cdrom before mount.")
+
         help_text = "command insert virtual media"
         return cmd_arg, "insert_vm", help_text
 
@@ -131,9 +136,11 @@ class VirtualMediaInsert(IDracManager,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
+                do_eject: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Execute command, inserts a virtual media eject.
 
+        :param do_eject: ejects cdrom if it already mounted.
         :param device_id: virtual media device id 1 or 1
         :param remote_username:  username for remote authentication
         :param remote_password:  password for remote authentication
@@ -173,9 +180,18 @@ class VirtualMediaInsert(IDracManager,
         inserted = {'image': m['Image'] for
                     m in members if m['Id'] == device_id and m['Inserted']}
 
-        if 'image' in inserted:
-            raise InvalidArgument(f"Image {inserted['image']} "
-                                  f"already inserted. Eject media first.")
+        if do_eject is False:
+            if 'image' in inserted:
+                raise InvalidArgument(f"Image {inserted['image']} "
+                                      f"already inserted. Eject media first.")
+        else:
+            cmd_resp = self.sync_invoke(
+                ApiRequestType.VirtualMediaEject,
+                "virtual_disk_eject",
+                device_id=device_id
+            )
+            if cmd_resp.error is not None:
+                return cmd_resp
 
         target = [a['InsertMedia'].target for a in actions][-1]
 
