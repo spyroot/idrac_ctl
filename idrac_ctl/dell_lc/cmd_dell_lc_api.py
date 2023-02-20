@@ -7,6 +7,7 @@ from typing import Optional
 
 from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from idrac_ctl.idrac_shared import IdracApiRespond, IDRAC_API
 
 
 class GetRemoteServicesAPIStatus(IDracManager,
@@ -45,9 +46,17 @@ class GetRemoteServicesAPIStatus(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        target_api = "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/" \
+        target_api = f"{self.idrac_members}/{IDRAC_API.DellLCService}/" \
                      "Actions/DellLCService.GetRemoteServicesAPIStatus"
-        r = f"https://{self.idrac_ip}{target_api}"
-        response = self.api_post_call(r, json.dumps({}), headers)
-        _ = self.default_post_success(self, response, expected=204)
-        return CommandResult(response.json(), None, None, None)
+
+        cmd_result, api_resp = self.base_post(target_api, payload={})
+
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        return cmd_result
+
+

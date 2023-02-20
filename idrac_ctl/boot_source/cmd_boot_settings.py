@@ -11,7 +11,8 @@ import asyncio
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult, save_if_needed
+from idrac_ctl import Singleton, IDracManager, CommandResult, save_if_needed
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class BootSettings(IDracManager,

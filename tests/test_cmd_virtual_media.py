@@ -4,22 +4,12 @@ Author Mus spyroot@gmail.com
 """
 import logging
 import os
-from datetime import datetime
-from unittest import TestCase
-from idrac_ctl.idrac_manager import IDracManager
-import json
-import os
-import pathlib
-from json import JSONDecodeError
 from unittest import TestCase
 
-import idrac_ctl
-from idrac_ctl.idrac_manager import IDracManager
-from idrac_ctl.idrac_manager import CommandResult
-from idrac_ctl.idrac_shared import ApiRequestType
 from idrac_ctl.cmd_exceptions import InvalidArgument
-
-import logging
+from idrac_ctl.idrac_manager import CommandResult
+from idrac_ctl.idrac_manager import IDracManager
+from idrac_ctl.idrac_shared import ApiRequestType
 
 img_location = "http://10.241.7.99/ph4-rt-refresh_adj_offline_testnf_os4_flex21.iso"
 
@@ -142,10 +132,28 @@ class TestVirtualMedia(TestCase):
         manager = self.setUpClass()
 
         cmd_resp = manager.sync_invoke(
-                          ApiRequestType.VirtualMediaInsert,
-                          "virtual_disk_insert",
-                          uri_path=img_location,
-                          device_id="1", do_eject=True)
+            ApiRequestType.VirtualMediaInsert,
+            "virtual_disk_insert",
+            uri_path=img_location,
+            device_id="1", do_eject=True)
+
+        self.assertIsInstance(cmd_resp, CommandResult)
+        self.assertIsInstance(cmd_resp.data, dict)
+        data = cmd_resp.data
+        self.assertTrue("Status" in data,
+                        f"Status key must in respond")
+
+    def test_base_eject(self):
+        """Base test attach media no id must raise
+        :return:
+        """
+        manager = self.setUpClass()
+
+        cmd_resp = manager.sync_invoke(
+            ApiRequestType.VirtualMediaEject,
+            "virtual_disk_eject",
+            device_id="1",
+            do_strict=False)
 
         self.assertIsInstance(cmd_resp, CommandResult)
         self.assertIsInstance(cmd_resp.data, dict)

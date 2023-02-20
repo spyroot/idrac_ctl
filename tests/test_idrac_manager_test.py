@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from unittest import TestCase
 from idrac_ctl.idrac_manager import IDracManager
+from idrac_ctl.idrac_shared import PowerState
 
 logging.basicConfig()
 log = logging.getLogger("LOG")
@@ -17,11 +18,12 @@ class BasicManagerTest(TestCase):
 
     @classmethod
     def setUpClass(cls) -> IDracManager:
-        redfish_api = IDracManager(idrac_ip=os.environ.get('IDRAC_IP', ''),
-                                   idrac_username=os.environ.get('IDRAC_USERNAME', 'root'),
-                                   idrac_password=os.environ.get('IDRAC_PASSWORD', ''),
-                                   insecure=False,
-                                   is_debug=False)
+        redfish_api = IDracManager(
+            idrac_ip=os.environ.get('IDRAC_IP', ''),
+            idrac_username=os.environ.get('IDRAC_USERNAME', 'root'),
+            idrac_password=os.environ.get('IDRAC_PASSWORD', ''),
+            insecure=False,
+            is_debug=False)
         return redfish_api
 
     def setUp(self) -> None:
@@ -113,4 +115,20 @@ class BasicManagerTest(TestCase):
         self.assertTrue(isinstance(resp, datetime), "return wrong data type")
         self.assertTrue(len(str(resp)) > 0, "failed fetch idrac idrac reset time")
 
+    def test_base_power_state(self):
+        """Test power state """
+        manager = self.setUpClass()
+        pd_state = manager.power_state
+        self.assertTrue(pd_state is not PowerState.Unknown, "Power state should be On or Off")
 
+    def test_uuid(self):
+        """Test chassis uuid """
+        manager = self.setUpClass()
+        uuid = manager.chassis_uuid
+        self.assertTrue(len(uuid) > 0, "UUID must be none empty string")
+
+    def test_serial(self):
+        """Test chassis uuid """
+        manager = self.setUpClass()
+        serial = manager.serial
+        self.assertTrue(len(serial) > 0, "serial must be none empty string")

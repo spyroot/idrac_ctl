@@ -112,7 +112,7 @@ class VirtualMediaInsert(IDracManager,
                              default=None,
                              help="remote password for authentication if required")
 
-        cmd_arg.add_argument('--uri_path', required=False, type=str,
+        cmd_arg.add_argument('--uri_path', required=True, type=str,
                              default=None,
                              help="url path to iso file. Example http://1.1.1.1/test.iso")
 
@@ -177,13 +177,16 @@ class VirtualMediaInsert(IDracManager,
                                   f"support device id {dev_id}")
 
         # if another image already mounted.
-        inserted = {'image': m['Image'] for
-                    m in members if m['Id'] == device_id and m['Inserted']}
+        inserted = {
+            'image': m['Image'] for
+            m in members if m['Id'] == device_id and m['Inserted']
+        }
 
         if do_eject is False:
             if 'image' in inserted:
-                raise InvalidArgument(f"Image {inserted['image']} "
-                                      f"already inserted. Eject media first.")
+                raise InvalidArgument(
+                    f"Image {inserted['image']} "
+                    f"already inserted. Eject media first.")
         else:
             cmd_resp = self.sync_invoke(
                 ApiRequestType.VirtualMediaEject,

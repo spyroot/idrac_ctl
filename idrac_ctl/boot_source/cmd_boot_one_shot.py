@@ -153,6 +153,6 @@ class BootOneShot(IDracManager,
 
         if do_reboot:
             reboot_result = self.reboot(do_watch=True)
-            cmd_result.data.update(reboot_result)
+            cmd_result.data["reboot"] = reboot_result.data
 
         return cmd_result

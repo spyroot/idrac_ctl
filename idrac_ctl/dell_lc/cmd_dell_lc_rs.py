@@ -1,12 +1,12 @@
 """iDRAC fetch dell lc rs status
 Author Mus spyroot@gmail.com
 """
-import json
 from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl import CommandResult
 from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from idrac_ctl.idrac_shared import IdracApiRespond, IDRAC_API
 
 
 class GetRemoteRssAPIStatus(IDracManager,
@@ -15,6 +15,7 @@ class GetRemoteRssAPIStatus(IDracManager,
                             metaclass=Singleton):
     """iDRACs cmd get status remote services api
     """
+
     def __init__(self, *args, **kwargs):
         super(GetRemoteRssAPIStatus, self).__init__(*args, **kwargs)
 
@@ -45,10 +46,14 @@ class GetRemoteRssAPIStatus(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        target_api = "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/" \
-                     "DellLCService/Actions/DellLCService.GetRSStatus"
-        r = f"https://{self.idrac_ip}{target_api}"
+        target_api = f"{self.idrac_members}/{IDRAC_API.DellLCService}" \
+                     f"/Actions/DellLCService.GetRSStatus"
+        cmd_result, api_resp = self.base_post(target_api, payload={})
 
-        response = self.api_post_call(r, json.dumps({}), headers)
-        _ = self.default_post_success(self, response, expected=204)
-        return CommandResult(response.json(), None, None, None)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        return cmd_result

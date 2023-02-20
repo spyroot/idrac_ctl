@@ -2,8 +2,11 @@ from enum import auto, Enum
 
 
 class RedfishActions(Enum):
+    """Redfish actions.
+    """
     BiosReset = "Bios.ResetBios"
     ManagerReset = "#Manager.Reset"
+    SimpleUpdate = "SimpleUpdate"
     ComputerSystemReset = "ComputerSystem.Reset"
 
 
@@ -49,8 +52,6 @@ class RedfishJson:
     Data_next = "@odata.nextLink"
     #
     MembersCount = "Members@odata.count"
-
-
     # This property is an array of references to the systems that this manager has control over.
     ManagerServers = "ManagerForServers"
     # This property is an array of references to the chassis that this manager has control over.
@@ -61,17 +62,29 @@ class RedfishJson:
 class RedfishApi:
     """
     """
+    Actions = "Actions"
+    Settings = "Settings"
+    Managers = "Managers"
+    Systems = "Systems"
+    Chassis = "Chassis"
+    AccountService = "AccountService"
+
+    BootSources = "BootSources"
+    BootSourcesRegistry = "BootSourcesRegistry"
+
     Version = "/redfish/v1"
-    Managers = f"{Version}/Managers"
-    Systems = f"{Version}/Systems"
-    Chassis = f"{Version}/Chassis"
+    Managers = f"{Version}/{Managers}"
+    Systems = f"{Version}/{Systems}"
+    Chassis = f"{Version}/{Chassis}"
 
+    Bios = "/Bios"
     UpdateService = f"{Version}/UpdateService"
-    UpdateServiceAction = f"{Version}/{UpdateService}/Actions/SimpleUpdate"
+    UpdateServiceAction = f"{UpdateService}/{Actions}/{RedfishActions.SimpleUpdate.value}"
 
-    ManagerAccount = f"{Version}/AccountService"
-    COMPUTE_RESET = "/Actions/ComputerSystem.Reset"
-    BIOS_RESET = "/Bios/Settings/Actions/Bios.ResetBios"
-    BIOS_SETTINGS = "/Bios/Settings"
-    BIOS = "/Bios"
+    ManagerAccount = f"{Version}/{AccountService}"
+    BiosSettings = f"{Bios}/{Settings}"
+    BiosReset = f"{Bios}/{Settings}/{Actions}/{RedfishActions.BiosReset.value}"
+    ComputeReset = f"/{Actions}/{RedfishActions.ComputerSystemReset.value}"
     CHASSIS = "/Chassis"
+
+

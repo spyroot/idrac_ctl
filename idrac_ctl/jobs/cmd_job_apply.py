@@ -9,7 +9,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from idrac_ctl.idrac_manager import IDracManager
-from idrac_ctl.idrac_shared import CliJobTypes, IdracApiRespond
+from idrac_ctl.idrac_shared import CliJobTypes, IdracApiRespond, IDRAC_API
 from idrac_ctl.idrac_shared import Singleton, ApiRequestType, ResetType, JobState
 from idrac_ctl.redfish_manager import CommandResult
 
@@ -72,19 +72,23 @@ class JobApply(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Managers/iDRAC.Embedded.1/Jobs"
+        target_api = f"{self.idrac_members}/{IDRAC_API.Jobs}"
         bios = f"{self.idrac_manage_servers}/Bios/Settings"
         boot_options = f"{self.idrac_manage_servers}/BootOptions"
 
         job_type = None
         if setting == "bios":
             pd = {
-                "TargetSettingsURI": bios
+                "TargetSettingsURI": bios,
+                "StartTime": "TIME_NOW",
+                "EndTime": "TIME_NA"
             }
             job_type = CliJobTypes.Bios_Config.value
         elif setting == "boot-option":
             pd = {
-                "TargetSettingsURI": boot_options
+                "TargetSettingsURI": boot_options,
+                "StartTime": "TIME_NOW",
+                "EndTime": "TIME_NA"
             }
             job_type = CliJobTypes.Bios_Config.value
         else:

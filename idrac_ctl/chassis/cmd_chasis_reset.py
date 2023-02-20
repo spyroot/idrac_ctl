@@ -36,7 +36,8 @@ class ChassisReset(IDracManager,
         :param cls:
         :return:
         """
-        cmd_parser = cls.base_parser(is_file_save=False, is_expanded=False)
+        cmd_parser = cls.base_parser(is_file_save=False,
+                                     is_expanded=False)
         cmd_parser.add_argument('--reset_type',
                                 required=False, dest='reset_type',
                                 default="On", type=str,
@@ -53,7 +54,8 @@ class ChassisReset(IDracManager,
         :raise InvalidArgument if reset type unknown
         """
         chassis_data = self.sync_invoke(
-            ApiRequestType.ChassisQuery, "chassis_service_query",
+            ApiRequestType.ChassisQuery,
+            "chassis_service_query",
             do_expanded=True
         )
 
@@ -103,7 +105,9 @@ class ChassisReset(IDracManager,
                 "Failed discover reset chassis actions."
             )
 
-        payload = {IDRAC_JSON.ResetType: reset_type}
+        payload = {
+            IDRAC_JSON.ResetType: reset_type
+        }
         cmd_result, api_resp = self.base_post(
             target_api, payload=payload, do_async=do_async
         )

@@ -107,6 +107,7 @@ from .boot_source.cmd_clear_pending import *
 from .boot_source.cmd_pending import *
 from .boot_source.cmd_enable import *
 from .boot_source.cmd_update import *
+from .boot_source.cmd_boot_source_registry import *
 
 # account
 from .accounts.cmd_accounts import *

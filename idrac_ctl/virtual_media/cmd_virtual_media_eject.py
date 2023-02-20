@@ -51,9 +51,12 @@ class VirtualMediaEject(IDracManager,
                 data_type: Optional[str] = "json",
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
+                do_strict: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Execute command virtual media eject.
+        """Execute command eject virtual media eject.
 
+        :param do_strict: will raise exception if media already ejected.
+                          mainly if caller need have special handler.
         :param device_id: virtual media device id. (1 or 2)
         :param verbose: enables verbose output
         :param do_async: will not block and return result as future.
@@ -93,12 +96,15 @@ class VirtualMediaEject(IDracManager,
         }
 
         if 'image' in inserted:
-            raise InvalidArgument(f"Image already ejected")
+            if do_strict:
+                raise InvalidArgument(f"Image already ejected")
+            else:
+                return CommandResult(
+                    {
+                        "Status": IdracApiRespond.Ok
+                     }, None, None, None)
 
         eject_rest = [a['EjectMedia'].target for a in actions][-1]
-
-        # r = f"https://{self.idrac_ip}{eject_rest}"
-
         payload = {}
         cmd_result, api_resp = self.base_post(
             eject_rest, payload=payload,

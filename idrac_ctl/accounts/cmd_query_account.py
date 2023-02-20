@@ -70,7 +70,7 @@ class QueryAccount(IDracManager,
             if len(accounts_id) > 0:
                 account = accounts_id[-1]
 
-        return self.base_query(f"{IDRAC_API.ACCOUNT}{account}",
+        return self.base_query(f"{IDRAC_API.Account}{account}",
                                filename=filename,
                                do_async=do_async,
                                do_expanded=do_expanded)

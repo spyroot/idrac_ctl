@@ -235,7 +235,7 @@ class BiosChangeSettings(IDracManager,
         :param start_date:
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BIOS_REGISTRY}"
+        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BiosRegistry}"
         cmd_result = self.base_query(
             target_api, filename=filename,
             do_async=do_async, do_expanded=False

@@ -88,7 +88,7 @@ class QueryAccountService(IDracManager,
             if schema_filter in self._json_filter_dict:
                 json_filter = self._json_filter_dict[schema_filter]
 
-        cmd_result = self.base_query(IDRAC_API.AccountService,
+        cmd_result = self.base_query(IDRAC_API.AccountServiceQuery,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=is_expanded)

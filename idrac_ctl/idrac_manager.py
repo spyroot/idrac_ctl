@@ -46,7 +46,7 @@ from .redfish_shared import RedfishJsonSpec, RedfishJson
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.redfish_manager import CommandResult
-from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes, IDRACJobType
+from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes, IDRACJobType, PowerState
 from idrac_ctl.idrac_shared import ApiRespondString
 from idrac_ctl.idrac_shared import IDRAC_API
 from idrac_ctl.idrac_shared import IDRAC_JSON
@@ -1892,3 +1892,63 @@ class IDracManager(RedfishManager):
             return_dict[message_key] = message
 
         return return_dict
+
+    @property
+    def power_state(self) -> PowerState:
+        """
+        :return:
+        """
+        cmd_result = self.base_query(self.idrac_manage_chassis,
+                                     do_async=False,
+                                     do_expanded=True)
+
+        if cmd_result.error is not None:
+            return PowerState.Unknown
+
+        if IDRAC_JSON.PowerState not in cmd_result.data:
+            raise UnexpectedResponse(f"{IDRAC_JSON.PowerState} not present in respond.")
+
+        power_state = cmd_result.data[IDRAC_JSON.PowerState]
+        if 'On' in power_state:
+            return PowerState.On
+        if 'Off' in power_state:
+            return PowerState.Off
+
+    def chassis_string_property(self, property_name: str) -> str:
+        """ Return chassis string property
+        :param property_name:
+        :return:
+        """
+        cmd_result = self.base_query(self.idrac_manage_chassis,
+                                     do_async=False,
+                                     do_expanded=True)
+
+        if property_name not in cmd_result.data:
+            raise UnexpectedResponse(f"{property_name} not present in respond.")
+
+        json_property = cmd_result.data[property_name]
+        if not isinstance(json_property, str):
+            raise UnexpectedResponse(f"{property_name} must be a string.")
+
+        return cmd_result.data[property_name]
+
+    @cached_property
+    def serial(self) -> str:
+        """return chassis serial number
+        :return: str: chassis serial number
+        """
+        return self.chassis_string_property("SerialNumber")
+
+    @cached_property
+    def chassis_type(self) -> str:
+        """return chassis type
+        :return: str: chassis type
+        """
+        return self.chassis_string_property("ChassisType")
+
+    @cached_property
+    def chassis_uuid(self) -> str:
+        """return chassis uuid
+        :return: str: chassis uuid
+        """
+        return self.chassis_string_property("UUID")

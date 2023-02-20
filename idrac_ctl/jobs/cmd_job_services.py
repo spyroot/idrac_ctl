@@ -8,7 +8,9 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl import Singleton, IDracManager, CommandResult
+from idrac_ctl.idrac_shared import IDRAC_API
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class JobServices(IDracManager,
@@ -59,8 +61,7 @@ class JobServices(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/JobService"
-        cmd_result = self.base_query(target_api,
+        cmd_result = self.base_query(IDRAC_API.JobServiceQuery,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=do_expanded)

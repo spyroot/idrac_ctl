@@ -1,4 +1,10 @@
 """Shared resource
+
+This is shared Enum, Classes used by idrac ctl.
+Many classes mapped directly to JSON schem.
+
+Author Mus spyroot@gmail.com
+
 """
 import json
 from enum import auto, Enum
@@ -79,6 +85,7 @@ class ApiRequestType(Enum):
     BootSourcePending = auto()
     BootSourceUpdate = auto()
     BootSourceClear = auto()
+    BootSourceRegistry = auto()
     BootQuery = auto()
 
     GetAttachStatus = auto()
@@ -122,7 +129,6 @@ class ApiRequestType(Enum):
     #  dell services
     JobRmDellServices = auto()
     JobDellServices = auto()
-
 
 
 class ScheduleJobType(Enum):
@@ -244,25 +250,29 @@ class PowerState(Enum):
     """
     On = "On"
     Off = "Off"
+    # this not idrac respect in case of error
+    Unknown = "Unknown"
 
 
 class JobState(Enum):
     """IDRAC job states
     https://developer.dell.com/apis/2978/versions/4.xx/docs/101WhatsNew.md
     """
+    New = "New"
     Scheduled = "Scheduled"
     Running = "Running"
     Completed = "Completed"
+    CompletedWithErrors = "CompletedWithErrors"
     Downloaded = "Downloaded"
     Downloading = "Downloading"
     Scheduling = "Scheduling"
     Waiting = "Waiting"
     Failed = "Failed"
-    CompletedWithErrors = "CompletedWithErrors"
     RebootFailed = "RebootFailed"
     RebootCompleted = "RebootCompleted"
     RebootPending = "RebootPending"
     PendingActivation = "PendingActivation"
+    Paused = "Paused"
     Unknown = "Unknown"
 
 
@@ -277,10 +287,38 @@ class CliJobTypes(Enum):
 class IDRACJobType(Enum):
     """idrac job types
     """
-    BIOSConfiguration = "BIOSConfiguration"
+    OSDeploy = "OSDeploy"
+    Shutdown = "Shutdown"
     FirmwareUpdate = "FirmwareUpdate"
     RebootNoForce = "RebootNoForce"
-    OSDeploy = "OSDeploy"
+    BIOSConfiguration = "BIOSConfiguration"
+    FirmwareRollback = "FirmwareRollback"
+    RepositoryUpdate = "RepositoryUpdate"
+    RebootPowerCycle = "RebootPowerCycle"
+    RAIDConfiguration = "RAIDConfiguration"
+    NICConfiguration = "NICConfiguration"
+    FCConfiguration = "FCConfiguration"
+    iDRACConfiguration = "iDRACConfiguration"
+    SystemInfoConfiguration = "SystemInfoConfiguration"
+    InbandBIOSConfiguration = "InbandBIOSConfiguration"
+    ExportConfiguration = "ExportConfiguration"
+    ImportConfiguration = "ImportConfiguration"
+    RemoteDiagnostics = "RemoteDiagnostics"
+    LCLogExport = "LCLogExport"
+    HardwareInventoryExport = "HardwareInventoryExport"
+    FactoryConfigurationExport = "FactoryConfigurationExport"
+    LicenseImport = "LicenseImport"
+    LicenseExport = "LicenseExport"
+    ThermalHistoryExport = "ThermalHistoryExport"
+    LCConfig = "LCConfig",
+    LCExport = "LCExport",
+    SystemErase = "SystemErase"
+    MessageRegistryExport = "MessageRegistryExport"
+    UploadCustomDefaults = "UploadCustomDefaults"
+    DPUConfig = "DPUConfig"
+    ExportDeviceLog = "ExportDeviceLog"
+    RealTimeNoRebootConfiguration = "RealTimeNoRebootConfiguration"
+    Unknown = "Unknown"
 
 
 class HTTPMethod(Enum):
@@ -327,13 +365,6 @@ class SupportedScheduledJobs(Enum):
     }
 
 
-# /redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset
-# /redfish/v1/Chassis/System.Embedded.1/Actions/Chassis.Reset
-# /redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.Reset
-# /redfish/v1/Systems/System.Embedded.1/Storage/Volumes/(instance-id)/Actions/Volume.CheckConsistency
-# /redfish/v1/Managers/(ID)/LogServices/Sel/Actions/LogService.ClearLog
-
-
 class RedfishSupermicro:
     """Mapping redfish rest to supermicro
     """
@@ -341,6 +372,25 @@ class RedfishSupermicro:
     BiosAttributeRegistry = f"{RedfishApi.Version}/Registries/BiosAttributeRegistry.v1_0_0"
     FirmwareInventoryBackup = f"{RedfishApi.Version}/UpdateService/FirmwareInventory/Backup_BIOS"
     BMC_Backup = f"{RedfishApi.Version}/UpdateService/FirmwareInventory/Backup_BMC"
+
+
+class IdracJobSvcActions(Enum):
+    """Dell IDRAC job services actions."""
+
+    # The CreateRebootJob action is used for creating a reboot job.
+    CreateRebootJob = "CreateRebootJob"
+    # method is used for deleting jobs from the JobQueue or the job store
+    DeleteJobQueue = "DeleteJobQueue"
+
+    SetupJobQueue = "SetupJobQueue"
+    SetDeleteOnCompletionTimeout = "SetDeleteOnCompletionTimeout"
+
+
+class IdracResetActions(Enum):
+    """IDRAC Reset actions."""
+    ComputerSystemReset = "ComputerSystem.Reset"
+    ChassisReset = "Chassis.Reset"
+    ManagerReset = "Manager.Reset"
 
 
 class IDRAC_API:
@@ -352,18 +402,40 @@ class IDRAC_API:
     Tasks = f"{RedfishApi.Version}/TaskService/Tasks/"
 
     IDRAC_LLC = "/iDRAC.Embedded.1/DellLCService"
-    BIOS_REGISTRY = "/Bios/BiosRegistry"
-    AccountService = "/redfish/v1/AccountService"
-    Accounts = "/redfish/v1/AccountService/Accounts"
-    ACCOUNT = "/redfish/v1/AccountService/Accounts/"
+    BiosRegistry = "/Bios/BiosRegistry"
 
-    Chassis = f"/redfish/v1/Chassis"
+    Chassis = f"{RedfishApi.Version}/Chassis"
+
+    Jobs = "/Jobs"
+    JobService = "JobService"
+    TaskService = "TaskService"
+    EventService = "EventService"
+    UpdateService = "UpdateService"
+    TelemetryService = "TelemetryService"
+    DellJobService = "DellJobService"
+    AccountService = "AccountService"
+    DellLCService = "DellLCService"
+
+    JobServiceQuery = f"{RedfishApi.Version}/{JobService}"
+    TaskServiceQuery = f"{RedfishApi.Version}/{TaskService}"
+    EventServiceQuery = f"{RedfishApi.Version}/{EventService}"
+    UpdateServiceQuery = f"{RedfishApi.Version}/{UpdateService}"
+    AccountServiceQuery = f"{RedfishApi.Version}/{AccountService}"
+    TelemetryServiceQuery = f"{RedfishApi.Version}/{TelemetryService}"
+
+    Accounts = f"{RedfishApi.Version}/{AccountService}/Accounts"
+    Account = f"{RedfishApi.Version}/{AccountService}/Accounts/"
+
+    DellOemJobService = f"/Oem/Dell/{DellJobService}"
+    DellOemJobServiceAction = f"/Oem/Dell/{DellJobService}/Actions/DellJobService."
+
+    BootSourcesRegistryQuery = f"/{RedfishApi.BootSources}/{RedfishApi.BootSourcesRegistry}"
 
     # /redfish/v1/AccountService/Roles/{RoleId}
     # The value of the Id property of the Role resource
-    BiosSettings = RedfishApi.BIOS_SETTINGS
-    COMPUTE_RESET = RedfishApi.COMPUTE_RESET
-    BIOS = RedfishApi.BIOS
+    BiosSettings = RedfishApi.BiosSettings
+    COMPUTE_RESET = RedfishApi.ComputeReset
+    BIOS = RedfishApi.Bios
     BootOptions = "BootOptions"
 
 
@@ -483,3 +555,69 @@ class MediaTypes(Enum):
     CD = "CD"
     DVD = "DVD"
     USBStick = "USBStick"
+
+
+class DellBootSource:
+    def __init__(self, device_id, name, enabled: Optional[bool] = True, index: Optional[int] = 1):
+        """
+        "Enabled": true,
+        "Id": "BIOS.Setup.1-1#BootSeq#NIC.Slot.8-1#4f5d8523dbaffba918182fe3adb15032",
+        "Index": 2,
+        "Name": "NIC.Slot.8-1"
+
+        :param device_id:
+        :param name:
+        :param index:
+        :param enabled:
+        """
+        self._index = index
+        self._name = name
+        self._id = device_id
+        self._enabled = enabled
+
+    @property
+    def Enabled(self) -> bool:
+        """if the boot device is Enabled
+        :return:
+        """
+        return self._enabled
+
+    @property
+    def Id(self) -> str:
+        return self._id
+
+    @property
+    def Index(self) -> int:
+        """The index number of the boot device in the  order list
+        :return:
+        """
+        return self._index
+
+    @property
+    def Name(self) -> str:
+        """The fully qualified device descriptor (FQDD) of the boot device
+        :return:
+        """
+        return self._name
+
+
+class IdracRebootJobTypes(Enum):
+    """IdracRebootJobTypes is reboot job types for CreateRebootJobReq
+    """
+    GracefulRebootWithForcedShutdown = "GracefulRebootWithForcedShutdown"
+    GracefulRebootWithoutForcedShutdown = "GracefulRebootWithoutForcedShutdown"
+    PowerCycle = "PowerCycle"
+
+
+class CreateRebootJobReq:
+    def __init__(self, reboot_job_type: IdracRebootJobTypes, target: str, title: str):
+        """The CreateRebootJob action is used for creating a reboot job.
+        :param reboot_job_type: IdracRebootJobTypes:  a reboot job type IdracRebootJobTypes
+        :param target: Link to invoke action
+        :param title: name
+        """
+        self.CreateRebootJob = {
+            "RebootJobType": reboot_job_type.value,
+            "target": target,
+            "title": title
+        }
