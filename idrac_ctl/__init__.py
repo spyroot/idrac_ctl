@@ -72,7 +72,7 @@ from .storage.cmd_convert_to_raid import *
 # chassis cmd
 from .chassis.cmd_chassis_query import *
 from .chassis.cmd_chasis_reset import *
-from .chassis.cmd_update_chasis import *
+from .chassis.cmd_chassis_query import *
 
 # dell oem attach
 from .delloem.delloem_attach_status import *
