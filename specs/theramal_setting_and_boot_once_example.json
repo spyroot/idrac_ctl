@@ -1,0 +1,10 @@
+{
+  "Attributes": {
+    "ThermalSettings.1.DriveTemperaturePolling": "Default",
+    "ThermalSettings.1.FanSpeedOffset": "Off",
+    "ThermalSettings.1.MinimumFanSpeed": 255,
+    "ThermalSettings.1.ThermalProfile": "Maximum Performance",
+    "ServerBoot.1.FirstBootDevice":"HDD",
+    "ServerBoot.1.BootOnce":"Enabled"
+  }
+}

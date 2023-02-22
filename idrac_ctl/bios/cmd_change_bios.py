@@ -290,7 +290,8 @@ class BiosChangeSettings(IDracManager,
             return CommandResult(payload, None, None, None)
 
         cmd_pending = self.sync_invoke(
-            ApiRequestType.BiosQueryPending, "bios_query_pending",
+            ApiRequestType.BiosQueryPending,
+            "bios_query_pending",
         )
 
         # commit or not pending

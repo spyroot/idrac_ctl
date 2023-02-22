@@ -428,9 +428,12 @@ class IDRAC_API:
 
     DellOemJobService = f"/Oem/Dell/{DellJobService}"
     DellOemJobServiceAction = f"/Oem/Dell/{DellJobService}/Actions/DellJobService."
+    # "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/System.Embedded.1"
+    # "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/System.Embedded.1"
 
     BootSourcesRegistryQuery = f"/{RedfishApi.BootSources}/{RedfishApi.BootSourcesRegistry}"
 
+    # /redfish/v1/Registries/ManagerAttributeRegistry/ManagerAttributeRegistry.v1_0_0.json
     # /redfish/v1/AccountService/Roles/{RoleId}
     # The value of the Id property of the Role resource
     BiosSettings = RedfishApi.BiosSettings
@@ -438,6 +441,8 @@ class IDRAC_API:
     BIOS = RedfishApi.Bios
     BootOptions = "BootOptions"
 
+
+# $select=SecurityCertificate.*
 
 class IDRAC_JSON:
     """All Keys we expect idrac uses based on specification.
@@ -601,6 +606,17 @@ class DellBootSource:
         return self._name
 
 
+class IdracRequestHeaders:
+    http_x_auth_token = "X-AUTH-TOKEN"
+    xsrf_token = "XSRF-TOKEN"
+
+
+class IdracRespondHeaders:
+    http_allow = "Allow"
+    http_www_authentication = "WWW-Authenticate"
+    http_www_authentication_realm = "Basic realm=\"RedfishService\""
+
+
 class IdracRebootJobTypes(Enum):
     """IdracRebootJobTypes is reboot job types for CreateRebootJobReq
     """
@@ -621,3 +637,35 @@ class CreateRebootJobReq:
             "target": target,
             "title": title
         }
+
+
+class TestNetworkShareReq:
+    def __init__(self,
+                 host="downloads.dell.com",
+                 share_type="HTTPS",
+                 proxy_support="Off",
+                 ignore_cert_warning="On"):
+        """
+        This a default test network share request type for DellLCService.TestNetworkShare.
+
+        :param host:
+        :param share_type:
+        :param proxy_support:
+        :param ignore_cert_warning:
+        """
+        self.network_share_req = {
+            "IPAddress": host,
+            "ShareType": share_type,
+            "ProxySupport": proxy_support,
+            "IgnoreCertWarning": ignore_cert_warning
+        }
+        self._success = 200
+        self._method = HTTPMethod.POST
+
+    @property
+    def success(self):
+        return self._success
+
+    @property
+    def method(self):
+        return self._method

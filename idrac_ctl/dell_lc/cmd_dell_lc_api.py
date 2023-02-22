@@ -1,7 +1,6 @@
 """iDRAC cmd fetch dell lc api status.
 Author Mus spyroot@gmail.com
 """
-import json
 from abc import abstractmethod
 from typing import Optional
 

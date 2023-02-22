@@ -79,6 +79,7 @@ class JobApply(IDracManager,
         job_type = None
         if setting == "bios":
             pd = {
+                "RebootJobType": "ForceReboot",
                 "TargetSettingsURI": bios,
                 "StartTime": "TIME_NOW",
                 "EndTime": "TIME_NA"
@@ -86,6 +87,7 @@ class JobApply(IDracManager,
             job_type = CliJobTypes.Bios_Config.value
         elif setting == "boot-option":
             pd = {
+                "RebootJobType": "ForceReboot",
                 "TargetSettingsURI": boot_options,
                 "StartTime": "TIME_NOW",
                 "EndTime": "TIME_NA"

@@ -777,6 +777,48 @@ class IDracManager(RedfishManager):
 
         return False
 
+    def select_cert(self) -> CommandResult:
+        """Return cert
+        :return:
+        """
+        r = f"{self.idrac_members}/Attributes"
+        return self.base_query(r, select_target="SecurityCertificate.*")
+
+    def select_network_adapters(self) -> CommandResult:
+        """Return idrac nics
+        :return:
+        """
+        r = f"{self.idrac_members}/Attributes"
+        return self.base_query(r, select_target="NIC.*")
+
+    def select_info(self) -> CommandResult:
+        """Return server info
+        :return:
+        """
+        r = f"{self.idrac_members}/Attributes"
+        return self.base_query(r, select_target="ServerInfo.*")
+
+    def bios_version(self) -> CommandResult:
+        """Return bios version
+        :return:
+        """
+        r = f"{self.idrac_manage_servers}/Attributes"
+        return self.base_query(r, select_target="Attributes/SystemBiosVersion")
+
+    def server_model_name(self) -> CommandResult:
+        """Return server model name
+        :return:
+        """
+        r = f"{self.idrac_manage_servers}/Attributes"
+        return self.base_query(r, select_target="Attributes/SystemModelName")
+
+    def select_server_info(self) -> CommandResult:
+        """Return idrac cert
+        :return:
+        """
+        r = f"{self.idrac_manage_servers}/Attributes"
+        return self.base_query(r, select_target="Info.*")
+
     @staticmethod
     def filter_attribute(cls,
                          json_data,
@@ -1952,3 +1994,5 @@ class IDracManager(RedfishManager):
         :return: str: chassis uuid
         """
         return self.chassis_string_property("UUID")
+
+    # def sysmgmt(self):

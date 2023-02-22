@@ -82,8 +82,8 @@ class AttributesUpdate(IDracManager,
             )
 
         api_target = "/redfish/v1/Managers/System.Embedded.1/Attributes"
-
         payload = from_json_spec(from_spec)
+
         cmd_result, api_resp = self.base_patch(
             api_target, payload=payload,
             do_async=do_async

@@ -77,7 +77,7 @@ class BiosClearPending(IDracManager,
 
         cmd_result, api_resp = self.base_post(
             api_target, payload={},
-            do_async=do_async
+            do_async=do_async, expected_status=200
         )
 
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:

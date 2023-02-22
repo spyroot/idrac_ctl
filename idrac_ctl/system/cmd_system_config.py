@@ -8,14 +8,11 @@ to a file and consume asynchronously or synchronously.
 Author Mus spyroot@gmail.com
 """
 import argparse
-import asyncio
-import json
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_utils import save_if_needed
-from idrac_ctl.idrac_manager import UnexpectedResponse, CommandResult
+from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class ExportSystemConfig(IDracManager,
@@ -47,7 +44,7 @@ class ExportSystemConfig(IDracManager,
                                 help="filename if we need to save a respond to a file.")
 
         cmd_parser.add_argument('--export_use', action='store_true',
-                                required=False,  default=False,
+                                required=False, default=False,
                                 help="Will create a task and will not wait.")
 
         help_text = "command exports system configuration"
@@ -98,9 +95,14 @@ class ExportSystemConfig(IDracManager,
 
         headers = {}
         headers.update(self.content_type)
-        payload = {"ExportFormat": export_format.upper(),
-                   "ShareParameters": {"Target": target},
-                   "IncludeInExport": include_in_export}
+        payload = {
+            "ExportFormat": export_format.upper(),
+            "ShareParameters": {
+                "Target": target,
+                "FileName": "",
+            },
+            "IncludeInExport": include_in_export
+        }
 
         if "Clone" in export_use or "Replace" in export_use:
             payload["ExportUse"] = export_use
@@ -108,28 +110,32 @@ class ExportSystemConfig(IDracManager,
         r = f"https://{self.idrac_ip}/redfish/v1/Managers/iDRAC.Embedded.1/" \
             f"Actions/Oem/EID_674_Manager.ExportSystemConfiguration"
 
-        json_pd = json.dumps(payload)
+        # json_pd = json.dumps(payload)
 
-        if not do_async:
-            response = self.api_post_call(r, json_pd, headers)
-            self.default_post_success(self, response)
-        else:
-            loop = asyncio.get_event_loop()
-            ok, response = loop.run_until_complete(self.async_post_until_complete(r, json_pd, headers))
+        cmd_result, api_resp = self.base_post(r, payload=payload,
+                                              do_async=do_async,
+                                              expected_status=202)
 
-        resp_hdr = response.headers
-        if 'Location' not in resp_hdr:
-            raise UnexpectedResponse("rest api failed.")
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
 
-        location = response.headers['Location']
-        job_id = location.split("/")[-1]
-        if not do_async:
-            data = self.fetch_task(job_id)
-            # we save only if we need to.
-            if verbose:
-                print(f"Saving to a file {filename}")
-            save_if_needed(filename, data)
-        else:
-            data = {"job_id": job_id}
 
-        return CommandResult(data, None, None, None)
+        #resp_hdr = response.headers
+        # if 'Location' not in resp_hdr:
+        #     raise UnexpectedResponse("rest api failed.")
+        #
+        # location = response.headers['Location']
+        # job_id = location.split("/")[-1]
+        # if not do_async:
+        #     data = self.fetch_task(job_id)
+        #     # we save only if we need to.
+        #     if verbose:
+        #         print(f"Saving to a file {filename}")
+        #     save_if_needed(filename, data)
+        # else:
+        #     data = {"job_id": job_id}
+
+        return cmd_result

@@ -87,4 +87,3 @@ class RedfishApi:
     ComputeReset = f"/{Actions}/{RedfishActions.ComputerSystemReset.value}"
     CHASSIS = "/Chassis"
 
-

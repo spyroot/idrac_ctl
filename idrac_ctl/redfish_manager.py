@@ -262,11 +262,19 @@ class RedfishManager:
             return api_resp.data["Systems"]["@odata.id"]
         return ""
 
+    @staticmethod
+    def select(select_property: Optional[str] = "") -> str:
+        """Return true if IDRAC version 6.0 i.e. a new version.
+        :return:
+        """
+        return f"?$select={select_property}"
+
     def base_query(self,
                    resource: str,
                    filename: Optional[str] = None,
                    do_async: Optional[bool] = False,
                    do_expanded: Optional[bool] = False,
+                   select_target: Optional[str] = "",
                    query_expansion: Optional[str] = "",
                    data_type: Optional[str] = "json",
                    verbose: Optional[bool] = False,
@@ -284,6 +292,7 @@ class RedfishManager:
 
         By default,  base_query uses ?$expand=*($levels={level}
 
+        :param select_target: select particular attribute
         :param resource: path to a redfish resource
         :param do_async: sync will subscribe to an event loop and issue async request.
         :param do_expanded:  will do expand query based on spec.
@@ -316,6 +325,10 @@ class RedfishManager:
             r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
         else:
             r = f"{self._default_method}{self._redfish_ip}{resource}"
+
+        if len(select_target) > 0:
+            r = f"{self._default_method}{self._redfish_ip}" \
+                f"{resource}{self.select(select_property=select_target)}"
 
         logging.debug(f"Sending request to {r}")
 

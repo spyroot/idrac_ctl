@@ -138,7 +138,7 @@ class RebootHost(IDracManager,
                 **kwargs
                 ) -> CommandResult:
         """
-        :param do_wait: wait indicate to wait and confirm a action.
+        :param do_wait: wait signals to wait and confirm action.
         :param do_async: will issue asyncio request and won't block
         :param reset_type: "On, ForceOff, ForceRestart, GracefulShutdown, PushPowerButton, Nmi"
         :param power_state: On, null
@@ -166,6 +166,7 @@ class RebootHost(IDracManager,
         system_actions = system_state.data['Actions']
         allowed_reset_types = []
 
+        # PowerCycle
         target = f"{self.idrac_manage_servers}{IDRAC_API.COMPUTE_RESET}"
 
         if '#ComputerSystem.Reset' in system_actions:

@@ -38,9 +38,11 @@ class JobRmDellServices(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
+                do_force: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Executes deletes all jobs
 
+        :param do_force:
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded: will do expand query
         :param data_type: json or xml
@@ -55,10 +57,15 @@ class JobRmDellServices(IDracManager,
                                      do_expanded=do_expanded)
 
         actions = self.discover_redfish_actions(self, cmd_result.data)
-        payload = {'JobID': "JID_CLEARALL_FORCE"}
+        if do_force:
+            payload = {'JobID': "JID_CLEARALL_FORCE"}
+        else:
+            payload = {"JobID": "JID_CLEARALL"}
+
         target_api = actions['DeleteJobQueue'].target
         cmd_result, api_resp = self.base_post(target_api, do_async=do_async,
-                                              payload=payload, expected_status=200)
+                                              payload=payload,
+                                              expected_status=200)
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
             task_id = cmd_result.data['task_id']
             task_state = self.fetch_task(task_id)

@@ -1,4 +1,7 @@
 # idrac_ctl
+This repo consist two parts. A generic redfish implementation that consumed by
+idrac_ctl. Right now i'm moving redfish implementation out of idrac ctl.
+
 Standalone command line tool provide option to interact with Dell iDRAC via Redfish 
 REST API and execute typical workflow. It supports both asynchronous and synchronous options 
 to interact with iDRAC.
