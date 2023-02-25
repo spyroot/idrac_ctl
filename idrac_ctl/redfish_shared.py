@@ -30,13 +30,36 @@ class RedfishJsonSpec:
     WwwAuthentication = "WWW-Authenticate"
 
 
+class RedfishJsonMessage:
+    """Redfish respond json scheme
+    either success or error
+    """
+    Message = "Message"
+    MessageId = "MessageId"
+    MessageArgs = "MessageArgs"
+    MessageSeverity = "MessageSeverity"
+    MessageExtendedInfo = "@Message.ExtendedInfo"
+    Severity = "Severity"
+    Resolution = "Resolution"
+
+    MessageArgsCount = "MessageArgs@odata.count"
+    RelatedPropertiesCount = "RelatedProperties@odata.count"
+
+
 class RedfishJson:
+    # json list of resource links
     Links = "Links"
+    # json list of member of particular API
     Members = "Members"
+    # json data time object
     Datatime = "DateTime"
+    # json location
     Location = "Location"
+    # json actions list
     Actions = "Actions"
+    # json attribute list
     Attributes = "Attributes"
+    # api entries for registry
     RegistryEntries = "RegistryEntries"
 
     Id = "Id"
@@ -57,6 +80,9 @@ class RedfishJson:
     # This property is an array of references to the chassis that this manager has control over.
     ManagerForChassis = "ManagerForChassis"
     # Manager.Reset
+
+    # redfish response message.
+    MessageExtendedInfo = "@Message.ExtendedInfo"
 
 
 class RedfishApi:
@@ -86,4 +112,3 @@ class RedfishApi:
     BiosReset = f"{Bios}/{Settings}/{Actions}/{RedfishActions.BiosReset.value}"
     ComputeReset = f"/{Actions}/{RedfishActions.ComputerSystemReset.value}"
     CHASSIS = "/Chassis"
-

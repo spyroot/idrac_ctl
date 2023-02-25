@@ -15,9 +15,8 @@ class QueryAccountService(IDracManager,
                           scm_type=ApiRequestType.QueryAccountService,
                           name='query_account_svc',
                           metaclass=Singleton):
-    """A command query iDRAC resource based on a resource path.
+    """A command query iDRAC account services based on a resource path.
     """
-
     def __init__(self, *args, **kwargs):
         super(QueryAccountService, self).__init__(*args, **kwargs)
         # maps from cli choice to a key in respond
@@ -59,6 +58,16 @@ class QueryAccountService(IDracManager,
                                 default=None, required=False, dest="schema_filter",
                                 help="filter show account types, ldap, roles etc")
 
+        cmd_parser.add_argument(
+            '--account_types', action='store_true',
+            required=False, dest="account_types",
+            default=False, help="return account types.")
+
+        cmd_parser.add_argument(
+            '--oem_account_types', action='store_true',
+            required=False, dest="oem_account_types",
+            default=False, help="return oem account types.")
+
         return cmd_parser, "account-svc", help_text
 
     def execute(self,
@@ -68,10 +77,14 @@ class QueryAccountService(IDracManager,
                 verbose: Optional[bool] = False,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
+                account_types: Optional[bool] = False,
+                oem_account_types: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Executes query command
         python idrac_ctl.py query
 
+        :param oem_account_types:  return list of oem account types
+        :param account_types: return list account types
         :param schema_filter: filter account services based on schema filter key.
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query
@@ -92,7 +105,12 @@ class QueryAccountService(IDracManager,
                                      filename=filename,
                                      do_async=do_async,
                                      do_expanded=is_expanded)
-        print(cmd_result.data.keys())
+
+        if account_types and 'SupportedAccountTypes' in cmd_result.data:
+            return CommandResult(cmd_result.data['SupportedAccountTypes'], None, None, None)
+
+        if oem_account_types and 'SupportedOEMAccountTypes' in cmd_result.data:
+            return CommandResult(cmd_result.data['SupportedOEMAccountTypes'], None, None, None)
 
         if cmd_result.error is None:
             if len(json_filter) > 0 and json_filter in cmd_result.data:

@@ -3,9 +3,11 @@ to get network ISO attach status.
 
 Author Mus spyroot@gmail.com
 """
+import json
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl import RedfishActionEncoder
 
 
 class GetAttachStatus(IDracManager,
@@ -41,8 +43,8 @@ class GetAttachStatus(IDracManager,
         Return if drivers attached and ISO attached.
 
         {
-        "DriversAttachStatus": "NotAttached",
-        "ISOAttachStatus": "NotAttached"
+            "DriversAttachStatus": "NotAttached",
+            "ISOAttachStatus": "NotAttached"
         }
         python idrac_ctl.py chassis
         :param do_async: note async will subscribe to an event loop.
@@ -52,14 +54,22 @@ class GetAttachStatus(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        cmd_result = self.sync_invoke(ApiRequestType.DellOemActions, "dell_oem_actions")
+        cmd_result = self.sync_invoke(
+            ApiRequestType.DellOemActions,
+            "dell_oem_actions"
+        )
+
         redfish_action = cmd_result.discovered['GetAttachStatus']
         target_api = redfish_action.target
+        cmd_result, api_resp = self.base_post(target_api, do_async=do_async)
+        print(f"target {cmd_result}")
 
-        api_result = self.base_post(target_api, do_async=do_async)
+        if cmd_result.error is not None:
+            return cmd_result
+
         result = {}
-        if api_result is not None and api_result.extra is not None:
-            data = api_result.extra.json()
+        if cmd_result is not None and cmd_result.extra is not None:
+            data = cmd_result.extra.json()
             if 'DriversAttachStatus' in data:
                 result['DriversAttachStatus'] = data['DriversAttachStatus']
             if 'ISOAttachStatus' in data:

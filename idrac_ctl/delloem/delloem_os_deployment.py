@@ -5,7 +5,8 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl import Singleton, IDracManager, CommandResult
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class DellOemTask(IDracManager,
@@ -36,7 +37,7 @@ class DellOemTask(IDracManager,
                 do_async: Optional[bool] = False,
                 do_expanded: Optional[bool] = False,
                 **kwargs) -> CommandResult:
-        """Executes query for dell oem actions.
+        """Executes query for dell oem actions for OS dep
 
         :param do_async: note async will subscribe to an event loop.
         :param do_expanded:  will do expand query

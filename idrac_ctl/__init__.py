@@ -113,3 +113,4 @@ from .boot_source.cmd_boot_source_registry import *
 from .accounts.cmd_accounts import *
 from .accounts.cmd_query_account import *
 from .accounts.cmd_account_svc import *
+from .accounts.cmd_privilage_registry import *

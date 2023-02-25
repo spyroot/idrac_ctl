@@ -46,10 +46,12 @@ from .redfish_shared import RedfishJsonSpec, RedfishJson
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.redfish_manager import CommandResult
-from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes, IDRACJobType, PowerState
+from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes
 from idrac_ctl.idrac_shared import ApiRespondString
+from idrac_ctl.idrac_shared import PowerState
 from idrac_ctl.idrac_shared import IDRAC_API
 from idrac_ctl.idrac_shared import IDRAC_JSON
+from idrac_ctl.idrac_shared import IDRACJobType
 from idrac_ctl.idrac_shared import IdracApiRespond
 from idrac_ctl.idrac_shared import JobApplyTypes
 from idrac_ctl.idrac_shared import RedfishAction
@@ -1126,7 +1128,6 @@ class IDracManager(RedfishManager):
 
         if response.headers is not None \
                 and RedfishJsonSpec.Location in response.headers:
-            print("Response code", response.headers[RedfishJsonSpec.Location])
             return IdracApiRespond.AcceptedTaskGenerated
 
         if response.status_code == expected:
@@ -1360,6 +1361,9 @@ class IDracManager(RedfishManager):
             self.logger.critical(
                 pf, exc_info=self._is_debug)
             err = pf
+
+        if response is not None:
+            redfishMsg = self.parse_json_respond_msg(response)
 
         # if task id available we fetch result.
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:

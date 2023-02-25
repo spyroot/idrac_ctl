@@ -5,7 +5,9 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl import Singleton, IDracManager, CommandResult
+from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class GetNetworkIsoAttachStatus(IDracManager,
@@ -42,8 +44,8 @@ class GetNetworkIsoAttachStatus(IDracManager,
         Return if drivers attached and ISO attached.
 
         {
-        "DriversAttachStatus": "NotAttached",
-        "ISOAttachStatus": "NotAttached"
+            "DriversAttachStatus": "NotAttached",
+            "ISOAttachStatus": "NotAttached"
         }
         python idrac_ctl.py chassis
         :param do_reboot: reboot
@@ -60,10 +62,12 @@ class GetNetworkIsoAttachStatus(IDracManager,
 
         cmd_result, api_resp = self.base_post(target_api, do_async=do_async)
         result = {}
-        resp_keys = ["HostAttachedStatus",
-                     "HostBootedFromISO",
-                     "IPAddr", "ISOConnectionStatus",
-                     "ImageName", "ShareName", "UserName"]
+        resp_keys = [
+            "HostAttachedStatus",
+            "HostBootedFromISO",
+            "IPAddr", "ISOConnectionStatus",
+            "ImageName", "ShareName", "UserName"
+        ]
 
         if cmd_result is not None and cmd_result.extra is not None:
             data = cmd_result.extra.json()
@@ -71,13 +75,14 @@ class GetNetworkIsoAttachStatus(IDracManager,
                 if rk in data:
                     result[rk] = data[rk]
 
-        if do_reboot:
-            cmd_reboot = self.reboot()
-            if 'Status' in cmd_reboot:
-                result.update(
-                    {
-                        "Reboot": cmd_reboot['Status']
-                     }
-                )
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            self.logger.info(f"Fetching task {task_id} state.")
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
 
-        return CommandResult(result, None, None, None)
+        if do_reboot:
+            self.reboot()
+
+        return cmd_result

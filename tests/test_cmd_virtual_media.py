@@ -121,9 +121,11 @@ class TestVirtualMedia(TestCase):
         :return:
         """
         manager = self.setUpClass()
-        self.assertRaises(InvalidArgument, manager.sync_invoke,
-                          ApiRequestType.VirtualMediaInsert,
-                          "virtual_disk_insert")
+        self.assertRaises(
+            InvalidArgument, manager.sync_invoke,
+            ApiRequestType.VirtualMediaInsert,
+            "virtual_disk_insert"
+        )
 
     def test_base_eject_and_insert(self):
         """Base test attach media no id must raise
@@ -135,13 +137,16 @@ class TestVirtualMedia(TestCase):
             ApiRequestType.VirtualMediaInsert,
             "virtual_disk_insert",
             uri_path=img_location,
-            device_id="1", do_eject=True)
+            device_id="1", do_eject=True
+        )
 
         self.assertIsInstance(cmd_resp, CommandResult)
         self.assertIsInstance(cmd_resp.data, dict)
         data = cmd_resp.data
-        self.assertTrue("Status" in data,
-                        f"Status key must in respond")
+        self.assertTrue(
+            "Status" in data,
+            f"Status key must in respond"
+        )
 
     def test_base_eject(self):
         """Base test attach media no id must raise

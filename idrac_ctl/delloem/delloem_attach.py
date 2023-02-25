@@ -16,6 +16,7 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl.idrac_shared import IdracApiRespond
 
 
 class DellOemAttach(IDracManager, scm_type=ApiRequestType.OemAttach,
@@ -83,11 +84,16 @@ class DellOemAttach(IDracManager, scm_type=ApiRequestType.OemAttach,
             if value is None:
                 del payload[key]
 
-        api_result = self.base_post(target_api, payload=payload,
-                                    do_async=do_async, expected_status=202)
-        result = {}
-        if api_result is not None and api_result.extra is not None:
-            data = api_result.extra.json()
-            self.default_json_printer(data)
+        cmd_result, api_resp = self.base_post(
+            target_api, payload=payload,
+            do_async=do_async, expected_status=202
+        )
 
-        return CommandResult(result, None, None, None)
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            self.logger.info(f"Fetching task {task_id} state.")
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        return cmd_result

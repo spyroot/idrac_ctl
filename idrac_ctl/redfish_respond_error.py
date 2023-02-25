@@ -7,13 +7,17 @@ Author Mus spyroot@gmail.com
 """
 from typing import Optional, List
 
+from idrac_ctl.redfish_respond import RedfishRespondMessage
 
-class RedfishErrorMessage:
+
+class RedfishMessage:
+    """Generic redfish error"""
+
     def __init__(self,
                  message_id: Optional[str] = "",
                  message: Optional[str] = "",
-                 related: List[str] = None,
-                 message_args: Optional[str] = None,
+                 related: Optional[List[str]] = None,
+                 message_args: Optional[List[str]] = None,
                  message_severity: Optional[str] = "",
                  severity: Optional[str] = "",
                  resolution: Optional[str] = ""
@@ -44,10 +48,46 @@ class RedfishErrorMessage:
         # deprecated
         self.severity = severity
         self.message_severity = message_severity
-        self.message_args = message_args
+
+        if message_args is None:
+            self.message_args = []
+        else:
+            self.message_args = message_args
+
+        self.message_count = 0
 
 
-class RedfishError:
+class RedfishErrorMessage(RedfishMessage):
+    def __init__(self,
+                 message_id: Optional[str] = "",
+                 message: Optional[str] = "",
+                 related: Optional[List[str]] = None,
+                 message_args: Optional[List[str]] = None,
+                 message_severity: Optional[str] = "",
+                 severity: Optional[str] = "",
+                 resolution: Optional[str] = ""
+                 ):
+        """
+        :param message_id: str: error msg id
+        :param message:
+        :param related:
+        :param message_args:
+        :param message_severity:
+        :param severity:
+        :param resolution:
+        """
+        super().__init__(
+            message_id=message_id,
+            message=message,
+            related=related,
+            message_args=message_args,
+            message_severity=message_severity,
+            severity=severity,
+            resolution=resolution
+        )
+
+
+class RedfishError(RedfishRespondMessage):
     """
     Redfish error.  Please check for DSP0266. In high level it just more verbose
     chatty error respond.  How useful is that I'm not 100 sure :-)
@@ -57,6 +97,7 @@ class RedfishError:
     JSON Decoder failed to decode error. ( this mainly if server responded with some dodgy
     replay)
     """
+
     def __init__(self,
                  http_status_code: int,
                  code: Optional[str] = "",
@@ -71,73 +112,30 @@ class RedfishError:
                         to the message in the message registry.
         :param message_extended: list of redfish that describe one or more error messages.
         """
-        self._code = code
-        self._message = message
-        if message_extended is None:
-            self._message_extended = []
-        else:
-            self._message_extended = message_extended
+        super().__init__(
+            http_status_code=http_status_code,
+            code=code, message=message,
+            message_extended=message_extended,
+        )
+        super().__init__(http_status_code=http_status_code,
+                         code=code, message=message,
+                         message_extended=message_extended)
 
-        self._status_code = http_status_code
-        self._exception_msg = exception_msg
-
-    @property
-    def code(self) -> str:
-        """code from error message from redfish error"""
-        return self._code
+    @staticmethod
+    def new_msg():
+        return RedfishErrorMessage()
 
     @property
-    def message(self) -> str:
-        """Message from redfish error.
-        :return:
-        """
-        return self._message
-
-    @property
-    def status_code(self) -> int:
-        """http status code that issue error.
-        :return:
-        """
-        return self._status_code
-
-    @property
-    def message_extended(self) -> list[RedfishErrorMessage]:
+    def message_extended(self) -> list[RedfishMessage]:
         """return a list of error message based on spec
         :return:  RedfishErrorMessage
         """
         return self._message_extended
-
-    @message.setter
-    def message(self, value) -> None:
-        self._message = value
 
     def __repr__(self) -> str:
         msgs = [m.message for m in self._message_extended]
         return "\n".join(msgs) + "\n"
 
     @message_extended.setter
-    def message_extended(self, value) -> None:
-        """a value must a list.
-        :param value:
-        :return: None
-        """
-        if not isinstance(value, list):
-            return
-
-        for v in value:
-            err_msg = RedfishErrorMessage()
-            if isinstance(v, dict):
-                if 'MessageId' in v:
-                    err_msg.message_id = v['MessageId']
-                if 'Message' in v:
-                    err_msg.message = v['Message']
-                if 'MessageArgs' in v:
-                    err_msg.message_args = v['MessageArgs']
-                if 'MessageSeverity' in v:
-                    err_msg.message_severity = v['MessageSeverity']
-                if 'Severity' in v:
-                    err_msg.severity = v['Severity']
-                if 'Resolution' in v:
-                    err_msg.resolution = v['Resolution']
-
-            self._message_extended.append(err_msg)
+    def message_extended(self, value):
+        self._message_extended = value

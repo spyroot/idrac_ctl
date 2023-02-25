@@ -8,7 +8,9 @@ Author Mus spyroot@gmail.com
 
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from idrac_ctl import Singleton, IDracManager, CommandResult
+from idrac_ctl.idrac_shared import IdracApiRespond
+from idrac_ctl.idrac_shared import ApiRequestType
 
 
 class DellOemDisconnect(IDracManager,
@@ -38,7 +40,8 @@ class DellOemDisconnect(IDracManager,
                 do_async: Optional[bool] = False,
                 **kwargs) -> CommandResult:
         """Executes dell oem disconnect, detach network iso.
-        :param do_async: note async will subscribe to an event loop.
+
+        :param do_async:note async will subscribe to an event loop.
         :param verbose: enables verbose output
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
@@ -47,8 +50,15 @@ class DellOemDisconnect(IDracManager,
         redfish_action = cmd_result.discovered['DisconnectNetworkISOImage']
         target_api = redfish_action.target
 
-        api_result = self.base_post(target_api,
-                                    do_async=do_async, expected_status=200)
-        resp = self.parse_task_id(api_result)
-        api_result.data.update(resp)
-        return CommandResult(api_result.data, None, None, None)
+        cmd_result, api_resp = self.base_post(
+            target_api, do_async=do_async, expected_status=200
+        )
+
+        if api_resp == IdracApiRespond.AcceptedTaskGenerated:
+            task_id = cmd_result.data['task_id']
+            self.logger.info(f"Fetching task {task_id} state.")
+            task_state = self.fetch_task(task_id)
+            cmd_result.data['task_state'] = task_state
+            cmd_result.data['task_id'] = task_id
+
+        return cmd_result

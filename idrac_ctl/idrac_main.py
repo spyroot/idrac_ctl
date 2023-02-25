@@ -209,12 +209,14 @@ def process_respond(cmd_args, command_result):
     if command_result.discovered is not None and cmd_args.no_action is False:
         if cmd_args.json:
             if isinstance(command_result.discovered, dict):
+                query_request["actions"] = {}
                 for ak in command_result.discovered.keys():
                     query_request["actions-description"] = "# Redfish actions:"
                     if isinstance(command_result.discovered[ak], RedfishAction):
-                        query_request["actions"] = json.dumps(command_result.discovered[ak].__dict__)
+                        action = command_result.discovered[ak]
+                        query_request["actions"][action.action_name] = action
                     else:
-                        query_request["actions"] = command_result.discovered[ak]
+                        query_request["actions"][ak] = command_result.discovered[ak]
             else:
                 query_request["actions"] = command_result.discovered
 

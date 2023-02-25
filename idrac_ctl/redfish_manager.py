@@ -17,7 +17,7 @@ from typing import Optional, Dict
 
 import requests
 
-from .redfish_shared import RedfishApi
+from .redfish_shared import RedfishApi, RedfishJsonMessage
 from .redfish_shared import RedfishApiRespond
 from .redfish_shared import RedfishJsonSpec
 
@@ -25,7 +25,8 @@ from .cmd_exceptions import AuthenticationFailed
 from .cmd_exceptions import ResourceNotFound
 from .cmd_exceptions import TaskIdUnavailable
 from .cmd_utils import save_if_needed
-from .redfish_error import RedfishError
+from .redfish_respond import RedfishRespondMessage
+from .redfish_respond_error import RedfishError
 
 from .redfish_exceptions import RedfishForbidden
 from .redfish_exceptions import RedfishMethodNotAllowed
@@ -353,8 +354,9 @@ class RedfishManager:
 
     @staticmethod
     def parse_error(error_response: requests.models.Response) -> RedfishError:
-        """Default Parser for error msg from a JSON error
-        response based on iDRAC.
+        """Default Parser for error msg from a JSON error.
+        Note that respond can be same as success msg.
+
         :param error_response:
         :return:
         """
@@ -373,14 +375,42 @@ class RedfishManager:
             if 'message' in err_data:
                 redfish_error.message = err_data['message']
 
-            if '@Message.ExtendedInfo' in err_data:
-                redfish_error.message_extended = [m for m in err_data['@Message.ExtendedInfo']]
+            if RedfishJsonMessage.MessageExtendedInfo in err_data:
+                redfish_error.message_extended = [
+                    m for m
+                    in err_data[RedfishJsonMessage.MessageExtendedInfo]
+                ]
 
         except requests.exceptions.JSONDecodeError as json_err:
             redfish_error.exception_msg = str(json_err)
             return redfish_error
 
         return redfish_error
+
+    @staticmethod
+    def parse_json_respond_msg(
+            resp: requests.models.Response) -> RedfishRespondMessage:
+        """Default parser for json respond. For example if HTTP post or HTTP Delete
+        return payload
+
+        :param resp: requests.models.Response
+        :return:
+        """
+        redfish_resp = RedfishRespondMessage(resp.status_code)
+        try:
+            json_data = resp.json()
+            if RedfishJsonMessage.MessageExtendedInfo in json_data:
+                redfish_resp.message_extended = [
+                    m for m
+                    in json_data[RedfishJsonMessage.MessageExtendedInfo]
+                ]
+        except requests.exceptions.JSONDecodeError as _:
+            pass
+        except TypeError as _:
+            pass
+
+        finally:
+            return redfish_resp
 
     @staticmethod
     def default_error_handler(response) -> RedfishApiRespond:
@@ -461,7 +491,8 @@ class RedfishManager:
 
     @staticmethod
     def job_id_from_header(
-            response: requests.models.Response, strict: Optional[bool] = True) -> str:
+            response: requests.models.Response,
+            strict: Optional[bool] = True) -> str:
         """Returns job id from the response header.
         :param strict:
         :param response: a response that should have job id information in the header.
