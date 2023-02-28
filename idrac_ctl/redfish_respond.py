@@ -201,11 +201,11 @@ class RedfishRespondMessage:
             if jsonMessage.Resolution.lower() in v:
                 msg.resolution = v[jsonMessage.Resolution.lower()]
 
-            if 'MessageArgs@odata.count' in v:
-                msg.message_count = int(v['MessageArgs@odata.count'])
+            if jsonMessage.MessageArgsCount in v:
+                msg.message_count = int(v[jsonMessage.MessageArgsCount])
 
-            if 'MessageArgs@odata.count' in v:
-                msg.related_count = int(v['MessageArgs@odata.count'])
+            if jsonMessage.RelatedPropertiesCount in v:
+                msg.related_count = int(v[jsonMessage.RelatedPropertiesCount])
 
             self._message_extended.append(msg)
 

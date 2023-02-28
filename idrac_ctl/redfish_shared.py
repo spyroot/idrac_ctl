@@ -5,8 +5,8 @@ class RedfishActions(Enum):
     """Redfish actions.
     """
     BiosReset = "Bios.ResetBios"
-    ManagerReset = "#Manager.Reset"
     SimpleUpdate = "SimpleUpdate"
+    ManagerReset = "#Manager.Reset"
     ComputerSystemReset = "ComputerSystem.Reset"
 
 
@@ -22,11 +22,10 @@ class RedfishApiRespond(Enum):
 
 
 class RedfishJsonSpec:
-    """
-
+    """ Redfish json scheme
     """
     Links = "Links"
-    Location = "Links"
+    Location = "Location"
     WwwAuthentication = "WWW-Authenticate"
 
 
@@ -80,7 +79,6 @@ class RedfishJson:
     # This property is an array of references to the chassis that this manager has control over.
     ManagerForChassis = "ManagerForChassis"
     # Manager.Reset
-
     # redfish response message.
     MessageExtendedInfo = "@Message.ExtendedInfo"
 
@@ -107,8 +105,7 @@ class RedfishApi:
     UpdateService = f"{Version}/UpdateService"
     UpdateServiceAction = f"{UpdateService}/{Actions}/{RedfishActions.SimpleUpdate.value}"
 
-    ManagerAccount = f"{Version}/{AccountService}"
     BiosSettings = f"{Bios}/{Settings}"
     BiosReset = f"{Bios}/{Settings}/{Actions}/{RedfishActions.BiosReset.value}"
-    ComputeReset = f"/{Actions}/{RedfishActions.ComputerSystemReset.value}"
+    ManagerAccount = f"{Version}/{AccountService}"
     CHASSIS = "/Chassis"

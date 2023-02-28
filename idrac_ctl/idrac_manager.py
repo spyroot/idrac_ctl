@@ -533,15 +533,20 @@ class IDracManager(RedfishManager):
 
                 if 'Retry-After' in resp.headers:
                     retry_after = int(resp.headers["Retry-After"])
-                    self.logger.info(f"Remote server responded with Retry-After {retry_after}")
-                print(f"fetch status code {resp.status_code}")
+                    self.logger.info(
+                        f"Remote server responded "
+                        f"with Retry-After {retry_after}"
+                    )
                 if resp.status_code == 401:
                     self.logger.error(f"task service returned 401")
                     AuthenticationFailed("Authentication failed.")
                 # if server failed, meanwhile HTTP exception propagate
                 # up on the stack.
                 if resp.status_code > 499:
-                    self.logger.critical(f"task service return http error code {resp.status_code}")
+                    self.logger.critical(
+                        f"task service return http error code "
+                        f"{resp.status_code}"
+                    )
                     break
                 # Cancellation: A subsequent GET request on the task monitor URI
                 # returns either the HTTP 410 Gone or 404 Not Found status code.
@@ -586,7 +591,9 @@ class IDracManager(RedfishManager):
                 elif resp.status_code == 200:
                     task_state, task_status = self.get_task_state(resp)
                     self.logger.info(
-                        f"Server return status code 200, Task state {task_state.value}, {task_status.value}")
+                        f"Server return status code 200, Task state "
+                        f"{task_state.value}, {task_status.value}"
+                    )
                     return task_state
                 # client wait for specific state
                 elif task_state == wait_for_state:
@@ -614,7 +621,9 @@ class IDracManager(RedfishManager):
                 return self._http_code_mapping[response.status_code]
 
         if response.status_code == 401:
-            raise AuthenticationFailed("Authentication failed.")
+            raise AuthenticationFailed(
+                "Authentication failed."
+            )
         elif response.status_code == 403:
             raise RedfishForbidden("access forbidden")
         elif response.status_code == 404:
@@ -624,7 +633,10 @@ class IDracManager(RedfishManager):
             # we try to parse error.
             self._redfish_error = IDracManager.parse_error(response)
         if response.status_code != 200:
-            raise UnexpectedResponse(f"Failed acquire result. Status code {response.status_code}")
+            raise UnexpectedResponse(
+                f"Failed acquire result. Status code "
+                f"{response.status_code}"
+            )
 
     def check_api_version(self):
         """Check Dell LLC Service API set
@@ -1270,16 +1282,21 @@ class IDracManager(RedfishManager):
             data_type: Optional[str] = "json",
             expected_status: Optional[int] = 200,
             ignore_error_code: Optional[int] = 0) -> tuple[CommandResult, IdracApiRespond]:
-        """A base http patch.
+        """A base http post/patch/delete method.
 
-        :param method:
-        :param ignore_error_code:
+        Return result as command result named tuples and IdracApiRespond
+        reflect API respond enum based on HTTP/HTTPS status replay
+
+        :param method: http method POST/PATCH etc.
+        :param ignore_error_code: error code that don't consider an error.
+                                  main for case when job , task canceled.
+                                  and we don't consider 404 not found as error.
         :param resource:  a request to api,  /redfish/v1/
-        :param payload: a json payload
+        :param payload: a json payload if payload is empty caller need pass empty dict
         :param do_async: for asynced request.
         :param data_type: a data-type json/xml
         :param expected_status: expected status code depend on patch msg.
-        :return: CommandResult
+        :return: Tuple of CommandResult, IdracApiRespond
         """
         headers = {}
         if data_type == "json":
@@ -1362,14 +1379,18 @@ class IDracManager(RedfishManager):
                 pf, exc_info=self._is_debug)
             err = pf
 
+        redish_resp = None
         if response is not None:
-            redfishMsg = self.parse_json_respond_msg(response)
+            redish_resp = self.parse_json_respond_msg(response)
 
-        # if task id available we fetch result.
+        # if task id available, we fetch task/job id from header
+        # and include in return api
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
             task_id = self.job_id_from_header(response)
-            return CommandResult({"task_id": task_id}, None, response, None), api_resp
+            return CommandResult(
+                {"task_id": task_id}, None, redish_resp, None), api_resp
 
+        self.api_success_msg(api_resp)
         return CommandResult(self.api_success_msg(api_resp), None, None, err), api_resp
 
     def base_post(self,
@@ -1936,6 +1957,7 @@ class IDracManager(RedfishManager):
 
         if message is not None:
             return_dict[message_key] = message
+
 
         return return_dict
 

@@ -56,7 +56,7 @@ class RedfishManager:
         :param redfish_ip: redfish IP or hostname
         :param redfish_username: redfish username default is root
         :param redfish_password: redfish password.
-        :param insecure: by default, we use insecure SSL
+        :param insecure: by default, we use insecure SSLself.api_success_msg(api_resp)
         :param x_auth: X-Authentication header.
         """
         self._redfish_ip = redfish_ip
@@ -176,8 +176,8 @@ class RedfishManager:
 
     def api_get_call(
             self, req: str, hdr: Dict) -> requests.models.Response:
-        """Make api request either with x-auth authentication header or base
-        authentication to redfish.
+        """Make api request either with x-auth authentication
+        header or base authentication to redfish.
         :param req:  request
         :param hdr: http header dict that will append to HTTP/HTTPS request.
         :return: request.
@@ -220,16 +220,16 @@ class RedfishManager:
         """
         return f"?$expand=*($levels={level})"
 
-    async def api_async_get_until_complete(self, r: str, hdr: Dict, loop=None):
-        """
-        :param r:
-        :param hdr: http header
+    async def api_async_get_until_complete(self, req: str, hdr: Dict, loop=None):
+        """Execute async get request
+        :param req: api method caller request.
+        :param hdr: dict: http/https header
         :param loop:  asyncio loop
-        :return:
+        :return: http response object
         """
         if loop is None:
             loop = asyncio.get_event_loop()
-        response = await self.api_async_get_call(loop, r, hdr)
+        response = await self.api_async_get_call(loop, req, hdr)
         await self.async_default_error_handler(await response)
         return await response
 
@@ -494,7 +494,7 @@ class RedfishManager:
             response: requests.models.Response,
             strict: Optional[bool] = True) -> str:
         """Returns job id from the response header.
-        :param strict:
+        :param strict: if true will raise exception.
         :param response: a response that should have job id information in the header.
         :return: job id from the Location header
         :raise TaskIdUnavailable if header not present.

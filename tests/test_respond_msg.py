@@ -1,12 +1,9 @@
 import logging
-import os
 from unittest import TestCase
-
-from idrac_ctl.idrac_manager import IDracManager
-from idrac_ctl.redfish_manager import RedfishManager
-from requests.models import Response
 from unittest.mock import Mock
 from requests.models import Response
+from idrac_ctl.redfish_manager import RedfishManager
+from tests.test_utils import create_json_resp
 
 the_response = Mock(spec=Response)
 
@@ -30,20 +27,25 @@ class TestRedfishRespondMsg(TestCase):
                         'Resolution': 'None',
                         'Severity': 'OK'
                     }
-                ],
-            'DriversAttachStatus': 'NotAttached',
-            'ISOAttachStatus': 'NotAttached'
+                ]
         }
 
-        resp = Mock(spec=Response)
-        resp._content = data
-        resp.status_code = 200
+        resp = create_json_resp(data)
         redfish_resp = RedfishManager.parse_json_respond_msg(resp)
         self.assertTrue(
             redfish_resp.status_code == 200,
             f"status code must be 200"
         )
-        log.warning("Redfish status code", redfish_resp.status_code)
+        err_string = ""
+        extended_info = data['@Message.ExtendedInfo']
+        self.assertTrue(
+            len(extended_info) == len(redfish_resp.message_extended),
+            f"expected len {len(data['@Message.ExtendedInfo'])} "
+            f"got len {len(redfish_resp.message_extended)}"
+        )
+        self.assertTrue(redfish_resp.message_extended[0].message == extended_info[0]["Message"])
+        self.assertTrue(redfish_resp.message_extended[0].message_id == extended_info[0]["MessageId"])
+        self.assertTrue(redfish_resp.message_extended[0].severity == extended_info[0]["Severity"])
 
     def test_base_respond_with_pd(self):
         data = {
@@ -63,13 +65,9 @@ class TestRedfishRespondMsg(TestCase):
             'ISOAttachStatus': 'NotAttached'
         }
 
-        resp = Mock(spec=Response)
-        resp._content = data
-        resp.status_code = 200
+        resp = create_json_resp(data)
         redfish_resp = RedfishManager.parse_json_respond_msg(resp)
         self.assertTrue(
             redfish_resp.status_code == 200,
             f"status code must be 200"
         )
-        log.warning("Redfish status code", redfish_resp.status_code)
-
