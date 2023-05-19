@@ -4,9 +4,14 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.idrac_shared import IdracApiRespond, IDRAC_API
+
+from ..redfish_manager import CommandResult
+from ..cmd_exceptions import FailedDiscoverAction
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import UnsupportedAction
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import IDRAC_JSON
 
 
 class GetRemoteServicesAPIStatus(IDracManager,
@@ -15,6 +20,7 @@ class GetRemoteServicesAPIStatus(IDracManager,
                                  metaclass=Singleton):
     """iDRACs fetch Dell LC status
     """
+
     def __init__(self, *args, **kwargs):
         super(GetRemoteServicesAPIStatus, self).__init__(*args, **kwargs)
 
@@ -57,5 +63,3 @@ class GetRemoteServicesAPIStatus(IDracManager,
             cmd_result.data['task_id'] = task_id
 
         return cmd_result
-
-

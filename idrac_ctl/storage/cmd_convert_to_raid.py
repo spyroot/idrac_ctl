@@ -14,17 +14,20 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult, find_ids
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
-class ConvertToRaid(IDracManager,
-                    scm_type=ApiRequestType.ConvertToRaid,
-                    name='convert_none_raid',
-                    metaclass=Singleton):
+class ConvertToRaid(
+    IDracManager,
+    scm_type=ApiRequestType.ConvertToRaid,
+    name='convert_none_raid',
+    metaclass=Singleton):
     """iDRACs REST API convert none raid disk to raid
     for a target controller.
     """
+
     def __init__(self, *args, **kwargs):
         super(ConvertToRaid, self).__init__(*args, **kwargs)
 

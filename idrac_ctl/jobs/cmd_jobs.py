@@ -15,10 +15,13 @@ Author Mus spyroot@gmail.com
 """
 import argparse
 from abc import abstractmethod
-from typing import Optional
 from datetime import datetime
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.cmd_exceptions import InvalidArgumentFormat
+from typing import Optional
+
+from ..cmd_exceptions import InvalidArgumentFormat
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class JobList(IDracManager,

@@ -10,9 +10,9 @@ Author Mus spyroot@gmail.com
 import argparse
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl.idrac_manager import CommandResult, IDracManager
-from idrac_ctl.idrac_shared import ApiRequestType, Singleton
-from idrac_ctl.cmd_utils import save_if_needed
+from ..idrac_manager import CommandResult, IDracManager
+from ..idrac_shared import ApiRequestType, Singleton
+from ..cmd_utils import save_if_needed
 
 
 class SystemQuery(IDracManager,

@@ -7,8 +7,14 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.idrac_shared import IDRAC_API
+from ..idrac_shared import IDRAC_API
+from ..redfish_manager import CommandResult
+from ..cmd_exceptions import FailedDiscoverAction
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import UnsupportedAction
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import IDRAC_JSON
 
 
 class ChassisQuery(IDracManager,
@@ -17,6 +23,7 @@ class ChassisQuery(IDracManager,
                    metaclass=Singleton):
     """A command query chassis.
     """
+
     def __init__(self, *args, **kwargs):
         super(ChassisQuery, self).__init__(*args, **kwargs)
 

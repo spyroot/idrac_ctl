@@ -12,10 +12,16 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Optional
 
-from idrac_ctl import CommandResult
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_exceptions import InvalidArgument
-from idrac_ctl.idrac_manager import PostRequestFailed
+from ..redfish_manager import CommandResult
+from ..cmd_exceptions import InvalidArgument
+from ..idrac_manager import PostRequestFailed, IDracManager
+from ..redfish_manager import CommandResult
+from ..cmd_exceptions import FailedDiscoverAction
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import UnsupportedAction
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import IDRAC_JSON
 
 
 class ImportSystemConfig(IDracManager,

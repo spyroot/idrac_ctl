@@ -35,28 +35,28 @@ from typing import Optional, Tuple, Dict
 import requests
 from tqdm import tqdm
 
-from redfish_exceptions import RedfishException
-from redfish_exceptions import RedfishUnauthorized
-from redfish_exceptions import RedfishForbidden
+from .redfish_exceptions import RedfishException
+from .redfish_exceptions import RedfishUnauthorized
+from .redfish_exceptions import RedfishForbidden
 
 from .redfish_manager import RedfishManager
 from .redfish_task_state import TaskState
 from .redfish_task_state import TaskStatus
 from .redfish_shared import RedfishJsonSpec, RedfishJson, RedfishApi
 
-from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl.redfish_manager import CommandResult
-from idrac_ctl.idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes
-from idrac_ctl.idrac_shared import ApiRespondString
-from idrac_ctl.idrac_shared import PowerState
-from idrac_ctl.idrac_shared import IDRAC_API
-from idrac_ctl.idrac_shared import IDRAC_JSON
-from idrac_ctl.idrac_shared import IDRACJobType
-from idrac_ctl.idrac_shared import IdracApiRespond
-from idrac_ctl.idrac_shared import JobApplyTypes
-from idrac_ctl.idrac_shared import RedfishAction
-from idrac_ctl.idrac_shared import ResetType as ResetType
-from idrac_ctl.idrac_shared import ScheduleJobType
+from .custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+from .redfish_manager import CommandResult
+from .idrac_shared import ApiRequestType, HTTPMethod, CliJobTypes
+from .idrac_shared import ApiRespondString
+from .idrac_shared import PowerState
+from .idrac_shared import IDRAC_API
+from .idrac_shared import IDRAC_JSON
+from .idrac_shared import IDRACJobType
+from .idrac_shared import IdracApiRespond
+from .idrac_shared import JobApplyTypes
+from .idrac_shared import RedfishAction
+from .idrac_shared import ResetType as ResetType
+from .idrac_shared import ScheduleJobType
 from .idrac_shared import JobState
 
 from .cmd_exceptions import AuthenticationFailed

@@ -31,7 +31,10 @@ import asyncio
 from abc import abstractmethod
 from typing import Optional, Tuple
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, save_if_needed, CommandResult
+from ..cmd_utils import save_if_needed
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class StorageQuery(IDracManager, scm_type=ApiRequestType.StorageQuery,

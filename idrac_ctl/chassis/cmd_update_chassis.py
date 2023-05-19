@@ -16,13 +16,14 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_exceptions import InvalidJsonSpec
-from idrac_ctl.cmd_exceptions import InvalidArgument
-from idrac_ctl.cmd_exceptions import InvalidArgumentFormat
-from idrac_ctl.cmd_utils import from_json_spec
-from idrac_ctl.idrac_shared import IDRAC_API
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import InvalidArgumentFormat
+from ..cmd_exceptions import InvalidJsonSpec
+from ..cmd_utils import from_json_spec
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IDRAC_API
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class ChassisUpdate(IDracManager,

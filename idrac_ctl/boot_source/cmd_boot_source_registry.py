@@ -6,13 +6,20 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.idrac_shared import IDRAC_API
 
-class QueryBootSourceRegistry(IDracManager,
-                              scm_type=ApiRequestType.BootSourceRegistry,
-                              name='boot_source_registry',
-                              metaclass=Singleton):
+from ..cmd_utils import save_if_needed
+from ..cmd_exceptions import InvalidArgument
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
+from ..idrac_shared import IDRAC_API
+
+
+class QueryBootSourceRegistry(
+    IDracManager,
+    scm_type=ApiRequestType.BootSourceRegistry,
+    name='boot_source_registry',
+    metaclass=Singleton):
     """A command query iDRAC resource based on a resource path.
     """
 

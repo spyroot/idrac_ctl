@@ -10,11 +10,13 @@ import time
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_exceptions import InvalidArgument, MissingResource
-from idrac_ctl.idrac_shared import CliJobTypes, IDRAC_API, IdracApiRespond
-from idrac_ctl.redfish_exceptions import RedfishException
-from idrac_ctl.redfish_manager import CommandResult
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import MissingResource
+from ..idrac_manager import IDracManager
+from ..idrac_shared import CliJobTypes, IDRAC_API
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..redfish_exceptions import RedfishException
+from ..redfish_manager import CommandResult
 
 
 class RebootHost(IDracManager,

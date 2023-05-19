@@ -12,8 +12,10 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult, find_ids
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
+from ..cmd_utils import find_ids
 
 
 class ConvertNoneRaid(IDracManager,
@@ -66,10 +68,11 @@ class ConvertNoneRaid(IDracManager,
         :return: named tuple CommandResult
         :raise: AuthenticationFailed, UnexpectedResponse
         """
-        drives = self.sync_invoke(ApiRequestType.StorageViewQuery,
-                                  "storage_get",
-                                  controller=controller,
-                                  data_filter="Drives")
+        drives = self.sync_invoke(
+            ApiRequestType.StorageViewQuery,
+            "storage_get",
+            controller=controller,
+            data_filter="Drives")
 
         odata_ids = find_ids(drives.data, "@odata.id")
         final_data = []

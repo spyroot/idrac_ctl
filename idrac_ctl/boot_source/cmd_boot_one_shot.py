@@ -15,9 +15,10 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.cmd_exceptions import InvalidArgument
-from idrac_ctl.idrac_shared import IdracApiRespond
+from ..cmd_exceptions import InvalidArgument
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class BootOneShot(IDracManager,

@@ -30,12 +30,15 @@ Author Mus spyroot@gmail.com
 import asyncio
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import IDracManager, Singleton
-from idrac_ctl import ApiRequestType, CommandResult
-from idrac_ctl.cmd_utils import save_if_needed, find_ids, from_json_spec
-from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
-from idrac_ctl.idrac_shared import IDRAC_JSON, IDRAC_API
+
+from ..cmd_utils import save_if_needed, find_ids, from_json_spec
+from ..custom_argparser.customer_argdefault import BiosSubcommand
+from ..custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IDRAC_API
+from ..idrac_shared import IDRAC_JSON
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class BiosQuery(IDracManager,

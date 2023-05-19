@@ -6,14 +6,17 @@ is easy to query.
 
 Author Mus spyroot@gmail.com
 """
+import json
 import os
 from abc import abstractmethod
 from pathlib import Path
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-import json
 
-from idrac_ctl.redfish_exceptions import RedfishForbidden
+from ..idrac_manager import IDracManager
+from ..idrac_shared import ApiRequestType
+from ..idrac_shared import Singleton
+from ..redfish_exceptions import RedfishForbidden
+from ..redfish_manager import CommandResult
 
 
 class Discovery(IDracManager,

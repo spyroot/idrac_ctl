@@ -3,17 +3,19 @@ to get network ISO attach status.
 
 Author Mus spyroot@gmail.com
 """
-import json
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl import RedfishActionEncoder
+
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
-class GetAttachStatus(IDracManager,
-                      scm_type=ApiRequestType.GetAttachStatus,
-                      name='get_attach_status',
-                      metaclass=Singleton):
+class GetAttachStatus(
+    IDracManager,
+    scm_type=ApiRequestType.GetAttachStatus,
+    name='get_attach_status',
+    metaclass=Singleton):
     """A command query job_service_query.
     """
 

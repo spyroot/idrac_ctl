@@ -12,19 +12,22 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Optional
 
-from idrac_ctl import CommandResult
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_exceptions import InvalidArgument
-from idrac_ctl.idrac_manager import PostRequestFailed
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import PostRequestFailed
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
-class ImportOneTimeBoot(IDracManager,
-                        scm_type=ApiRequestType.ImportOneTimeBoot,
-                        name='import_sysconfig',
-                        metaclass=Singleton):
+class ImportOneTimeBoot(
+    IDracManager,
+    scm_type=ApiRequestType.ImportOneTimeBoot,
+    name='import_sysconfig',
+    metaclass=Singleton):
     """
     Command implementation import system configuration.
     """
+
     def __init__(self, *args, **kwargs):
         super(ImportOneTimeBoot, self).__init__(*args, **kwargs)
 
