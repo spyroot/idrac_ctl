@@ -35,14 +35,14 @@ from typing import Optional, Tuple, Dict
 import requests
 from tqdm import tqdm
 
-from .redfish_exceptions import RedfishException
-from .redfish_exceptions import RedfishUnauthorized
-from .redfish_exceptions import RedfishForbidden
+from redfish_exceptions import RedfishException
+from redfish_exceptions import RedfishUnauthorized
+from redfish_exceptions import RedfishForbidden
 
 from .redfish_manager import RedfishManager
 from .redfish_task_state import TaskState
 from .redfish_task_state import TaskStatus
-from .redfish_shared import RedfishJsonSpec, RedfishJson
+from .redfish_shared import RedfishJsonSpec, RedfishJson, RedfishApi
 
 from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
 from idrac_ctl.redfish_manager import CommandResult
@@ -84,8 +84,10 @@ class IDracManager(RedfishManager):
                  idrac_ip: Optional[str] = "",
                  idrac_username: Optional[str] = "root",
                  idrac_password: Optional[str] = "",
+                 idrac_port: Optional[int] = 443,
                  insecure: Optional[bool] = False,
                  x_auth: Optional[str] = None,
+                 is_http: Optional[bool] = False,
                  is_debug: Optional[bool] = False,
                  log_level=logging.NOTSET):
         """Default constructor for idrac requires credentials.
@@ -100,17 +102,13 @@ class IDracManager(RedfishManager):
         """
         super().__init__(redfish_ip=idrac_ip,
                          redfish_username=idrac_username,
-                         redfish_password=idrac_username,
+                         redfish_password=idrac_password,
+                         redfish_port=idrac_port,
                          insecure=insecure,
+                         is_http=is_http,
                          x_auth=x_auth,
                          is_debug=is_debug)
-        self._idrac_ip = idrac_ip
-        self._username = idrac_username
-        self._password = idrac_password
-        self._is_verify_cert = insecure
-        self._x_auth = x_auth
-        self._is_debug = is_debug
-        self._default_method = "https://"
+
         self.logger = logging.getLogger(__name__)
         self._logger_level = log_level
         self.logger.setLevel(self._logger_level)
@@ -208,7 +206,7 @@ class IDracManager(RedfishManager):
 
     @property
     def idrac_ip(self) -> str:
-        return self._idrac_ip
+        return self.redfish_ip
 
     @property
     def username(self) -> str:
@@ -273,12 +271,19 @@ class IDracManager(RedfishManager):
         _idrac_ip = kwargs.pop("idrac_ip")
         _username = kwargs.pop("username")
         _password = kwargs.pop("password")
+        _port = kwargs.pop("port")
+        _insecure = kwargs.pop("insecure")
+        _is_http = kwargs.pop("is_http")
 
         inst = disp(
             idrac_ip=_idrac_ip,
             idrac_username=_username,
-            idrac_password=_password
+            idrac_password=_password,
+            idrac_port=_port,
+            insecure=_insecure,
+            is_http=_is_http
         )
+
         return inst.execute(**kwargs)
 
     async def async_invoke(
@@ -296,11 +301,18 @@ class IDracManager(RedfishManager):
         _idrac_ip = kwargs.pop("idrac_ip")
         _username = kwargs.pop("username")
         _password = kwargs.pop("password")
+        _port = kwargs.pop("port")
+        _insecure = kwargs.pop("insecure")
+        _is_http = kwargs.pop("is_http")
+        print(" PORT ", _port)
 
         inst = disp(
             idrac_ip=_idrac_ip,
             idrac_username=_username,
-            idrac_password=_password
+            idrac_password=_password,
+            idrac_port=_port,
+            insecure=_insecure,
+            is_http=_is_http
         )
         return inst.execute(**kwargs)
 
@@ -384,14 +396,17 @@ class IDracManager(RedfishManager):
             raise ValueError("Username is empty string.")
         if len(self._password) == 0:
             raise ValueError("Password is empty string.")
-        if len(self._idrac_ip) == 0:
+        if len(self.redfish_ip) == 0:
             raise ValueError("IDRAC IP is empty string.")
 
         kwargs.update(
             {
-                "idrac_ip": self._idrac_ip,
+                "idrac_ip": self.redfish_ip,
                 "username": self._username,
-                "password": self._password
+                "password": self._password,
+                "port": self._port,
+                "insecure": self._is_verify_cert,
+                "is_http": self._is_http,
             }
         )
         return self.invoke(api_call, name, **kwargs)
@@ -644,10 +659,25 @@ class IDracManager(RedfishManager):
         """
         headers = {}
         headers.update(self.json_content_type)
-        r = f"{self._default_method}{self._idrac_ip}{IDRAC_API.IDRAC_DELL_MANAGERS}" \
+        r = f"{self._default_method}" \
+            f"{self.redfish_ip}" \
+            f"{IDRAC_API.IDRAC_DELL_MANAGERS}" \
             f"{IDRAC_API.IDRAC_LLC}"
 
+        # r = f"{self._default_method}" \
+        #     f"{self.redfish_ip}" \
+        #     f"{RedfishApi.Version}"
+
+        # print("Sending request {}", r)
+        # response = self.api_get_call(r, headers)
+        # # print("Response:", response.text)
+
         response = self.api_get_call(r, headers)
+        if response.status_code == 404:
+            r = f"{self._default_method}" \
+                f"{self.redfish_ip}" \
+                f"{RedfishApi.Version}"
+            response = self.api_get_call(r, headers)
         self.default_error_handler(response)
 
         data = response.json()
@@ -779,7 +809,7 @@ class IDracManager(RedfishManager):
         headers = {}
         if data_type == "json":
             headers.update(self.json_content_type)
-        r = f"{self._default_method}{self.idrac_ip}/redfish/v1/Managers" \
+        r = f"{self._default_method}{self.redfish_ip}/redfish/v1/Managers" \
             f"/iDRAC.Embedded.1?$select=FirmwareVersion"
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
@@ -1185,7 +1215,7 @@ class IDracManager(RedfishManager):
         :param ignore_error_code: error code to ignore.
         :param expected:  Option status code that we caller consider success.
         :return:
-        :raise DeleteRequestFailed if POST Method failed
+        :raise: DeleteRequestFailed if POST Method failed
         """
         return self.read_api_respond(
             response, expected=expected, ignore_error_code=ignore_error_code
@@ -1213,7 +1243,7 @@ class IDracManager(RedfishManager):
         :param ignore_error_code: error code to ignore.
         :param expected:  Option status code that we caller consider success.
         :return:
-        :raise DeleteRequestFailed if POST Method failed
+        :raise; DeleteRequestFailed if POST Method failed
         """
         return self.read_api_respond(
             response, expected=expected, ignore_error_code=ignore_error_code
@@ -1312,7 +1342,7 @@ class IDracManager(RedfishManager):
         response = None
         api_resp = IdracApiRespond.Error
         try:
-            r = f"{self._default_method}{self.idrac_ip}{resource}"
+            r = f"{self._default_method}{self.redfish_ip}{resource}"
             if not do_async:
                 if method == HTTPMethod.PATCH:
                     response = self.api_patch_call(
@@ -1379,19 +1409,22 @@ class IDracManager(RedfishManager):
                 pf, exc_info=self._is_debug)
             err = pf
 
-        redish_resp = None
+        redfish_resp = None
         if response is not None:
-            redish_resp = self.parse_json_respond_msg(response)
+            redfish_resp = self.parse_json_respond_msg(response)
 
         # if task id available, we fetch task/job id from header
         # and include in return api
         if api_resp == IdracApiRespond.AcceptedTaskGenerated:
             task_id = self.job_id_from_header(response)
             return CommandResult(
-                {"task_id": task_id}, None, redish_resp, None), api_resp
+                {"task_id": task_id}, None, None, None), api_resp
 
-        self.api_success_msg(api_resp)
-        return CommandResult(self.api_success_msg(api_resp), None, None, err), api_resp
+        api_resp_msg = self.api_success_msg(api_resp)
+        if redfish_resp is not None:
+            api_resp_msg.update(api_resp_msg)
+
+        return CommandResult(api_resp_msg, None, None, err), api_resp
 
     def base_post(self,
                   resource: str,
@@ -1957,7 +1990,6 @@ class IDracManager(RedfishManager):
 
         if message is not None:
             return_dict[message_key] = message
-
 
         return return_dict
 

@@ -36,7 +36,7 @@ from .redfish_shared import RedfishJson
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
-                                       ("data", "discovered", "extra", "error",))
+                                       ("data", "discovered", "extra", "error"))
 
 
 class RedfishManager:
@@ -45,7 +45,9 @@ class RedfishManager:
                  redfish_ip: Optional[str] = "",
                  redfish_username: Optional[str] = "root",
                  redfish_password: Optional[str] = "",
+                 redfish_port: Optional[int] = 443,
                  insecure: Optional[bool] = False,
+                 is_http: Optional[bool] = False,
                  x_auth: Optional[str] = None,
                  is_debug: Optional[bool] = False):
         """Default constructor for Redfish Manager.
@@ -62,10 +64,19 @@ class RedfishManager:
         self._redfish_ip = redfish_ip
         self._username = redfish_username
         self._password = redfish_password
+
+        if isinstance(redfish_port, str):
+            redfish_port = int(redfish_port)
+
+        self._port = redfish_port
         self._is_verify_cert = insecure
         self._x_auth = x_auth
         self._is_debug = is_debug
+        self._is_http = is_http
         self._default_method = "https://"
+        if self._is_http:
+            self._default_method = "http://"
+
         self.logger = logging.getLogger(__name__)
 
         self.content_type = {
@@ -85,7 +96,13 @@ class RedfishManager:
 
     @property
     def redfish_ip(self) -> str:
-        return self._redfish_ip
+        if ":" in self._redfish_ip:
+            return self._redfish_ip
+        else:
+            if self._port != 443:
+                return f"{self._redfish_ip}:{self._port}"
+            else:
+                return self._redfish_ip
 
     @property
     def username(self) -> str:
@@ -321,14 +338,14 @@ class RedfishManager:
 
         # for expanded
         if len(query_expansion) > 0:
-            r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
+            r = f"{self._default_method}{self.redfish_ip}{resource}{self.expanded()}"
         elif do_expanded:
-            r = f"{self._default_method}{self._redfish_ip}{resource}{self.expanded()}"
+            r = f"{self._default_method}{self.redfish_ip}{resource}{self.expanded()}"
         else:
-            r = f"{self._default_method}{self._redfish_ip}{resource}"
+            r = f"{self._default_method}{self.redfish_ip}{resource}"
 
         if len(select_target) > 0:
-            r = f"{self._default_method}{self._redfish_ip}" \
+            r = f"{self._default_method}{self.redfish_ip}" \
                 f"{resource}{self.select(select_property=select_target)}"
 
         logging.debug(f"Sending request to {r}")

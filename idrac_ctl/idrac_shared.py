@@ -131,6 +131,8 @@ class ApiRequestType(Enum):
     JobRmDellServices = auto()
     JobDellServices = auto()
 
+    Discovery = auto()
+
 
 class ScheduleJobType(Enum):
     """Each commands enum, based on redfish spec.
@@ -437,8 +439,8 @@ class IDRAC_API:
     # /redfish/v1/AccountService/Roles/{RoleId}
     # The value of the Id property of the Role resource
     BiosSettings = RedfishApi.BiosSettings
-    COMPUTE_RESET = RedfishApi.ComputeReset
-    BIOS = RedfishApi.Bios
+    # COMPUTE_RESET = RedfishApi.ComputeReset
+    # BIOS = RedfishApi.Bios
     BootOptions = "BootOptions"
 
 

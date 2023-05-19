@@ -233,7 +233,9 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
     redfish_api = IDracManager(idrac_ip=cmd_args.idrac_ip,
                                idrac_username=cmd_args.idrac_username,
                                idrac_password=cmd_args.idrac_password,
+                               idrac_port=cmd_args.idrac_port,
                                insecure=cmd_args.insecure,
+                               is_http=cmd_args.use_http,
                                is_debug=cmd_args.debug)
     _ = redfish_api.check_api_version()
 
@@ -345,18 +347,19 @@ def idrac_main_ctl():
     """
     """
     logger.setLevel(logging.ERROR)
-    parser = argparse.ArgumentParser(prog="idrac_ctl", add_help=True,
-                                     description='''iDrac command line tools. |n
+    parser = argparse.ArgumentParser(
+        prog="idrac_ctl", add_help=True,
+        description='''iDrac command line tools. |n
                                      It a standalone command line tool provide option to interact with  |n 
                                      Dell iDRAC via Redfish REST API. It supports both asynchronous and |n
                                      synchronous options to interact with iDRAC.|n
                                      Author Mus''',
-                                     epilog='''For more detail, for example, documentation. Make sure to check.
+        epilog='''For more detail, for example, documentation. Make sure to check.
                                              https://github.com/spyroot/idrac_ctl |n
                                              The example folder container many examples.
                                              Author Mustafa Bayramov spyroot@gmail.com
                                              ''',
-                                     formatter_class=CustomArgumentDefaultsHelpFormatter)
+        formatter_class=CustomArgumentDefaultsHelpFormatter)
 
     credentials = parser.add_argument_group('credentials', '# idrac credentials details.')
 
@@ -377,8 +380,16 @@ def idrac_main_ctl():
         help="idrac ip address, by default "
              "read from environment IDRAC_PASSWORD.")
     credentials.add_argument(
+        '--idrac_port', required=False, type=int,
+        default=int(os.environ.get('IDRAC_PORT', 443)),
+        help="idrac port address, by default "
+             "read from environment IDRAC_PORT.")
+    credentials.add_argument(
         '--insecure', action='store_true', required=False,
         help="insecure ssl.")
+    credentials.add_argument(
+        '--use_http', action='store_true', required=False, default=False,
+        help="use http instead https as transport.")
 
     verbose_group = parser.add_argument_group('verbose', '# verbose and debug options')
     verbose_group.add_argument(
@@ -449,7 +460,6 @@ def idrac_main_ctl():
         )
         sys.exit(1)
     try:
-
         main(args, cmd_dict)
     except AuthenticationFailed as af:
         console_error_printer(f"Error: {af}")

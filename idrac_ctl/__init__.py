@@ -114,3 +114,5 @@ from .accounts.cmd_accounts import *
 from .accounts.cmd_query_account import *
 from .accounts.cmd_account_svc import *
 from .accounts.cmd_privilage_registry import *
+
+from .discovery.cmd_discovery import *
