@@ -4,12 +4,13 @@ Command provides the option to delete a job from iDRAC.
 
 Author Mus spyroot@gmail.com
 """
-import argparse
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.idrac_shared import IdracApiRespond
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class JobDel(IDracManager,

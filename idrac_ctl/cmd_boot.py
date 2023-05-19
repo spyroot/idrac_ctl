@@ -11,9 +11,12 @@ import argparse
 import asyncio
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType
-from idrac_ctl import IDracManager, CommandResult
-from idrac_ctl.cmd_utils import save_if_needed, find_ids
+
+from .cmd_utils import find_ids
+from .cmd_utils import save_if_needed
+from .idrac_manager import IDracManager
+from .idrac_shared import Singleton, ApiRequestType
+from .redfish_manager import CommandResult
 
 
 class BootQuery(IDracManager,
@@ -23,6 +26,7 @@ class BootQuery(IDracManager,
     """
     Command return boot source
     """
+
     def __init__(self, *args, **kwargs):
         super(BootQuery, self).__init__(*args, **kwargs)
 

@@ -19,15 +19,18 @@ import warnings
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult, save_if_needed, InvalidArgument
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_exceptions import ResourceNotFound
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_utils import save_if_needed
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
-class VirtualDiskQuery(IDracManager,
-                       scm_type=ApiRequestType.VirtualDiskQuery,
-                       name='virtual_disk_query',
-                       metaclass=Singleton):
+class VirtualDiskQuery(
+    IDracManager,
+    scm_type=ApiRequestType.VirtualDiskQuery,
+    name='virtual_disk_query',
+    metaclass=Singleton):
     """iDRACs REST API Virtual Disk Query Command, fetch virtual disk, caller can save
     result to a file or output stdout or pass downstream to jq etc. tools.
     """

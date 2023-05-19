@@ -12,6 +12,7 @@ Author Mus spyroot@gmail.com
 import argparse
 import collections
 import json
+import logging
 import os
 import ssl
 import sys
@@ -21,7 +22,9 @@ from typing import Optional, Dict
 import requests
 import urllib3
 from pygments import highlight
-import logging
+
+from .redfish_exceptions import RedfishException
+from .version import __version__
 
 try:
     from pygments.lexers.data import JsonLexer
@@ -30,20 +33,23 @@ except ImportError as ie:
 
 from pygments.formatters.terminal256 import Terminal256Formatter
 
-from idrac_ctl.cmd_utils import save_if_needed
-from idrac_ctl.idrac_shared import RedfishAction, RedfishActionEncoder
-from idrac_ctl.cmd_exceptions import MissingResource
-from idrac_ctl.cmd_exceptions import TaskIdUnavailable
-from idrac_ctl.cmd_exceptions import UnsupportedAction
-from idrac_ctl.cmd_exceptions import InvalidArgument, FailedDiscoverAction
-from idrac_ctl.cmd_exceptions import AuthenticationFailed, ResourceNotFound
-from idrac_ctl.cmd_exceptions import InvalidJsonSpec, MissingMandatoryArguments
-from idrac_ctl.cmd_exceptions import UncommittedPendingChanges
-from idrac_ctl.cmd_exceptions import JsonHttpError
-from idrac_ctl.idrac_manager import IDracManager
+from .idrac_shared import RedfishAction, RedfishActionEncoder
+from .cmd_exceptions import MissingResource
+from .cmd_exceptions import InvalidJsonSpec, MissingMandatoryArguments
+from .cmd_exceptions import UncommittedPendingChanges
+from .cmd_exceptions import JsonHttpError
 
-from idrac_ctl.custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-from idrac_ctl import version, redfish_exceptions
+from .custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+
+from .cmd_exceptions import FailedDiscoverAction
+from .cmd_exceptions import InvalidArgument
+from .cmd_exceptions import UnsupportedAction
+from .idrac_manager import IDracManager
+
+from .cmd_exceptions import AuthenticationFailed
+from .cmd_exceptions import ResourceNotFound
+from .cmd_exceptions import TaskIdUnavailable
+from .cmd_utils import save_if_needed
 
 try:
     from urllib3.exceptions import InsecureRequestWarning
@@ -101,7 +107,10 @@ def formatter(prog):
 
 
 class IdracDetails:
-    version = version.__version__
+    """
+
+    """
+    version = __version__
     description = 'iDRAC command line tools.'
     author = 'Mus'
     author_email = 'spyroot@gmail.com'
@@ -277,7 +286,7 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
         if json_printer:
             json_printer(processed_data, cmd_args, colorized=cmd_args.nocolor)
 
-    except redfish_exceptions.RedfishException as redfish_err:
+    except RedfishException as redfish_err:
         console_error_printer(f"Error: {redfish_err}")
     except TaskIdUnavailable as tid:
         console_error_printer(f"Error: {tid}")

@@ -8,10 +8,12 @@ import time
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl.idrac_manager import IDracManager
-from idrac_ctl.idrac_shared import CliJobTypes, IdracApiRespond, IDRAC_API
-from idrac_ctl.idrac_shared import Singleton, ApiRequestType, ResetType, JobState
-from idrac_ctl.redfish_manager import CommandResult
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IDRAC_API, CliJobTypes, JobState
+from ..idrac_shared import IdracApiRespond
+from ..idrac_shared import ResetType
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class JobApply(IDracManager,

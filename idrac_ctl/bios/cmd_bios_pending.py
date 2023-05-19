@@ -7,8 +7,15 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
-from idrac_ctl.redfish_shared import RedfishJson
+from ..redfish_shared import RedfishJson
+
+from ..redfish_manager import CommandResult
+from ..cmd_exceptions import FailedDiscoverAction
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import UnsupportedAction
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import IDRAC_JSON
 
 
 class BiosQueryPending(IDracManager,

@@ -8,10 +8,10 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl.idrac_shared import IdracApiRespond
-from idrac_ctl.cmd_exceptions import FailedDiscoverAction
-from idrac_ctl.custom_argparser.customer_argdefault import BiosSubcommand
-from idrac_ctl import IDracManager, ApiRequestType, Singleton, CommandResult
+from ..idrac_shared import IdracApiRespond
+from ..cmd_exceptions import FailedDiscoverAction
+from ..custom_argparser.customer_argdefault import BiosSubcommand
+from .. import IDracManager, ApiRequestType, Singleton, CommandResult
 
 
 class BiosClearPending(IDracManager,

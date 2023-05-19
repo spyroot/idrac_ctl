@@ -7,13 +7,13 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import CommandResult
-from idrac_ctl import IDracManager, ApiRequestType, Singleton
-from idrac_ctl.cmd_exceptions import FailedDiscoverAction
-from idrac_ctl.cmd_exceptions import InvalidArgument
-from idrac_ctl.cmd_exceptions import UnsupportedAction
-from idrac_ctl.idrac_shared import IdracApiRespond
-from idrac_ctl.idrac_shared import IDRAC_JSON
+from ..redfish_manager import CommandResult
+from ..cmd_exceptions import FailedDiscoverAction
+from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import UnsupportedAction
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import IDRAC_JSON
 
 
 class ChassisReset(IDracManager,

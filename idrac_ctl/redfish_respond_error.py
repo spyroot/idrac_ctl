@@ -7,7 +7,7 @@ Author Mus spyroot@gmail.com
 """
 from typing import Optional, List
 
-from idrac_ctl.redfish_respond import RedfishRespondMessage
+from .redfish_respond import RedfishRespondMessage
 
 
 class RedfishMessage:

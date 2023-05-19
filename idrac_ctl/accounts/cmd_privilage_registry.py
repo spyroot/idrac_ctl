@@ -6,7 +6,9 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class QueryPrivilegeRegistry(IDracManager,

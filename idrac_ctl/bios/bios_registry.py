@@ -14,10 +14,22 @@ Author Mus spyroot@gmail.com
 """
 from abc import abstractmethod
 from typing import Optional
-from idrac_ctl import Singleton, IDracManager, save_if_needed
-from idrac_ctl.redfish_shared import RedfishJson
-from idrac_ctl.idrac_shared import ApiRequestType
-from idrac_ctl.redfish_manager import CommandResult
+
+from ..cmd_exceptions import InvalidJsonSpec
+from ..cmd_utils import from_json_spec
+from ..idrac_shared import IdracApiRespond
+from ..redfish_shared import RedfishJson
+from ..cmd_utils import str2bool
+from ..idrac_shared import IdracApiRespond, ResetType
+from ..cmd_utils import save_if_needed
+from ..cmd_exceptions import InvalidArgument
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
+from ..idrac_shared import IDRAC_API
+from ..idrac_shared import IdracApiRespond
+
+
 
 
 class BiosRegistry(IDracManager,

@@ -17,8 +17,10 @@ import argparse
 from abc import abstractmethod
 from typing import Optional
 
-from idrac_ctl import ApiRequestType, IDracManager, Singleton, CommandResult
-from idrac_ctl.cmd_utils import save_if_needed
+from ..cmd_utils import save_if_needed
+from ..idrac_manager import IDracManager
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
 
 
 class RaidServiceQuery(IDracManager,
