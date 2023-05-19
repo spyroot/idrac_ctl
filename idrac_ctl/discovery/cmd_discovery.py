@@ -13,9 +13,6 @@ from typing import Optional
 from idrac_ctl import Singleton, ApiRequestType, IDracManager, CommandResult
 import json
 
-import datasets
-import transformers
-
 from idrac_ctl.redfish_exceptions import RedfishForbidden
 
 
@@ -66,7 +63,6 @@ class Discovery(IDracManager,
         elif isinstance(data, list):
             for item in data:
                 yield from self.extract_odata_ids(item)
-
 
     def recursive_discovery(self, resource_path):
         """
