@@ -28,31 +28,19 @@ from ..cmd_exceptions import InvalidArgument
 from ..cmd_exceptions import InvalidJsonSpec
 from ..cmd_exceptions import UncommittedPendingChanges
 from ..cmd_utils import from_json_spec
+from ..idrac_manager import IDracManager
+from ..idrac_shared import IDRAC_API
 from ..idrac_shared import IDRAC_JSON
 from ..idrac_shared import IdracApiRespond
-from ..idrac_shared import IDRAC_API
-
-
-from ..cmd_exceptions import InvalidJsonSpec
-from ..cmd_utils import from_json_spec
-from ..idrac_shared import IdracApiRespond
-from ..redfish_shared import RedfishJson
-from ..cmd_utils import str2bool
-from ..idrac_shared import IdracApiRespond, ResetType
-from ..cmd_utils import save_if_needed
-from ..cmd_exceptions import InvalidArgument
-from ..idrac_manager import IDracManager
-from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import Singleton, ApiRequestType
 from ..redfish_manager import CommandResult
-from ..idrac_shared import IDRAC_API
-from ..idrac_shared import IdracApiRespond
 
 
-
-class BiosChangeSettings(IDracManager,
-                         scm_type=ApiRequestType.BiosChangeSettings,
-                         name='bios_change_settings',
-                         metaclass=Singleton):
+class BiosChangeSettings(
+    IDracManager,
+    scm_type=ApiRequestType.BiosChangeSettings,
+    name='bios_change_settings',
+    metaclass=Singleton):
     """A command changes bios settings
     """
 
