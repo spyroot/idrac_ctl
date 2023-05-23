@@ -37,6 +37,11 @@ class RedfishMessage:
         :param severity: Severity of the error
         :param resolution: recommended actions to take to resolve the error
         """
+        if not isinstance(message_args, list):
+            raise TypeError("message_args must be a list")
+        if not isinstance(related, list):
+            raise TypeError("related must be a list")
+
         if message_args is None:
             message_args = []
 
@@ -45,7 +50,6 @@ class RedfishMessage:
 
         self.message = message
         self.related = related
-
         self.message_id = message_id
         self.resolution = resolution
 
@@ -89,6 +93,9 @@ class RedfishRespondMessage:
         self._status_code = http_status_code
         self._exception_msg = exception_msg
 
+        if not isinstance(self._message_extended, list):
+            self._message_extended = []
+
     @property
     def code(self) -> str:
         """code from error message from redfish error"""
@@ -122,6 +129,9 @@ class RedfishRespondMessage:
 
     @staticmethod
     def new_msg():
+        """
+        :return:
+        """
         return RedfishMessage()
 
     @staticmethod
@@ -157,58 +167,44 @@ class RedfishRespondMessage:
         :return: None
         """
 
-        json_list = value
-        if value is None:
-            json_list = []
-
-        if isinstance(value, dict) and \
-                jsonMessage.MessageExtendedInfo in value:
+        if isinstance(value, dict) and jsonMessage.MessageExtendedInfo in value:
             json_list = value[jsonMessage.MessageExtendedInfo]
-
-        if not isinstance(json_list, list):
+        elif isinstance(value, list):
+            json_list = value
+        else:
             return
 
         for v in json_list:
             if not isinstance(v, dict):
                 continue
-
             # data_count_map = self.redfish_odata_count_map(v)
+
             # msg.add_property(data_count_map)
             msg = RedfishMessage()
-            if jsonMessage.MessageId in v:
-                msg.message_id = v[jsonMessage.MessageId]
-            if jsonMessage.Message in v:
-                msg.message = v[jsonMessage.Message]
+            msg.message_id = v.get(jsonMessage.MessageId, "")
+            msg.message = v.get(jsonMessage.Message, "")
 
             if jsonMessage.MessageId.lower() in v:
                 msg.message = v[jsonMessage.Message.lower()]
 
-            # list of args
-            if jsonMessage.MessageArgs in v:
-                if isinstance(v[jsonMessage.MessageArgs], list):
-                    msg.message_args = v[jsonMessage.MessageArgs]
-                else:
-                    msg.message_args.append(v[jsonMessage.MessageArgs])
+            message_args = v.get(jsonMessage.MessageArgs, [])
+            if isinstance(message_args, list):
+                msg.message_args = message_args
+            else:
+                msg.message_args.append(message_args)
 
-            if jsonMessage.MessageSeverity in v:
-                msg.message_severity = v[jsonMessage.MessageSeverity]
-            if jsonMessage.Severity in v:
-                msg.severity = v[jsonMessage.Severity]
-            if jsonMessage.Severity.lower() in v:
-                msg.severity = v[jsonMessage.Severity.lower()]
-            if jsonMessage.Resolution in v:
-                msg.resolution = v[jsonMessage.Resolution]
-            if jsonMessage.Resolution.lower() in v:
-                msg.resolution = v[jsonMessage.Resolution.lower()]
-
-            if jsonMessage.MessageArgsCount in v:
-                msg.message_count = int(v[jsonMessage.MessageArgsCount])
-
-            if jsonMessage.RelatedPropertiesCount in v:
-                msg.related_count = int(v[jsonMessage.RelatedPropertiesCount])
+            msg.message_severity = v.get(jsonMessage.MessageSeverity, v.get(jsonMessage.Severity, ""))
+            msg.message_severity = v.get(jsonMessage.MessageSeverity, v.get(jsonMessage.Severity, ""))
+            msg.resolution = v.get(jsonMessage.Resolution, v.get(jsonMessage.Resolution.lower(), ""))
+            msg.message_count = int(v.get(jsonMessage.MessageArgsCount, 0))
+            msg.related_count = int(v.get(jsonMessage.RelatedPropertiesCount, 0))
+            msg.severity = v.get(jsonMessage.Severity, "")
 
             self._message_extended.append(msg)
 
     def __repr__(self) -> str:
+        """
+        :return:
+        """
         msgs = [m.message for m in self._message_extended]
         return "\n".join(msgs) + "\n"

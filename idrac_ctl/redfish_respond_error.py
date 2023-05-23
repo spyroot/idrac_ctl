@@ -118,24 +118,25 @@ class RedfishError(RedfishRespondMessage):
             message_extended=message_extended,
         )
         super().__init__(http_status_code=http_status_code,
-                         code=code, message=message,
+                         code=code,
+                         message=message,
                          message_extended=message_extended)
 
     @staticmethod
     def new_msg():
         return RedfishErrorMessage()
-
-    @property
-    def message_extended(self) -> list[RedfishMessage]:
-        """return a list of error message based on spec
-        :return:  RedfishErrorMessage
-        """
-        return self._message_extended
+    #
+    # @property
+    # def message_extended(self) -> list[RedfishMessage]:
+    #     """return a list of error message based on spec
+    #     :return:  RedfishErrorMessage
+    #     """
+    #     return self._message_extended
 
     def __repr__(self) -> str:
-        msgs = [m.message for m in self._message_extended]
+        msgs = [m.message for m in self._message_extended if m.message]
         return "\n".join(msgs) + "\n"
-
-    @message_extended.setter
-    def message_extended(self, value):
-        self._message_extended = value
+    #
+    # @message_extended.setter
+    # def message_extended(self, value):
+    #     super().message_extended(value)

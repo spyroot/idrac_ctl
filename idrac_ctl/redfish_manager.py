@@ -393,11 +393,11 @@ class RedfishManager:
                 redfish_error.message = err_data['message']
 
             if RedfishJsonMessage.MessageExtendedInfo in err_data:
-                redfish_error.message_extended = [
-                    m for m
-                    in err_data[RedfishJsonMessage.MessageExtendedInfo]
-                ]
-
+                message_extended = err_data[RedfishJsonMessage.MessageExtendedInfo]
+                if isinstance(message_extended, list):
+                    redfish_error.message_extended = [
+                        m for m in message_extended if isinstance(m, dict)
+                    ]
         except requests.exceptions.JSONDecodeError as json_err:
             redfish_error.exception_msg = str(json_err)
             return redfish_error
