@@ -362,12 +362,14 @@ class RedfishManager:
                 )
             )
 
+        allow_header = response.headers.get("Allow")
+
         data = response.json()
         if key is not None and len(key) > 0 and key in data:
             data = data[key]
 
         save_if_needed(filename, data)
-        return CommandResult(data, None, None, None)
+        return CommandResult(data, None, allow_header, None)
 
     @staticmethod
     def parse_error(error_response: requests.models.Response) -> RedfishError:
