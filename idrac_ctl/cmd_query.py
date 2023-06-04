@@ -9,37 +9,16 @@ Author Mus spyroot@gmail.com
 from abc import abstractmethod
 from typing import Optional
 
-from .cmd_utils import save_if_needed, find_ids
-from .redfish_manager import CommandResult
-from .cmd_exceptions import FailedDiscoverAction
-from .cmd_exceptions import InvalidArgument
-from .cmd_exceptions import UnsupportedAction
 from .idrac_manager import IDracManager
-from .idrac_shared import IdracApiRespond, Singleton, ApiRequestType
-from .idrac_shared import IDRAC_JSON
+from .idrac_shared import Singleton, ApiRequestType
+from .redfish_manager import CommandResult
 
 
-from .redfish_shared import RedfishApi, RedfishJsonMessage
-from .redfish_shared import RedfishApiRespond
-from .redfish_shared import RedfishJsonSpec
-
-from .cmd_exceptions import AuthenticationFailed
-from .cmd_exceptions import ResourceNotFound
-from .cmd_exceptions import TaskIdUnavailable
-from .cmd_utils import save_if_needed
-from .redfish_respond import RedfishRespondMessage
-from .redfish_respond_error import RedfishError
-
-from .redfish_exceptions import RedfishForbidden
-from .redfish_exceptions import RedfishMethodNotAllowed
-from .redfish_exceptions import RedfishNotAcceptable
-from .redfish_exceptions import RedfishUnauthorized
-from .redfish_shared import RedfishJson
-
-class QueryIDRAC(IDracManager,
-                 scm_type=ApiRequestType.QueryIdrac,
-                 name='query_idrac',
-                 metaclass=Singleton):
+class QueryIDRAC(
+    IDracManager,
+    scm_type=ApiRequestType.QueryIdrac,
+    name='query_idrac',
+    metaclass=Singleton):
     """A command query iDRAC resource based on a resource path.
     """
 

@@ -1,8 +1,6 @@
-"""iDRAC query command
+"""Redfish discovery command
 
-Command provides capability raw query based URI resource,
-in case specific action might not implement yet; hence it
-is easy to query.
+Command discover all idrac / redfish resources.
 
 Author Mus spyroot@gmail.com
 """
@@ -21,23 +19,31 @@ from ..redfish_manager import CommandResult
 
 class Discovery(IDracManager,
                 scm_type=ApiRequestType.Discovery,
-                name='discovery_idrac',
+                name='discovery',
                 metaclass=Singleton):
-    """A command query iDRAC resource based on a resource path.
+    """A command discovery all redfish resource
+       based on a resource path
     """
 
     def __init__(self, *args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        """
         super(Discovery, self).__init__(*args, **kwargs)
         self.visited_urls = {}
         home_dir = str(Path.home())
         redfish_ip = self.redfish_ip.replace(":", "")
         self.json_response_dir = f"{str(home_dir)}/.json_responses/{redfish_ip}"
 
-        self.default_query_filter = ["LogServices/Sel/Entries",
-                                     "JID_",
-                                     "StdSecbootpolicy.",
-                                     "Signatures/StdSecbootpolicy.",
-                                     "Lclog/Entries/"]
+        # default filter that will skip this entities.
+        self.default_query_filter = [
+            "LogServices/Sel/Entries",
+            "JID_",
+            "StdSecbootpolicy.",
+            "Signatures/StdSecbootpolicy.",
+            "Lclog/Entries/"]
 
     @staticmethod
     @abstractmethod
