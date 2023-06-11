@@ -66,7 +66,7 @@ class ChassisReset(IDracManager,
 
         redfish_action = chassis_data.discovered[IDRAC_JSON.Reset]
         target_api = redfish_action.target
-        args = redfish_action.args
+        args = redfish_action._args
         args_options = args[IDRAC_JSON.ResetType]
 
         if reset_type not in args_options:
