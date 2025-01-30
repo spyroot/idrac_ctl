@@ -254,7 +254,7 @@ class BiosChangeSettings(
             )
         registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
 
-        if IDRAC_JSON.Attributes not in cmd_result.data:
+        if IDRAC_JSON.Attributes not in registry:
             return CommandResult(
                 {
                     "Status": "Failed fetch attributes from bios registry"
