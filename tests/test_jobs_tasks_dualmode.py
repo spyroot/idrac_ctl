@@ -1,0 +1,107 @@
+"""Dual-mode tests for job and task read commands."""
+import json
+
+from idrac_ctl.idrac_shared import ApiRequestType
+from idrac_ctl.redfish_manager import CommandResult
+
+JOB_ID = "JID_000000000001"
+
+
+def test_jobs_list_returns_expanded_job_members(redfish_api):
+    """jobs_sources_query returns expanded Dell job resources offline."""
+    result = redfish_api.sync_invoke(ApiRequestType.Jobs, "jobs_sources_query")
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, list)
+    json.dumps(result.data)
+    assert [job["Id"] for job in result.data] == [
+        "JID_000000000002",
+        JOB_ID,
+    ]
+    assert result.data[0]["JobState"] == "Running"
+
+
+def test_jobs_list_can_return_only_job_ids(redfish_api):
+    """jobs_sources_query can project the expanded job collection to IDs."""
+    result = redfish_api.sync_invoke(
+        ApiRequestType.Jobs,
+        "jobs_sources_query",
+        job_ids=True,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert result.data == ["JID_000000000002", JOB_ID]
+
+
+def test_job_get_returns_dell_oem_job(redfish_api):
+    """job_query returns one Dell OEM job by job ID."""
+    result = redfish_api.sync_invoke(
+        ApiRequestType.JobGet,
+        "job_query",
+        job_id=JOB_ID,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, dict)
+    json.dumps(result.data)
+    assert result.data["@odata.id"] == (
+        f"/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/{JOB_ID}"
+    )
+    assert result.data["Id"] == JOB_ID
+    assert result.data["JobState"] == "Completed"
+
+
+def test_job_service_returns_service_capabilities(redfish_api):
+    """job_service_query returns the Redfish JobService resource."""
+    result = redfish_api.sync_invoke(ApiRequestType.JobServices, "job_service_query")
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, CommandResult)
+    assert isinstance(result.data.data, dict)
+    json.dumps(result.data.data)
+    assert result.data.data["@odata.id"] == "/redfish/v1/JobService"
+    assert result.data.data["ServiceCapabilities"]["MaxJobs"] == 256
+    assert result.data.data["Jobs"]["@odata.id"] == (
+        "/redfish/v1/Managers/iDRAC.Embedded.1/Jobs"
+    )
+
+
+def test_tasks_list_returns_task_collection_and_actions(redfish_api):
+    """chassis_service_query for TasksList returns expanded task members."""
+    result = redfish_api.sync_invoke(ApiRequestType.TasksList, "chassis_service_query")
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, CommandResult)
+    assert isinstance(result.data.data, dict)
+    json.dumps(result.data.data)
+    assert result.data.data["@odata.id"] == "/redfish/v1/TaskService/Tasks"
+    assert result.data.data["Members"][0]["Id"] == JOB_ID
+    assert "Cancel" in result.discovered
+
+
+def test_task_get_returns_one_task_resource(redfish_api):
+    """task-get returns one TaskService task by task ID."""
+    result = redfish_api.sync_invoke(
+        ApiRequestType.TaskGet,
+        "chassis_service_query",
+        task_id=JOB_ID,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, CommandResult)
+    assert isinstance(result.data.data, dict)
+    json.dumps(result.data.data)
+    assert result.data.data["@odata.id"] == f"/redfish/v1/TaskService/Tasks/{JOB_ID}"
+    assert result.data.data["TaskState"] == "Completed"
+
+
+def test_get_task_returns_completed_job_state_without_polling(redfish_api):
+    """task_query returns the completed job state before polling TaskService."""
+    result = redfish_api.sync_invoke(
+        ApiRequestType.GetTask,
+        "task_query",
+        job_id=JOB_ID,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert result.data.value == "Completed"
