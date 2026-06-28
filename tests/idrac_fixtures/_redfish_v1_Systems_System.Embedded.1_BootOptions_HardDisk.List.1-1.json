@@ -1,0 +1,11 @@
+{
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/BootOptions/HardDisk.List.1-1",
+    "@odata.type": "#BootOption.v1_0_4.BootOption",
+    "Id": "HardDisk.List.1-1",
+    "Name": "UEFI Boot Option",
+    "DisplayName": "Integrated RAID Controller 1",
+    "Description": "Current settings of the UEFI boot option",
+    "BootOptionEnabled": true,
+    "BootOptionReference": "HardDisk.List.1-1",
+    "UefiDevicePath": "PciRoot(0x0)/Pci(0x1F,0x2)/Sata(0x0,0xFFFF,0x0)"
+}
