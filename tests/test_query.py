@@ -75,3 +75,32 @@ def test_bad_expand_levels_rejected():
     """$expand levels must be >= 1."""
     with pytest.raises(ValueError):
         RedfishQuery(expand=True, expand_levels=0).to_query_string()
+
+
+# --- transport integration: get_with_query applies params, offline ----------
+
+def test_get_with_query_applies_params(redfish_mock, redfish_service):
+    """get_with_query appends the query string and the server receives it."""
+    resp = redfish_mock.get_with_query(
+        "https://mock-idrac/redfish/v1/Managers", RedfishQuery(top=5)
+    )
+    assert resp.status_code == 200
+    assert "top=5" in redfish_service.last_request.query  # lowercased by requests-mock
+
+
+def test_get_with_query_none_is_plain_get(redfish_mock):
+    """No query yields a plain GET that still resolves the fixture."""
+    resp = redfish_mock.get_with_query(
+        "https://mock-idrac/redfish/v1/Managers", None
+    )
+    assert resp.status_code == 200
+    assert resp.json()["@odata.id"] == "/redfish/v1/Managers"
+
+
+def test_get_with_query_enforces_one_param(redfish_mock):
+    """With the Dell one-param-per-URI rule, combining params raises before the call."""
+    q = RedfishQuery(select=["Id"], top=5)
+    with pytest.raises(ValueError):
+        redfish_mock.get_with_query(
+            "https://mock-idrac/redfish/v1/Managers", q, one_param_per_uri=True
+        )

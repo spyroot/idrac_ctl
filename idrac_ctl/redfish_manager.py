@@ -13,26 +13,28 @@ import logging
 import re
 from abc import abstractmethod
 from functools import cached_property
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import requests
 
-from .redfish_shared import RedfishApi, RedfishJsonMessage
-from .redfish_shared import RedfishApiRespond
-from .redfish_shared import RedfishJsonSpec
-
-from .cmd_exceptions import AuthenticationFailed
-from .cmd_exceptions import ResourceNotFound
-from .cmd_exceptions import TaskIdUnavailable
+from .cmd_exceptions import AuthenticationFailed, ResourceNotFound, TaskIdUnavailable
 from .cmd_utils import save_if_needed
+from .redfish_exceptions import (
+    RedfishForbidden,
+    RedfishMethodNotAllowed,
+    RedfishNotAcceptable,
+    RedfishUnauthorized,
+)
+from .redfish_query import RedfishQuery
 from .redfish_respond import RedfishRespondMessage
 from .redfish_respond_error import RedfishError
-
-from .redfish_exceptions import RedfishForbidden
-from .redfish_exceptions import RedfishMethodNotAllowed
-from .redfish_exceptions import RedfishNotAcceptable
-from .redfish_exceptions import RedfishUnauthorized
-from .redfish_shared import RedfishJson
+from .redfish_shared import (
+    RedfishApi,
+    RedfishApiRespond,
+    RedfishJson,
+    RedfishJsonMessage,
+    RedfishJsonSpec,
+)
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
@@ -218,6 +220,27 @@ class RedfishManager:
                 req, verify=self._is_verify_cert,
                 auth=(self._username, self._password)
             )
+
+    def get_with_query(
+            self, req: str,
+            query: Optional[RedfishQuery] = None,
+            hdr: Optional[Dict] = None,
+            one_param_per_uri: bool = False) -> requests.models.Response:
+        """GET ``req`` with optional Redfish query parameters applied.
+
+        ``one_param_per_uri`` enforces the vendor rule (Dell iDRAC) that only one
+        query parameter may appear per URI. The caller passes it from the target's
+        vendor capability profile so this generic layer stays vendor-neutral.
+
+        :param req: full request URL (without a query string)
+        :param query: a RedfishQuery, or None for a plain GET
+        :param hdr: optional headers
+        :param one_param_per_uri: reject combining query parameters when True
+        :return: requests.models.Response
+        :raise ValueError: if the query is invalid for the target
+        """
+        url = req if query is None else query.apply(req, one_param_per_uri)
+        return self.api_get_call(url, hdr or {})
 
     @staticmethod
     def expanded(level: Optional[int] = 1):
