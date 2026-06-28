@@ -1,0 +1,21 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#DellAttributes.DellAttributes",
+  "@odata.id": "/redfish/v1/Managers/System.Embedded.1/Attributes",
+  "@odata.type": "#DellAttributes.v1_0_0.DellAttributes",
+  "Id": "Attributes",
+  "Name": "Manager Attribute Current Settings",
+  "AttributeRegistry": "ManagerAttributeRegistry.v1_0_0",
+  "Attributes": {
+    "SystemInfo.1.BootTime": "2024-06-21T12:34:56-05:00",
+    "ServerTopology.1.AisleName": "Aisle-A",
+    "ServerTopology.1.RackName": "Rack-42",
+    "OwnerInfo.1.OwnerName": "Initial Owner",
+    "IPv4.1.DHCPEnable": "Enabled",
+    "NIC.1.Selection": "Dedicated"
+  },
+  "Actions": {
+    "#DellManager.ClearPending": {
+      "target": "/redfish/v1/Managers/System.Embedded.1/Attributes/Actions/DellManager.ClearPending"
+    }
+  }
+}
