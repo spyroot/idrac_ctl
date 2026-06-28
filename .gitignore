@@ -18,6 +18,7 @@ IMPROVEMENT_PLAN.md
 ROADMAP*.md
 CODEX_TASKS.md
 CODEX_*.md
+COORDINATION.md
 .codex/
 .claude/
 .agent-review/
