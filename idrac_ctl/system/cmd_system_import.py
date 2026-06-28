@@ -113,12 +113,12 @@ class ImportSystemConfig(IDracManager,
         :return: in data type json will return json
         """
         if verbose:
-            print(f"cmd args data_type: {data_type} "
+            self.logger.debug(f"cmd args data_type: {data_type} "
                   f"shutdown_type:{shutdown_type} "
                   f"host_power_state:{host_power_state} "
                   f"do_async:{do_async} "
                   f"filename:{filename}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":

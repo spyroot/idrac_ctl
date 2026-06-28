@@ -1,0 +1,46 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
+  "@odata.id": "/redfish/v1/Systems/System.Embedded.1",
+  "@odata.type": "#ComputerSystem.v1_16_0.ComputerSystem",
+  "Id": "System.Embedded.1",
+  "Name": "System",
+  "SystemType": "Physical",
+  "Manufacturer": "Dell Inc.",
+  "Model": "PowerEdge Mock",
+  "PowerState": "On",
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  },
+  "Bios": {
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Bios"
+  },
+  "Boot": {
+    "BootSourceOverrideEnabled": "Disabled",
+    "BootSourceOverrideTarget": "None"
+  },
+  "PCIeDevices": [
+    {
+      "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevices/NIC.Slot.1-1"
+    }
+  ],
+  "PCIeFunctions": [
+    {
+      "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeFunctions/NIC.Slot.1-1-1"
+    }
+  ],
+  "Storage": {
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage"
+  },
+  "Actions": {
+    "#ComputerSystem.Reset": {
+      "target": "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
+      "ResetType@Redfish.AllowableValues": [
+        "On",
+        "GracefulRestart",
+        "ForceRestart",
+        "PowerCycle"
+      ]
+    }
+  }
+}

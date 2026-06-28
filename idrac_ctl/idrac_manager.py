@@ -304,7 +304,7 @@ class IDracManager(RedfishManager):
         _port = kwargs.pop("port")
         _insecure = kwargs.pop("insecure")
         _is_http = kwargs.pop("is_http")
-        print(" PORT ", _port)
+        module_logger.debug(f"dispatching {name} to idrac port {_port}")
 
         inst = disp(
             idrac_ip=_idrac_ip,
@@ -1164,7 +1164,7 @@ class IDracManager(RedfishManager):
         :raise RedfishException if HTTP method failed.
         """
         # if location in the header , job created
-        print("Response code", response.status_code)
+        self.logger.debug(f"read_api_respond response code {response.status_code}")
 
         if response.headers is not None \
                 and RedfishJsonSpec.Location in response.headers:

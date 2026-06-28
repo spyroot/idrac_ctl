@@ -90,9 +90,9 @@ class ExportSystemConfig(IDracManager,
         """
 
         if verbose:
-            print(f"cmd args data_type: {data_type} "
+            self.logger.debug(f"cmd args data_type: {data_type} "
                   f"do_async:{do_async} export_format:{export_format}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         headers.update(self.content_type)

@@ -13,26 +13,28 @@ import logging
 import re
 from abc import abstractmethod
 from functools import cached_property
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import requests
 
-from .redfish_shared import RedfishApi, RedfishJsonMessage
-from .redfish_shared import RedfishApiRespond
-from .redfish_shared import RedfishJsonSpec
-
-from .cmd_exceptions import AuthenticationFailed
-from .cmd_exceptions import ResourceNotFound
-from .cmd_exceptions import TaskIdUnavailable
+from .cmd_exceptions import AuthenticationFailed, ResourceNotFound, TaskIdUnavailable
 from .cmd_utils import save_if_needed
+from .redfish_exceptions import (
+    RedfishForbidden,
+    RedfishMethodNotAllowed,
+    RedfishNotAcceptable,
+    RedfishUnauthorized,
+)
+from .redfish_query import RedfishQuery
 from .redfish_respond import RedfishRespondMessage
 from .redfish_respond_error import RedfishError
-
-from .redfish_exceptions import RedfishForbidden
-from .redfish_exceptions import RedfishMethodNotAllowed
-from .redfish_exceptions import RedfishNotAcceptable
-from .redfish_exceptions import RedfishUnauthorized
-from .redfish_shared import RedfishJson
+from .redfish_shared import (
+    RedfishApi,
+    RedfishApiRespond,
+    RedfishJson,
+    RedfishJsonMessage,
+    RedfishJsonSpec,
+)
 
 """Each command encapsulate result in named tuple"""
 CommandResult = collections.namedtuple("cmd_result",
@@ -218,6 +220,27 @@ class RedfishManager:
                 req, verify=self._is_verify_cert,
                 auth=(self._username, self._password)
             )
+
+    def get_with_query(
+            self, req: str,
+            query: Optional[RedfishQuery] = None,
+            hdr: Optional[Dict] = None,
+            one_param_per_uri: bool = False) -> requests.models.Response:
+        """GET ``req`` with optional Redfish query parameters applied.
+
+        ``one_param_per_uri`` enforces the vendor rule (Dell iDRAC) that only one
+        query parameter may appear per URI. The caller passes it from the target's
+        vendor capability profile so this generic layer stays vendor-neutral.
+
+        :param req: full request URL (without a query string)
+        :param query: a RedfishQuery, or None for a plain GET
+        :param hdr: optional headers
+        :param one_param_per_uri: reject combining query parameters when True
+        :return: requests.models.Response
+        :raise ValueError: if the query is invalid for the target
+        """
+        url = req if query is None else query.apply(req, one_param_per_uri)
+        return self.api_get_call(url, hdr or {})
 
     @staticmethod
     def expanded(level: Optional[int] = 1):
@@ -423,10 +446,10 @@ class RedfishManager:
                     m for m
                     in json_data[RedfishJsonMessage.MessageExtendedInfo]
                 ]
-        except requests.exceptions.JSONDecodeError as _:
-            pass
-        except TypeError as _:
-            pass
+        except requests.exceptions.JSONDecodeError as decode_err:
+            logging.debug(f"no json body to parse from respond: {decode_err}")
+        except TypeError as type_err:
+            logging.debug(f"unexpected respond payload shape: {type_err}")
 
         finally:
             return redfish_resp
@@ -547,8 +570,8 @@ class RedfishManager:
                     if job_id is not None:
                         job_id = job_id.group(0)
                     return job_id
-        except AttributeError as _:
-            pass
+        except AttributeError as attr_err:
+            logging.debug(f"could not read job id from respond object: {attr_err}")
 
         return ""
 
@@ -579,17 +602,17 @@ class RedfishManager:
             job_id = self.job_id_from_header(resp)
             logging.debug(f"idrac api returned job_id: {job_id} in the response header.")
             return job_id
-        # ignored.
-        except TaskIdUnavailable as _:
-            pass
+        # optional lookup, fall through to the response body below.
+        except TaskIdUnavailable as header_err:
+            logging.debug(f"no job id in the response header: {header_err}")
 
         # this from response
         try:
             # try to get from the response, it an optional check.
             job_id = self.job_id_from_respond(resp)
             logging.debug(f"idrac api returned job_id: {job_id} in the response header.")
-        except TaskIdUnavailable as _:
-            pass
+        except TaskIdUnavailable as respond_err:
+            logging.debug(f"no job id in the response body: {respond_err}")
 
         return ""
 

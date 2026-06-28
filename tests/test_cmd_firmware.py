@@ -18,6 +18,12 @@ from idrac_ctl.idrac_shared import ApiRequestType
 from idrac_ctl.idrac_manager import CommandResult
 
 
+import pytest
+
+# Integration tests: require a reachable iDRAC.
+# Skipped automatically unless IDRAC_IP is set (see tests/conftest.py).
+pytestmark = pytest.mark.live
+
 class TestFirmware(TestCase):
     redfish_api = None
 

@@ -66,9 +66,9 @@ class GetCurrentBoot(IDracManager,
         :return: CommandResult and if filename provide will save to a file.
         """
         if verbose:
-            print(f"cmd args data_type: {data_type} "
+            self.logger.debug(f"cmd args data_type: {data_type} "
                   f"do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":

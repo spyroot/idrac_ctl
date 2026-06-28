@@ -68,9 +68,9 @@ class FirmwareQuery(IDracManager,
         :return: in data type json will return json
         """
         if verbose:
-            print(f"cmd args data_type: {data_type} "
+            self.logger.debug(f"cmd args data_type: {data_type} "
                   f"do_deep:{do_deep} do_async:{do_async} filename:{filename}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":

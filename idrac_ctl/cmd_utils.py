@@ -131,6 +131,6 @@ def save_if_needed(filename: str, raw_data,
         else:
             final_filename = f"{final_filename}.yaml"
         with open(final_filename, 'w') as file:
-            yaml.dump(filename, file)
+            yaml.dump(raw_data, file)
     else:
-        ValueError("Unknown format")
+        raise ValueError(f"Unknown data format '{data_format}'.")

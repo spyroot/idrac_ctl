@@ -1,0 +1,22 @@
+{
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/BootSources",
+    "@odata.type": "#DellBootSources.v1_0_0.DellBootSources",
+    "Id": "BootSources",
+    "Name": "BootSources Configuration Current Settings",
+    "Attributes": {
+        "UefiBootSeq": [
+            {
+                "Enabled": true,
+                "Id": "BIOS.Setup.1-1#UefiBootSeq#NIC.PxeDevice.1-1",
+                "Index": 0,
+                "Name": "NIC.PxeDevice.1-1"
+            },
+            {
+                "Enabled": true,
+                "Id": "BIOS.Setup.1-1#UefiBootSeq#RAID.Integrated.1-1",
+                "Index": 1,
+                "Name": "RAID.Integrated.1-1"
+            }
+        ]
+    }
+}
