@@ -4,6 +4,9 @@
   "@odata.type": "#AttributeRegistry.v1_3_0.AttributeRegistry",
   "Id": "BiosAttributeRegistry",
   "Name": "BIOS Attribute Registry",
+  "Language": "en",
+  "RegistryVersion": "1.0.0",
+  "OwningEntity": "Dell",
   "RegistryEntries": {
     "Attributes": [
       {
