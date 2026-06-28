@@ -9,13 +9,9 @@
     "State": "Enabled",
     "Health": "OK"
   },
-  "Controllers": [
-    {
-      "MemberId": "0",
-      "Name": "PERC H755 Adapter",
-      "Model": "PERC H755"
-    }
-  ],
+  "Controllers": {
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/RAID.Integrated.1-1/Controllers"
+  },
   "Drives": [
     {
       "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/RAID.Integrated.1-1/Drives/Disk.Bay.0"

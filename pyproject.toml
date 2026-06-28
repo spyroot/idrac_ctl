@@ -47,6 +47,7 @@ pythonpath = ["."]
 # skipped automatically by tests/conftest.py unless IDRAC_IP is set.
 markers = [
     "live: integration test that requires a reachable iDRAC (set IDRAC_IP to run)",
+    "schema: validates fixtures against DMTF Redfish schemas (run tools/fetch_schemas.sh first)",
 ]
 filterwarnings = [
     "ignore:Unverified HTTPS request",

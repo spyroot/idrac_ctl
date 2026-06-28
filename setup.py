@@ -30,7 +30,11 @@ setup_info = dict(name='idrac_ctl',
                           "requests-mock >= 1.10",
                           "ruff",
                           "mypy",
-                      ]
+                      ],
+                      "schema": [
+                          "jsonschema >= 4.18",
+                          "referencing",
+                      ],
                   },
                   )
 setup(**setup_info)

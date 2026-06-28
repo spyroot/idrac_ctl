@@ -27,6 +27,9 @@ COORDINATION.md
 .DS_Store
 result.json
 
+# Vendored DMTF Redfish schemas (populated by tools/fetch_schemas.sh; not committed)
+tools/redfish-schemas/
+
 *.th
 *.env
 devices/*.env
