@@ -1,0 +1,23 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#DellRaidService.DellRaidService",
+  "@odata.id": "/redfish/v1/Dell/Systems/System.Embedded.1/DellRaidService",
+  "@odata.type": "#DellRaidService.v1_5_0.DellRaidService",
+  "Id": "DellRaidService",
+  "Name": "Dell RAID Service",
+  "Description": "Dell RAID service for System.Embedded.1",
+  "Actions": {
+    "#DellRaidService.AssignSpare": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellRaidService/Actions/DellRaidService.AssignSpare"
+    },
+    "#DellRaidService.ConvertToNonRAID": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellRaidService/Actions/DellRaidService.ConvertToNonRAID"
+    },
+    "#DellRaidService.ConvertToRAID": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellRaidService/Actions/DellRaidService.ConvertToRAID"
+    }
+  },
+  "Status": {
+    "Health": "OK",
+    "State": "Enabled"
+  }
+}
