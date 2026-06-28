@@ -1,0 +1,71 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#VirtualMediaCollection.VirtualMediaCollection",
+  "@odata.id": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia",
+  "@odata.type": "#VirtualMediaCollection.VirtualMediaCollection",
+  "Name": "Virtual Media Collection",
+  "Description": "Mock iDRAC virtual media collection",
+  "Members@odata.count": 2,
+  "Members": [
+    {
+      "@odata.context": "/redfish/v1/$metadata#VirtualMedia.VirtualMedia",
+      "@odata.id": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/1",
+      "@odata.type": "#VirtualMedia.v1_6_0.VirtualMedia",
+      "Id": "1",
+      "Name": "VirtualMedia Instance 1",
+      "Description": "iDRAC Virtual Media Instance",
+      "ConnectedVia": "NotConnected",
+      "Image": null,
+      "ImageName": null,
+      "Inserted": false,
+      "MediaTypes": [
+        "CD",
+        "DVD",
+        "USBStick"
+      ],
+      "MediaTypes@odata.count": 3,
+      "Password": null,
+      "TransferMethod": null,
+      "TransferProtocolType": null,
+      "UserName": null,
+      "WriteProtected": true,
+      "Actions": {
+        "#VirtualMedia.InsertMedia": {
+          "target": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/1/Actions/VirtualMedia.InsertMedia"
+        },
+        "#VirtualMedia.EjectMedia": {
+          "target": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/1/Actions/VirtualMedia.EjectMedia"
+        }
+      }
+    },
+    {
+      "@odata.context": "/redfish/v1/$metadata#VirtualMedia.VirtualMedia",
+      "@odata.id": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/2",
+      "@odata.type": "#VirtualMedia.v1_6_0.VirtualMedia",
+      "Id": "2",
+      "Name": "VirtualMedia Instance 2",
+      "Description": "iDRAC Virtual Media Instance",
+      "ConnectedVia": "URI",
+      "Image": "http://example.test/installer.iso",
+      "ImageName": "installer.iso",
+      "Inserted": true,
+      "MediaTypes": [
+        "CD",
+        "DVD"
+      ],
+      "MediaTypes@odata.count": 2,
+      "Password": null,
+      "TransferMethod": "Stream",
+      "TransferProtocolType": "HTTP",
+      "UserName": null,
+      "WriteProtected": true,
+      "Actions": {
+        "#VirtualMedia.InsertMedia": {
+          "target": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/2/Actions/VirtualMedia.InsertMedia"
+        },
+        "#VirtualMedia.EjectMedia": {
+          "target": "/redfish/v1/Systems/System.Embedded.1/VirtualMedia/2/Actions/VirtualMedia.EjectMedia"
+        }
+      }
+    }
+  ]
+}
