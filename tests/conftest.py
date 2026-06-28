@@ -43,9 +43,16 @@ sys.path.insert(0, _REPO_ROOT)
 import importlib.util  # noqa: E402
 
 _nested_init = os.path.join(_REPO_ROOT, "idrac_ctl", "__init__.py")
-_pkg = importlib.import_module("idrac_ctl")
-if getattr(_pkg, "__file__", "") != _nested_init:
-    # Wrong package won the race; load the nested one by path and rebind it.
+try:
+    _pkg = importlib.import_module("idrac_ctl")
+    _correct = getattr(_pkg, "__file__", "") == _nested_init
+except Exception:
+    # e.g. a sibling repo dir named idrac_ctl (a git worktree next to the repo)
+    # or the repo-root re-export shim raising on its relative import.
+    _correct = False
+    _pkg = None
+if not _correct:
+    # Wrong/failed import: force-load THIS tree's nested package by path.
     sys.modules.pop("idrac_ctl", None)
     spec = importlib.util.spec_from_file_location(
         "idrac_ctl", _nested_init,
