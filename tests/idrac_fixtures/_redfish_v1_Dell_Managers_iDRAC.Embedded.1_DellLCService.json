@@ -1,0 +1,25 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#DellLCService.DellLCService",
+  "@odata.id": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService",
+  "@odata.type": "#DellLCService.v1_0_0.DellLCService",
+  "Id": "DellLCService",
+  "Name": "Dell Lifecycle Controller Service",
+  "ServiceEnabled": true,
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  },
+  "Links": {
+    "Manager": {
+      "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"
+    }
+  },
+  "Actions": {
+    "#DellLCService.GetRemoteServicesAPIStatus": {
+      "target": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus"
+    },
+    "#DellLCService.GetRSStatus": {
+      "target": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/Actions/DellLCService.GetRSStatus"
+    }
+  }
+}
