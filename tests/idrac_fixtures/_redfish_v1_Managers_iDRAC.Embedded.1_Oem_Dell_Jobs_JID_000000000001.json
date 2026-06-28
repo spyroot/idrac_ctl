@@ -1,0 +1,14 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#DellJob.DellJob",
+  "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/JID_000000000001",
+  "@odata.type": "#DellJob.v1_0_0.DellJob",
+  "Id": "JID_000000000001",
+  "Name": "Completed BIOS configuration job",
+  "JobState": "Completed",
+  "JobType": "BIOSConfiguration",
+  "StartTime": "2026-06-28T10:00:00+00:00",
+  "ActualRunningStartTime": "2026-06-28T10:00:00+00:00",
+  "EndTime": "2026-06-28T10:02:00+00:00",
+  "PercentComplete": 100,
+  "Message": "Job completed successfully."
+}
