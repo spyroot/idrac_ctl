@@ -1,0 +1,12 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Task.Task",
+  "@odata.id": "/redfish/v1/TaskService/Tasks/JID_000000000001",
+  "@odata.type": "#Task.v1_7_0.Task",
+  "Id": "JID_000000000001",
+  "Name": "Completed BIOS configuration task",
+  "TaskState": "Completed",
+  "TaskStatus": "OK",
+  "StartTime": "2026-06-28T10:00:00+00:00",
+  "EndTime": "2026-06-28T10:02:00+00:00",
+  "PercentComplete": 100
+}

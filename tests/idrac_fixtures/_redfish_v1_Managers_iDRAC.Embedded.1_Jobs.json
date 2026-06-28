@@ -1,0 +1,33 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#JobCollection.JobCollection",
+  "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Jobs",
+  "@odata.type": "#JobCollection.JobCollection",
+  "Name": "Job Queue",
+  "Members@odata.count": 2,
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/JID_000000000001",
+      "@odata.type": "#DellJob.v1_0_0.DellJob",
+      "Id": "JID_000000000001",
+      "Name": "Completed BIOS configuration job",
+      "JobState": "Completed",
+      "JobType": "BIOSConfiguration",
+      "StartTime": "2026-06-28T10:00:00+00:00",
+      "ActualRunningStartTime": "2026-06-28T10:00:00+00:00",
+      "PercentComplete": 100,
+      "Message": "Job completed successfully."
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/JID_000000000002",
+      "@odata.type": "#DellJob.v1_0_0.DellJob",
+      "Id": "JID_000000000002",
+      "Name": "Running firmware update job",
+      "JobState": "Running",
+      "JobType": "FirmwareUpdate",
+      "StartTime": "2026-06-28T10:05:00+00:00",
+      "ActualRunningStartTime": "2026-06-28T10:05:00+00:00",
+      "PercentComplete": 40,
+      "Message": "Job is running."
+    }
+  ]
+}

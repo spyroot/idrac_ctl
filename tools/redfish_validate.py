@@ -86,6 +86,23 @@ def _strip_oem(obj) -> None:
             _strip_oem(value)
 
 
+def _reduce_collection_members(obj: dict) -> None:
+    """Reduce a collection's ``Members`` to references for validation.
+
+    Redfish collection schemas type ``Members`` as references (``{@odata.id}``).
+    Real services (notably Dell iDRAC, and any ``$expand`` response) inline the
+    full member objects. We validate the collection's reference structure here;
+    each inlined member is validated on its own as its individual resource.
+    """
+    members = obj.get("Members")
+    if isinstance(members, list):
+        obj["Members"] = [
+            {"@odata.id": m["@odata.id"]}
+            if isinstance(m, dict) and "@odata.id" in m else m
+            for m in members
+        ]
+
+
 def validate_payload(payload: dict, strip_oem: bool = True) -> list:
     """Validate a Redfish resource. Returns a sorted list of errors ([] = valid).
 
@@ -95,10 +112,10 @@ def validate_payload(payload: dict, strip_oem: bool = True) -> list:
     odata_type = payload.get("@odata.type")
     if not odata_type:
         raise ValueError("payload has no @odata.type")
-    body = payload
+    body = deepcopy(payload)
     if strip_oem:
-        body = deepcopy(payload)
         _strip_oem(body)
+    _reduce_collection_members(body)
     validator = Draft7Validator({"$ref": schema_ref_for(odata_type)}, registry=_REGISTRY)
     try:
         errors = list(validator.iter_errors(body))
