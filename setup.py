@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -22,6 +22,7 @@ setup_info = dict(name='idrac_ctl',
                   entry_points={
                       'console_scripts': [
                           'idrac_ctl = idrac_ctl.idrac_main:idrac_main_ctl',
+                          'redfish-discover = idrac_ctl.discover.cli:redfish_discover_main',
                       ]
                   },
                   extras_require={
@@ -34,6 +35,9 @@ setup_info = dict(name='idrac_ctl',
                       "schema": [
                           "jsonschema >= 4.18",
                           "referencing",
+                      ],
+                      "tui": [
+                          "rich >= 13",
                       ],
                   },
                   )
