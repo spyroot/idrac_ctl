@@ -25,6 +25,8 @@ dependencies:
   # Schema validation (tools/redfish_validate.py)
   - jsonschema>=4.18
   - referencing
+  # Optional TUI ("tui" extra in setup.py): pretty tables for redfish-discover.
+  - rich>=13
   - pip:
       # Install idrac_ctl itself (and anything not on conda-forge) via pip.
       - -e .
