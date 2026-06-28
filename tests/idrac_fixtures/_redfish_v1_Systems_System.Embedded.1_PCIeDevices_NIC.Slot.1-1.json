@@ -1,0 +1,15 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#PCIeDevice.PCIeDevice",
+  "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevices/NIC.Slot.1-1",
+  "@odata.type": "#PCIeDevice.v1_9_0.PCIeDevice",
+  "Id": "NIC.Slot.1-1",
+  "Name": "PCIe Device NIC.Slot.1-1",
+  "Manufacturer": "Dell Inc.",
+  "Model": "Mock 25GbE Adapter",
+  "DeviceType": "SingleFunction",
+  "FirmwareVersion": "21.5.9",
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  }
+}

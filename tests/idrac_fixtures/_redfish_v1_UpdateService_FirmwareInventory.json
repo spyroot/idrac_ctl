@@ -1,0 +1,20 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#SoftwareInventoryCollection.SoftwareInventoryCollection",
+  "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory",
+  "@odata.type": "#SoftwareInventoryCollection.SoftwareInventoryCollection",
+  "Name": "Firmware Inventory Collection",
+  "Members@odata.count": 1,
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/BIOS",
+      "@odata.type": "#SoftwareInventory.v1_4_0.SoftwareInventory",
+      "Id": "BIOS",
+      "Name": "BIOS",
+      "Version": "2.19.1",
+      "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+      }
+    }
+  ]
+}
