@@ -2,6 +2,28 @@
 build_push.sh
 env_test.sh
 
+# --- Agent / AI instruction files and generated plans: NEVER commit (hard rule) ---
+# Most are also covered by the global ~/.gitignore_global; pinned here so the rule
+# travels with the repo. Agent data must not leak into git or commit messages.
+CLAUDE.md
+AGENTS.md
+AGENT_BOOTSTRAP.md
+CODEX_HANDOFF.md
+TEAM_GUIDE.md
+AGENT_HANDOFF*.md
+CLAUDE_REVIEW*
+CLAUDE_PLAN.md
+CLAUDE_PATCH.diff
+IMPROVEMENT_PLAN.md
+ROADMAP*.md
+.codex/
+.claude/
+.agent-review/
+
+# macOS / stray test output
+.DS_Store
+result.json
+
 *.th
 *.env
 devices/*.env

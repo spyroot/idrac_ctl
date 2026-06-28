@@ -1,0 +1,36 @@
+# Keep build context small AND keep agent/secret data out of the image (hard rule:
+# agent instruction files must never be baked into a shipped artifact).
+.git
+.gitignore
+
+# Agent / AI instruction files and generated plans
+CLAUDE.md
+AGENTS.md
+AGENT_BOOTSTRAP.md
+CODEX_HANDOFF.md
+TEAM_GUIDE.md
+AGENT_HANDOFF*.md
+CLAUDE_REVIEW*
+CLAUDE_PLAN.md
+CLAUDE_PATCH.diff
+IMPROVEMENT_PLAN.md
+ROADMAP*.md
+.codex/
+.claude/
+.agent-review/
+
+# Caches / build artifacts / local cruft
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+.venv/
+venv/
+.DS_Store
+result.json

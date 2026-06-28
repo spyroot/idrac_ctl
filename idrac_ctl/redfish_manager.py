@@ -421,10 +421,10 @@ class RedfishManager:
                     m for m
                     in json_data[RedfishJsonMessage.MessageExtendedInfo]
                 ]
-        except requests.exceptions.JSONDecodeError as _:
-            pass
-        except TypeError as _:
-            pass
+        except requests.exceptions.JSONDecodeError as decode_err:
+            logging.debug(f"no json body to parse from respond: {decode_err}")
+        except TypeError as type_err:
+            logging.debug(f"unexpected respond payload shape: {type_err}")
 
         finally:
             return redfish_resp
@@ -545,8 +545,8 @@ class RedfishManager:
                     if job_id is not None:
                         job_id = job_id.group(0)
                     return job_id
-        except AttributeError as _:
-            pass
+        except AttributeError as attr_err:
+            logging.debug(f"could not read job id from respond object: {attr_err}")
 
         return ""
 
@@ -577,17 +577,17 @@ class RedfishManager:
             job_id = self.job_id_from_header(resp)
             logging.debug(f"idrac api returned job_id: {job_id} in the response header.")
             return job_id
-        # ignored.
-        except TaskIdUnavailable as _:
-            pass
+        # optional lookup, fall through to the response body below.
+        except TaskIdUnavailable as header_err:
+            logging.debug(f"no job id in the response header: {header_err}")
 
         # this from response
         try:
             # try to get from the response, it an optional check.
             job_id = self.job_id_from_respond(resp)
             logging.debug(f"idrac api returned job_id: {job_id} in the response header.")
-        except TaskIdUnavailable as _:
-            pass
+        except TaskIdUnavailable as respond_err:
+            logging.debug(f"no job id in the response body: {respond_err}")
 
         return ""
 

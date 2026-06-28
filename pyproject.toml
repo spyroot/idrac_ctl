@@ -1,0 +1,53 @@
+# Tooling configuration for idrac_ctl.
+#
+# Packaging metadata still lives in setup.py (name, version, entry_points).
+# This file only adds the build backend and the lint/type/test tool config so
+# the two do not declare project metadata twice.
+
+[build-system]
+requires = ["setuptools>=67.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+# idrac_ctl targets Python 3.10+ (see setup.py python_requires).
+target-version = "py310"
+line-length = 100
+extend-exclude = ["build", "dist", "venv", ".venv"]
+
+[tool.ruff.lint]
+# F = pyflakes (catches the duplicate/unused imports cleaned up in this change),
+# E/W = pycodestyle, I = import sorting.
+select = ["F", "E", "W", "I"]
+# E501 (line length) is noisy on this legacy tree; enforce it gradually.
+ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["idrac_ctl"]
+omit = ["idrac_ctl/json_responses/*", "*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.mypy]
+python_version = "3.10"
+# The tree is only partially typed today; start lenient and tighten per-module.
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Collect only the test_*.py convention (skips stray *_test.py scratch files).
+python_files = ["test_*.py"]
+# Make the repo root importable so `import idrac_ctl` resolves to the source
+# tree regardless of how pytest is launched.
+pythonpath = ["."]
+# Tests that need a reachable iDRAC must be marked @pytest.mark.live; they are
+# skipped automatically by tests/conftest.py unless IDRAC_IP is set.
+markers = [
+    "live: integration test that requires a reachable iDRAC (set IDRAC_IP to run)",
+]
+filterwarnings = [
+    "ignore:Unverified HTTPS request",
+]

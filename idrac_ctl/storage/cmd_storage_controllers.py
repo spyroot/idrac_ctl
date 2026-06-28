@@ -100,9 +100,9 @@ class StorageQuery(IDracManager, scm_type=ApiRequestType.StorageQuery,
         :return:
         """
         if verbose:
-            print(f"cmd args data_type: {data_type} "
+            self.logger.debug(f"cmd args data_type: {data_type} "
                   f"do_deep:{do_deep} do_async:{do_async} id_filter:{id_filter}")
-            print(f"the rest of args: {kwargs}")
+            self.logger.debug(f"the rest of args: {kwargs}")
 
         headers = {}
         if data_type == "json":

@@ -22,6 +22,12 @@ logging.basicConfig()
 log = logging.getLogger("LOG")
 
 
+import pytest
+
+# Integration tests: require a reachable iDRAC.
+# Skipped automatically unless IDRAC_IP is set (see tests/conftest.py).
+pytestmark = pytest.mark.live
+
 class TestAccounts(TestCase):
     redfish_api = None
 

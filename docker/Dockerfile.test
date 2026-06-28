@@ -1,0 +1,33 @@
+# Ubuntu image that runs the offline idrac_ctl test suite, to confirm the code
+# behaves the same on Linux as on macOS. This matters: requests-mock lowercases
+# paths and Linux is case-SENSITIVE, so a fixture-lookup bug that macOS's
+# case-insensitive filesystem hides would surface here.
+#
+# Build + run:  ./docker/run-tests.sh   (or see the commands at the bottom)
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# Isolated venv (Ubuntu 24.04 is PEP 668 externally-managed).
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+WORKDIR /app
+COPY . /app
+
+# Install the package with its dev/test extras (pytest, ruff, requests-mock, ...).
+RUN pip install --no-cache-dir -e ".[dev]" pytest-cov
+
+# Default: the offline suite (live tests auto-skip with no IDRAC_IP).
+CMD ["pytest", "-q"]
+
+# Manual equivalent of run-tests.sh:
+#   docker build -f docker/Dockerfile.test -t idrac-ctl-test .
+#   docker run --rm idrac-ctl-test

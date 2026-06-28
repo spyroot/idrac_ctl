@@ -26,7 +26,10 @@ setup_info = dict(name='idrac_ctl',
                   },
                   extras_require={
                       "dev": [
-                          "pytest >= 3.7"
+                          "pytest >= 7",
+                          "requests-mock >= 1.10",
+                          "ruff",
+                          "mypy",
                       ]
                   },
                   )
