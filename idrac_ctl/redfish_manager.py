@@ -48,7 +48,7 @@ class RedfishManager:
                  redfish_username: Optional[str] = "root",
                  redfish_password: Optional[str] = "",
                  redfish_port: Optional[int] = 443,
-                 insecure: Optional[bool] = False,
+                 insecure: Optional[bool] = True,
                  is_http: Optional[bool] = False,
                  x_auth: Optional[str] = None,
                  is_debug: Optional[bool] = False):
@@ -60,7 +60,9 @@ class RedfishManager:
         :param redfish_ip: redfish IP or hostname
         :param redfish_username: redfish username default is root
         :param redfish_password: redfish password.
-        :param insecure: by default, we use insecure SSLself.api_success_msg(api_resp)
+        :param insecure: when True (the default) TLS certificate verification is
+            skipped. BMCs ship self-signed certificates, so verification is
+            opt-in: pass ``insecure=False`` to verify the server certificate.
         :param x_auth: X-Authentication header.
         """
         self._redfish_ip = redfish_ip
@@ -71,7 +73,9 @@ class RedfishManager:
             redfish_port = int(redfish_port)
 
         self._port = redfish_port
-        self._is_verify_cert = insecure
+        # ``insecure`` means "skip TLS verification"; requests' ``verify`` is the
+        # inverse, so verification is enabled only when insecure is explicitly off.
+        self._is_verify_cert = not insecure
         self._x_auth = x_auth
         self._is_debug = is_debug
         self._is_http = is_http

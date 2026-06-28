@@ -85,7 +85,7 @@ class IDracManager(RedfishManager):
                  idrac_username: Optional[str] = "root",
                  idrac_password: Optional[str] = "",
                  idrac_port: Optional[int] = 443,
-                 insecure: Optional[bool] = False,
+                 insecure: Optional[bool] = True,
                  x_auth: Optional[str] = None,
                  is_http: Optional[bool] = False,
                  is_debug: Optional[bool] = False,
@@ -97,7 +97,9 @@ class IDracManager(RedfishManager):
         :param idrac_ip: idrac mgmt IP address
         :param idrac_username: idrac username default is root
         :param idrac_password: idrac password.
-        :param insecure: by default, we use insecure SSL
+        :param insecure: when True (the default) TLS certificate verification is
+            skipped. iDRAC/BMC controllers present self-signed certificates, so
+            verification is opt-in: pass ``insecure=False`` to verify the cert.
         :param x_auth: X-Authentication header.
         """
         super().__init__(redfish_ip=idrac_ip,
@@ -405,7 +407,9 @@ class IDracManager(RedfishManager):
                 "username": self._username,
                 "password": self._password,
                 "port": self._port,
-                "insecure": self._is_verify_cert,
+                # forward the original "skip verification" intent; _is_verify_cert
+                # is the inverse (requests' verify flag), so flip it back here.
+                "insecure": not self._is_verify_cert,
                 "is_http": self._is_http,
             }
         )

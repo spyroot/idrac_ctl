@@ -235,7 +235,12 @@ def process_respond(cmd_args, command_result):
 def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
     """Main entry point
     """
-    if cmd_args.insecure:
+    # BMCs ship self-signed certs, so verification is opt-in via --verify-ssl.
+    # We skip verification by default; --insecure stays as an explicit "skip".
+    verify_ssl = getattr(cmd_args, "verify_ssl", False)
+    insecure = not verify_ssl
+
+    if insecure:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     # idrac manager main interface main uses to interact with IDRAC.
@@ -243,7 +248,7 @@ def main(cmd_args: argparse.Namespace, command_name_to_cmd: Dict) -> None:
                                idrac_username=cmd_args.idrac_username,
                                idrac_password=cmd_args.idrac_password,
                                idrac_port=cmd_args.idrac_port,
-                               insecure=cmd_args.insecure,
+                               insecure=insecure,
                                is_http=cmd_args.use_http,
                                is_debug=cmd_args.debug)
     _ = redfish_api.check_api_version()
@@ -394,8 +399,14 @@ def idrac_main_ctl():
         help="idrac port address, by default "
              "read from environment IDRAC_PORT.")
     credentials.add_argument(
-        '--insecure', action='store_true', required=False,
-        help="insecure ssl.")
+        '--insecure', action='store_true', required=False, default=False,
+        help="skip TLS certificate verification (explicit form of the "
+             "default; BMCs ship self-signed certs).")
+    credentials.add_argument(
+        '--verify-ssl', dest='verify_ssl',
+        action='store_true', required=False, default=False,
+        help="verify the BMC TLS certificate. Off by default because "
+             "BMCs ship self-signed certs; opt in only with a trusted cert.")
     credentials.add_argument(
         '--use_http', action='store_true', required=False, default=False,
         help="use http instead https as transport.")
