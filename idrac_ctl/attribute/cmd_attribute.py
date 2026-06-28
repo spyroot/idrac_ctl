@@ -13,28 +13,19 @@ import argparse
 from abc import abstractmethod
 from typing import Optional
 
-
-
-from ..cmd_exceptions import InvalidJsonSpec
-from ..cmd_utils import from_json_spec, find_ids
-from ..idrac_shared import IdracApiRespond
-from ..redfish_shared import RedfishJson
-from ..cmd_utils import str2bool
-from ..idrac_shared import IdracApiRespond, ResetType
+from ..cmd_utils import find_ids
 from ..cmd_utils import save_if_needed
-from ..cmd_exceptions import InvalidArgument
 from ..idrac_manager import IDracManager
-from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
+from ..idrac_shared import Singleton, ApiRequestType
 from ..redfish_manager import CommandResult
-from ..idrac_shared import IDRAC_API
-from ..idrac_shared import IdracApiRespond
+from ..redfish_shared import RedfishJson
 
 
-
-class AttributesQuery(IDracManager,
-                      scm_type=ApiRequestType.AttributesQuery,
-                      name='attribute_inventory',
-                      metaclass=Singleton):
+class AttributesQuery(
+    IDracManager,
+    scm_type=ApiRequestType.AttributesQuery,
+    name='attribute_inventory',
+    metaclass=Singleton):
     """iDRAC Attribute Query Command, fetch attribute data, caller can save to a file
     or output to a file or pass downstream.
     """

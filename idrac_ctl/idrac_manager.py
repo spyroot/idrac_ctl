@@ -636,9 +636,7 @@ class IDracManager(RedfishManager):
                 return self._http_code_mapping[response.status_code]
 
         if response.status_code == 401:
-            raise AuthenticationFailed(
-                "Authentication failed."
-            )
+            raise AuthenticationFailed("Authentication failed.")
         elif response.status_code == 403:
             raise RedfishForbidden("access forbidden")
         elif response.status_code == 404:

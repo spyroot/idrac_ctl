@@ -385,12 +385,14 @@ class RedfishManager:
                 )
             )
 
+        allow_header = response.headers.get("Allow")
+
         data = response.json()
         if key is not None and len(key) > 0 and key in data:
             data = data[key]
 
         save_if_needed(filename, data)
-        return CommandResult(data, None, None, None)
+        return CommandResult(data, None, allow_header, None)
 
     @staticmethod
     def parse_error(error_response: requests.models.Response) -> RedfishError:
@@ -416,11 +418,11 @@ class RedfishManager:
                 redfish_error.message = err_data['message']
 
             if RedfishJsonMessage.MessageExtendedInfo in err_data:
-                redfish_error.message_extended = [
-                    m for m
-                    in err_data[RedfishJsonMessage.MessageExtendedInfo]
-                ]
-
+                message_extended = err_data[RedfishJsonMessage.MessageExtendedInfo]
+                if isinstance(message_extended, list):
+                    redfish_error.message_extended = [
+                        m for m in message_extended if isinstance(m, dict)
+                    ]
         except requests.exceptions.JSONDecodeError as json_err:
             redfish_error.exception_msg = str(json_err)
             return redfish_error

@@ -8,26 +8,19 @@ import argparse
 from abc import abstractmethod
 from typing import Optional
 
-
-from ..cmd_exceptions import InvalidJsonSpec, FailedDiscoverAction
-from ..cmd_utils import from_json_spec
-from ..idrac_shared import IdracApiRespond
-from ..redfish_shared import RedfishJson
-from ..cmd_utils import str2bool
-from ..idrac_shared import IdracApiRespond, ResetType
-from ..cmd_utils import save_if_needed
-from ..cmd_exceptions import InvalidArgument
+from ..cmd_exceptions import FailedDiscoverAction
 from ..idrac_manager import IDracManager
-from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
-from ..redfish_manager import CommandResult
-from ..idrac_shared import IDRAC_API
 from ..idrac_shared import IdracApiRespond
+from ..idrac_shared import Singleton, ApiRequestType
+from ..redfish_manager import CommandResult
+from ..redfish_shared import RedfishJson
 
 
-class AttributeClearPending(IDracManager,
-                            scm_type=ApiRequestType.AttributeClearPending,
-                            name='clear_pending',
-                            metaclass=Singleton):
+class AttributeClearPending(
+    IDracManager,
+    scm_type=ApiRequestType.AttributeClearPending,
+    name='clear_pending',
+    metaclass=Singleton):
     """
     This cmd action is used to clear all the pending
     values currently in iDRAC.
