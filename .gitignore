@@ -16,6 +16,8 @@ CLAUDE_PLAN.md
 CLAUDE_PATCH.diff
 IMPROVEMENT_PLAN.md
 ROADMAP*.md
+CODEX_TASKS.md
+CODEX_*.md
 .codex/
 .claude/
 .agent-review/
