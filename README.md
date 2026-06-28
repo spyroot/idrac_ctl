@@ -1,38 +1,42 @@
 # idrac_ctl
-This repo consist two parts. A generic redfish implementation that consumed by
-idrac_ctl. Right now i'm moving redfish implementation out of idrac ctl.
 
-Standalone command line tool provide option to interact with Dell iDRAC via Redfish 
-REST API and execute typical workflow. It supports both asynchronous and synchronous options 
-to interact with iDRAC.
+`idrac_ctl` is a command-line control plane for servers that speak **Redfish**. Today it drives
+**Dell iDRAC** end to end — BIOS, boot, RAID, firmware, virtual media, sensors, inventory, and Dell
+Lifecycle Controller jobs — over the Redfish REST API, synchronously or asynchronously. Under the
+hood it already implements a large part of the generic Redfish spec, kept in a product-neutral layer
+that Dell (and, next, other vendors) plug into.
 
-Update.
-    After going deeper in redfish specification. I recognize that 
-    I already implemented major portion of specs. Thus, I will probably
-    de-couple redfish and idrac_ctl will be a plugin.
+**Where this is going.** A full, generic **Redfish** implementation (the package becomes
+`redfish_ctl`), with Dell / HPE / Supermicro as vendor extensions, plus an optional **Kubernetes
+proxy** so you manage a whole fleet declaratively instead of one box at a time. The goal is to take
+**1,000 servers concurrently** to a target spec — upgrade firmware, set BIOS, enable SR-IOV, tune for
+a real-time workload — and to do it as engineering, not guesswork: every path **mocked, tested,
+measured, and benchmarked**.
 
-* boot from remote location via http/https
-* boot from remote NFS/CIFS
-* optimize bios setting for real time workload.
-* basic option related to job and management.  apply/reset pending changes.
-* query any object that IDRAC exposes via REST interface. firmware/driver/status/metrics
-* manage volumes
-* manage raid
-* manage boot source
-* manage secure boot / UEFI
-* and much more..
+If you have one server in front of you, the CLI below is all you need. If you have a rack — or a
+hundred racks — see [Fleet management & the Redfish proxy](docs/redfish-proxy.md).
 
-Examples directory contains typical examples.
-Project on https://pypi.org/manage/project/idrac-ctl/releases/
+## What you can do today
 
-# Overview
-This tool provides an option to interact with Dell iDRAC via the command line and execute almost 
-every workflow you can do via Web UI. The idrac_ctl, by default, outputs everything in JSON, 
-so you can easily pass it to any other tools to filter. Some commands provide an option to 
-filter on action or specific fields, and s is still ongoing work. The tool developed in extendability 
-mind. Each command registered dynamically. It sufficiently indicates the import statement 
-in __init__ to load the custom command.
- 
+* Boot from a remote ISO over HTTP/HTTPS or NFS/CIFS, including unattended installs.
+* Tune BIOS for real-time / low-latency workloads (memory, C-states, SR-IOV, watchdog, …).
+* Manage RAID, volumes, boot order, secure boot / UEFI.
+* Query anything iDRAC exposes — firmware, drivers, status, metrics — as JSON you can pipe to `jq`.
+* Drive Dell Lifecycle Controller jobs: apply / reset pending changes, watch tasks.
+
+Output is JSON by default, so every command composes with other tools. Commands self-register, so the
+surface grows one small module at a time. Published on PyPI: https://pypi.org/project/idrac-ctl/
+
+## Documentation
+
+The deep, implementation-specific material lives under [`docs/`](docs/):
+
+* [Architecture](docs/architecture.md) — the Redfish core, the Dell layer, vendor packages, command dispatch.
+* [Fleet management & the Redfish proxy](docs/redfish-proxy.md) — the optional Kubernetes service that manages servers at scale.
+* [Scaling & benchmarks](docs/scaling-and-benchmarks.md) — driving ~1,000 servers concurrently, the fleet simulator, the metrics we track.
+* [Testing](docs/testing.md) — the mock / live / emulator lanes and how to run them.
+* [Vendors](docs/vendors.md) — adding a vendor and the capability model.
+
 # Initial steps
 
 Set the environment variable, so you don't need to pass each time.
