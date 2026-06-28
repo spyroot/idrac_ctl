@@ -17,7 +17,20 @@
   },
   "Boot": {
     "BootSourceOverrideEnabled": "Disabled",
-    "BootSourceOverrideTarget": "None"
+    "BootSourceOverrideTarget": "None",
+    "BootSourceOverrideTarget@Redfish.AllowableValues": [
+      "None",
+      "Pxe",
+      "Cd",
+      "Usb",
+      "Hdd",
+      "BiosSetup",
+      "Utilities",
+      "Diags",
+      "SDCard",
+      "UefiTarget",
+      "UefiHttp"
+    ]
   },
   "PCIeDevices": [
     {

@@ -24,16 +24,10 @@ import json
 from abc import abstractmethod
 from typing import Optional
 
-from ..cmd_exceptions import InvalidArgument
-from ..cmd_exceptions import InvalidJsonSpec
-from ..cmd_exceptions import UncommittedPendingChanges
+from ..cmd_exceptions import InvalidArgument, InvalidJsonSpec, UncommittedPendingChanges
 from ..cmd_utils import from_json_spec
 from ..idrac_manager import IDracManager
-from ..idrac_shared import IDRAC_JSON
-from ..idrac_shared import IDRAC_API
-from ..idrac_shared import IdracApiRespond
-from ..idrac_shared import Singleton
-from ..idrac_shared import ApiRequestType
+from ..idrac_shared import IDRAC_API, IDRAC_JSON, ApiRequestType, IdracApiRespond, Singleton
 from ..redfish_manager import CommandResult
 
 
@@ -238,50 +232,50 @@ class BiosChangeSettings(IDracManager,
         :param start_date:
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BiosRegistry}"
-        cmd_result = self.base_query(
-            target_api, filename=filename,
-            do_async=do_async, do_expanded=False
-        )
-        if verbose:
-            self.default_json_printer(cmd_result.data)
-
-        if IDRAC_JSON.RegistryEntries not in cmd_result.data:
-            return CommandResult(
-                {
-                    "Status": "Failed fetch bios registry"
-                }, None, None, None
-            )
-        registry = cmd_result.data[IDRAC_JSON.RegistryEntries]
-
-        if IDRAC_JSON.Attributes not in cmd_result.data:
-            return CommandResult(
-                {
-                    "Status": "Failed fetch attributes from bios registry"
-                }, None, None, None
-            )
-        attribute_data = registry[IDRAC_JSON.Attributes]
-
-        # we read either from a file or form args
-        # comma seperated.
+        # We read changes either from a JSON spec file or build them from
+        # --attr_name/--attr_value. A spec file is self-contained, so the BIOS
+        # registry is only fetched (and validated) on the args path.
         try:
             if from_spec is not None and len(from_spec) > 0:
                 payload = from_json_spec(from_spec)
             else:
+                target_api = f"{self.idrac_manage_servers}{IDRAC_API.BiosRegistry}"
+                cmd_result = self.base_query(
+                    target_api, filename=filename,
+                    do_async=do_async, do_expanded=False
+                )
+                if verbose:
+                    self.default_json_printer(cmd_result.data)
+
+                if cmd_result is None or not isinstance(cmd_result.data, dict):
+                    return CommandResult(
+                        {"Status": "Failed fetch bios registry"}, None, None, None
+                    )
+                registry = cmd_result.data.get(IDRAC_JSON.RegistryEntries)
+                if not isinstance(registry, dict) \
+                        or IDRAC_JSON.Attributes not in registry:
+                    return CommandResult(
+                        {"Status": "Failed fetch attributes from bios registry"},
+                        None, None, None
+                    )
+                attribute_data = registry[IDRAC_JSON.Attributes]
+                if not isinstance(attribute_data, list):
+                    return CommandResult(
+                        {"Status": "Bios registry attributes are malformed"},
+                        None, None, None
+                    )
                 payload = self.crete_bios_config(
                     attribute_data, attr_name, attr_value
                 )
             if len(payload) == 0:
                 return CommandResult(
-                    {
-                        "Status": "Empty bios spec."
-                    },
-                    None, None, None
+                    {"Status": "Empty bios spec."}, None, None, None
                 )
         except json.decoder.JSONDecodeError as jde:
             raise InvalidJsonSpec(
-                "It looks like your JSON spec is invalid. "
-                "JSONlint the file and check..".format(str(jde)))
+                f"It looks like your JSON spec is invalid. "
+                f"JSONlint the file and check: {jde}"
+            )
 
         job_req_payload = self.create_apply_time_req(
             apply, start_time, start_date, default_duration)
@@ -325,7 +319,7 @@ class BiosChangeSettings(IDracManager,
             cmd_result.data['task_id'] = task_id
         elif api_resp.Success or api_resp.Ok:
             if do_commit:
-                self.logger.info(f"Commit changes and rebooting.")
+                self.logger.info("Commit changes and rebooting.")
                 # we commit with a reboot
                 cmd_apply = self.sync_invoke(
                     ApiRequestType.JobApply,
