@@ -4,10 +4,13 @@ The suite runs fully offline by default — no iDRAC, no network — and stays g
 Hardware and emulator paths are opt-in.
 
 ```bash
-pytest -q                 # offline suite (live tests auto-skip)
-ruff check <changed>      # no new lint findings
-pytest --cov=idrac_ctl    # coverage
+env -u IDRAC_IP -u IDRAC_USERNAME -u IDRAC_PASSWORD pytest -q
+ruff check <changed>
 ```
+
+Unset the `IDRAC_*` variables for offline runs. The dual-mode `redfish_api` fixture switches to live
+mode when `IDRAC_IP` is exported, so a shell used for real iDRAC work should not be reused for the
+offline suite without clearing those variables.
 
 ## Three lanes
 
@@ -42,7 +45,7 @@ paths still use the mock fixtures.
 
 `docker/run-tests.sh` builds `ubuntu:24.04`, installs `.[dev]`, and runs the offline suite. Linux is
 case-sensitive and macOS is not, so this guards a real bug class (the fixture lookup is deliberately
-case-insensitive). `.dockerignore` keeps agent/instruction files out of the image.
+case-insensitive). Sensitive local files are excluded from the image.
 
 ## Fixtures and faithfulness
 
@@ -53,11 +56,18 @@ to cover them offline is a one-time capture of a real iDRAC with **DMTF Redfish-
 ## Coverage goal
 
 Target **80%**, currently lower because the ~100 command modules are exercised only as live tests are
-ported to dual-mode. Enforce a **ratcheting** `--cov-fail-under` (raise as tests land) so the floor
-never regresses, rather than a hard gate that fails today.
+ported to dual-mode. Coverage output requires `pytest-cov` in the active environment:
+
+```bash
+python -m pip install pytest-cov
+env -u IDRAC_IP -u IDRAC_USERNAME -u IDRAC_PASSWORD pytest --cov=idrac_ctl
+```
+
+Enforce a **ratcheting** `--cov-fail-under` (raise as tests land) so the floor never regresses, rather
+than a hard gate that fails today.
 
 ## Fleet/concurrency tests
 
-The proxy's reconcile loop and the concurrency engine are tested against the fleet simulator (N
-synthetic servers, latency/failure injection) and benchmarked — see
+The planned proxy reconcile loop and concurrency engine should be tested against a fleet simulator
+(N synthetic servers, latency/failure injection) and benchmarked before they become default gates. See
 [scaling-and-benchmarks.md](scaling-and-benchmarks.md).

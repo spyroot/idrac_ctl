@@ -1,21 +1,21 @@
-# Fleet management & the Redfish proxy
+# Fleet Management & The Redfish Proxy
 
-The CLI manages one server at a time. To manage a fleet — bring 1,000 servers to a target spec,
-concurrently — there is an **optional** Kubernetes-deployable service: the Redfish proxy/controller.
-It holds the desired and observed state of every server and reconciles the two over Redfish.
+The CLI manages one server at a time. The planned fleet path is an optional Redfish proxy/controller:
+a service that holds desired and observed state for many servers and reconciles the two over Redfish.
+This page is the design target, not a runnable component in the repository today.
 
-This component is optional. The core CLI never depends on it.
+When implemented, this component stays optional. The core CLI should not depend on it.
 
-## Why a service (and why Python, not a Go operator)
+## Why A Service
 
 Surveying the prior art — Metal3/baremetal-operator (BMC I/O isolated in Ironic), OpenStack
 Ironic+sushy (stateless API + worker conductor), DMTF Redfish Aggregation, Tinkerbell Rufio — the
 recurring lesson is: **isolate the privileged BMC-talking process** and model **desired vs observed**
-state. We get both from a single Python service that **reuses `RedfishManager`/`IDracManager`**, so we
-don't maintain a second Redfish client in a second language. A `kubectl`-native CRD façade can come
-later as a thin adapter; it is not needed to start.
+state. The design keeps that BMC-talking process in Python so it can reuse `RedfishManager` and
+`IDracManager` instead of growing a second Redfish client in a second language. A `kubectl`-native CRD
+facade can come later as a thin adapter; it is not needed to start.
 
-## Shape
+## Target Shape
 
 ```
 clients / kubectl / CI
@@ -30,10 +30,10 @@ clients / kubectl / CI
   iDRAC / generic Redfish / (later) iLO / Supermicro
 ```
 
-## State model
+## Target State Model
 
-CRD-shaped even in the DB, so a Kubernetes CRD adapter is free later. Borrowed from BareMetalHost +
-the DMTF `AggregationSource` vocabulary:
+The internal model should be CRD-shaped even in the DB, so a Kubernetes CRD adapter is natural later.
+It can borrow from BareMetalHost and the DMTF `AggregationSource` vocabulary:
 
 ```yaml
 spec:                                   # desired
@@ -58,23 +58,23 @@ status:                                 # observed
   error: null
 ```
 
-## Reconcile rules
+## Reconcile Rules
 
 Standard external-system controller discipline: **level-triggered** (read current, converge to spec —
 never trust an event), **idempotent**, store the device handle in `status`, **periodic resync**
 (Redfish has no push, so poll on an interval), **back off** on transient errors, write
 `observedGeneration` after success, use finalizers for clean teardown.
 
-## Target profiles
+## Target Profiles
 
 A "target spec" is a named, versioned profile (e.g. `rt-low-latency`) that expands to concrete
-firmware versions + BIOS attributes + SR-IOV settings. The proxy reconciles each server toward its
-profile and reports drift. Profiles are the unit users reason about; the proxy turns them into the
+firmware versions + BIOS attributes + SR-IOV settings. The proxy would reconcile each server toward
+its profile and report drift. Profiles are the unit users reason about; the proxy turns them into the
 right ordered Redfish operations (some need a reboot/job, so ordering and job-tracking matter).
 
-## Security
+## Security Design
 
-- BMC credentials in a k8s **Secret** (`username`/`password`), referenced by name — never inline,
+- BMC credentials in a Kubernetes **Secret** (`username`/`password`), referenced by name — never inline,
   never logged; record only "good-credentials" metadata in status.
 - **NetworkPolicy** restricting egress to the BMC management CIDR; the proxy is the only pod with that
   route. Self-signed BMC certs ⇒ `insecure` on that hop, compensated by network isolation.
@@ -89,8 +89,9 @@ right ordered Redfish operations (some need a reboot/job, so ordering and job-tr
 - **Later:** firmware / BIOS / SR-IOV / target-profile desired-state; DMTF-Aggregator-shaped read API;
   optional CRD + kopf façade; multi-replica leader election; iLO / Supermicro vendor subclasses.
 
-## Testing
+## Testing Target
 
-The reconcile loop is unit-tested with a mocked client (converges, idempotent, backs off, redacts
-credentials) and integration-tested against the `sushy-emulator --fake` lane and the multi-server
-fleet simulator. See [testing.md](testing.md) and [scaling-and-benchmarks.md](scaling-and-benchmarks.md).
+The reconcile loop should be unit-tested with a mocked client (converges, idempotent, backs off,
+redacts credentials) and integration-tested against the `sushy-emulator --fake` lane and the planned
+multi-server fleet simulator. See [testing.md](testing.md) and
+[scaling-and-benchmarks.md](scaling-and-benchmarks.md).
