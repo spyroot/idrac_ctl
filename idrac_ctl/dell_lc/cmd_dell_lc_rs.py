@@ -11,6 +11,7 @@ from ..cmd_exceptions import UnsupportedAction
 from ..idrac_manager import IDracManager
 from ..idrac_shared import IdracApiRespond, Singleton, ApiRequestType
 from ..idrac_shared import IDRAC_JSON
+from ..idrac_shared import IDRAC_API
 
 
 class GetRemoteRssAPIStatus(IDracManager,
