@@ -52,7 +52,7 @@ class StorageListView(IDracManager,
         :return: named tuple CommandResult
         :raise: AuthenticationFailed, UnexpectedResponse
         """
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Storage"
+        target_api = f"{self.idrac_manage_servers}/Storage"
         return self.base_query(target_api,
                                filename=filename,
                                do_async=do_async,

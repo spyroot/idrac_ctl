@@ -70,8 +70,8 @@ class PciDeviceQuery(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
-            f"System.Embedded.1?$select={pci_type}"
+        r = f"https://{self.idrac_ip}{self.idrac_manage_servers}" \
+            f"?$select={pci_type}"
 
         if not do_async:
             response = self.api_get_call(r, headers)

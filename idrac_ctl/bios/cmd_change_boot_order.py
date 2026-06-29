@@ -131,7 +131,7 @@ class ChangeBootOrder(
         """
 
         if from_spec is None or len(from_spec) == 0:
-            target_api = "/redfish/v1/Systems/System.Embedded.1/Bios"
+            target_api = f"{self.idrac_manage_servers}/Bios"
 
             cmd_query = self.base_query(
                 target_api, filename=filename,
