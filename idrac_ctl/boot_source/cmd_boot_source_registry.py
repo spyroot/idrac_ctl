@@ -53,7 +53,7 @@ class QueryBootSourceRegistry(
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        return self.base_query(f"{self.idrac_manage_servers}/{IDRAC_API.BootSourcesRegistryQuery}",
+        return self.base_query(f"{self.idrac_manage_servers}{IDRAC_API.BootSourcesRegistryQuery}",
                                filename=filename,
                                do_async=do_async,
                                do_expanded=do_expanded)
