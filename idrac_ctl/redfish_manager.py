@@ -567,7 +567,7 @@ class RedfishManager:
         :return: str: a job id or empty string
         """
         try:
-            if response is not None and hasattr(response, __dict__):
+            if response is not None and hasattr(response, "__dict__"):
                 response_dict = str(response.__dict__)
                 if response_dict is not None and len(response_dict) > 0:
                     job_id = re.search("JID_.+?,", response_dict)
