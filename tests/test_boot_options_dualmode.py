@@ -76,3 +76,24 @@ def test_boot_source_pending_filter_returns_named_attribute(redfish_api):
 
     assert isinstance(result, CommandResult)
     assert result.data == "Uefi"
+
+
+def test_boot_settings_query_returns_dell_boot_sources_settings(redfish_api):
+    """boot_settings_query returns the DellBootSources Settings resource."""
+    result = redfish_api.sync_invoke(
+        ApiRequestType.BootSettingsQuery,
+        "boot_settings_query",
+    )
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, dict)
+    json.dumps(result.data)
+    assert result.data["@odata.id"] == (
+        "/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellBootSources/Settings"
+    )
+    assert result.data["Attributes"]["BootMode"] == "Uefi"
+    assert result.data["Attributes"]["UefiBootSeq"][0]["Name"] == "NIC.PxeDevice.1-1"
+    assert result.discovered["ClearPending"].target == (
+        "/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellBootSources/Settings/"
+        "Actions/DellManager.ClearPending"
+    )
