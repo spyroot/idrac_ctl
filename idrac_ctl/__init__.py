@@ -74,6 +74,10 @@ from .chassis.cmd_chassis_query import *
 from .chassis.cmd_chasis_reset import *
 from .sensors.cmd_sensors import *
 from .telemetry.cmd_metric_reports import *
+from .telemetry.cmd_metric_definitions import *
+from .component_integrity.cmd_component_integrity import *
+from .network.cmd_network_adapters import *
+from .ports.cmd_nvlink_ports import *
 from .chassis.cmd_chassis_query import *
 
 # dell oem attach

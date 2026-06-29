@@ -13,7 +13,7 @@
       "target": "/redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
     }
   },
-  "AssetTag": "REDACTED",
+  "AssetTag": "",
   "Bios": {
     "@odata.id": "/redfish/v1/Systems/System_0/Bios"
   },
@@ -106,7 +106,7 @@
   },
   "Model": "GB NVL",
   "Name": "System_0",
-  "PartNumber": "REDACTED",
+  "PartNumber": "ARS-121GL-NB3-LCC-R1",
   "PowerOnDelaySeconds": 0,
   "PowerRestorePolicy": "LastState",
   "PowerState": "On",
@@ -127,7 +127,7 @@
       "ServiceEnabled": true
     }
   },
-  "SerialNumber": "REDACTED",
+  "SerialNumber": "S964512X5913271",
   "Status": {
     "Conditions": [],
     "Health": "OK",
@@ -137,5 +137,5 @@
     "@odata.id": "/redfish/v1/Systems/System_0/Storage"
   },
   "SystemType": "Physical",
-  "UUID": "REDACTED"
+  "UUID": "5f1cf000-643d-11f0-8000-7cc25590513a"
 }
