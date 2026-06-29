@@ -439,8 +439,11 @@ class IDRAC_API:
     # /redfish/v1/AccountService/Roles/{RoleId}
     # The value of the Id property of the Role resource
     BiosSettings = RedfishApi.BiosSettings
+    # Base BIOS resource, relative to idrac_manage_servers
+    # (e.g. /redfish/v1/Systems/System.Embedded.1) -> .../Bios. This matches the
+    # BiosRegistry/BiosSettings members, which hang off the same /Bios base.
+    BIOS = RedfishApi.Bios
     # COMPUTE_RESET = RedfishApi.ComputeReset
-    # BIOS = RedfishApi.Bios
     BootOptions = "BootOptions"
 
 

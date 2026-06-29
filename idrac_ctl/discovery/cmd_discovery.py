@@ -10,11 +10,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
-
 from ..idrac_manager import IDracManager
-from ..idrac_shared import ApiRequestType
-from ..idrac_shared import Singleton
+from ..idrac_shared import ApiRequestType, Singleton
 from ..redfish_exceptions import RedfishForbidden
 from ..redfish_manager import CommandResult
 
@@ -131,7 +128,12 @@ class Discovery(IDracManager,
     def save_url_file_mapping(self):
         """Save the URL-to-file mapping to a JSON respond file
         and what each api allow.
+
+        numpy is imported lazily here so importing this module does not
+        require numpy to be installed; it is only needed for ``np.save``.
         """
+        import numpy as np
+
         filename = os.path.join(self.json_response_dir, "rest_api_map.npy")
         mappings = {
             "url_file_mapping": self._discovered_url_file_mapping,

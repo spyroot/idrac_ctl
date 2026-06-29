@@ -1,0 +1,24 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Bios.Bios",
+  "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Bios",
+  "@odata.type": "#Bios.v1_2_0.Bios",
+  "Id": "BIOS",
+  "Name": "BIOS Configuration Current Settings",
+  "AttributeRegistry": "BiosAttributeRegistry.v1_0_0",
+  "Actions": {
+    "#Bios.ChangePassword": {
+      "target": "/redfish/v1/Systems/System.Embedded.1/Bios/Settings/Actions/Bios.ChangePassword"
+    },
+    "#Bios.ResetBios": {
+      "target": "/redfish/v1/Systems/System.Embedded.1/Bios/Settings/Actions/Bios.ResetBios"
+    }
+  },
+  "Attributes": {
+    "BootMode": "Uefi",
+    "OneTimeBootMode": "Disabled",
+    "ProcCStates": "Disabled",
+    "SriovGlobalEnable": "Enabled",
+    "SysMemSize": "768 GB",
+    "SystemModelName": "PowerEdge R740"
+  }
+}
