@@ -1386,7 +1386,7 @@
     "HealthRollup": "OK",
     "State": "Enabled"
   },
-  "UUID": "REDACTED",
+  "UUID": "cb0377f1-e3b9-4da9-9275-71825b2c6434",
   "VirtualMedia": {
     "@odata.id": "/redfish/v1/Managers/BMC_0/VirtualMedia"
   }

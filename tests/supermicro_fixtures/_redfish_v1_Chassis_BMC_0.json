@@ -62,7 +62,7 @@
   "PCIeSlots": {
     "@odata.id": "/redfish/v1/Chassis/BMC_0/PCIeSlots"
   },
-  "PartNumber": "REDACTED",
+  "PartNumber": "AOM-SCM-GB-P",
   "PowerState": "On",
   "PowerSubsystem": {
     "@odata.id": "/redfish/v1/Chassis/BMC_0/PowerSubsystem"
@@ -70,7 +70,7 @@
   "Sensors": {
     "@odata.id": "/redfish/v1/Chassis/BMC_0/Sensors"
   },
-  "SerialNumber": "REDACTED",
+  "SerialNumber": "HA256S015664",
   "Status": {
     "Conditions": [],
     "Health": "OK",

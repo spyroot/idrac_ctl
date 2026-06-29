@@ -46,7 +46,7 @@
       }
     }
   },
-  "PartNumber": "REDACTED",
+  "PartNumber": "699-2G548-0301-B00",
   "PowerMode": "OEM",
   "PowerMode@Redfish.AllowableValues": [],
   "PowerState": "On",
@@ -58,7 +58,7 @@
   "Processors": {
     "@odata.id": "/redfish/v1/Systems/HGX_Baseboard_0/Processors"
   },
-  "SerialNumber": "REDACTED",
+  "SerialNumber": "1653125034241",
   "Status": {
     "Conditions": [],
     "Health": "OK",
@@ -66,5 +66,5 @@
     "State": "Enabled"
   },
   "SystemType": "Physical",
-  "UUID": "REDACTED"
+  "UUID": "c01dc250-5678-11ed-9b6a-0242ac120002"
 }
