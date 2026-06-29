@@ -73,6 +73,7 @@ from .storage.cmd_convert_to_raid import *
 from .chassis.cmd_chassis_query import *
 from .chassis.cmd_chasis_reset import *
 from .sensors.cmd_sensors import *
+from .telemetry.cmd_metric_reports import *
 from .chassis.cmd_chassis_query import *
 
 # dell oem attach
