@@ -82,6 +82,7 @@ class ApiRequestType(Enum):
     BootSettingsQuery = auto()
     EnableBootOptions = auto()
     Sensors = auto()
+    MetricReports = auto()
 
     # boot sources
     BootSourcePending = auto()
