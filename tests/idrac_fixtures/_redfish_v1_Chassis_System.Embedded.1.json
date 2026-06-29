@@ -1,0 +1,28 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+  "@odata.id": "/redfish/v1/Chassis/System.Embedded.1",
+  "@odata.type": "#Chassis.v1_15_0.Chassis",
+  "Id": "System.Embedded.1",
+  "Name": "System Chassis",
+  "ChassisType": "RackMount",
+  "Manufacturer": "Dell Inc.",
+  "Model": "PowerEdge Mock",
+  "PowerState": "On",
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  },
+  "Actions": {
+    "#Chassis.Reset": {
+      "target": "/redfish/v1/Chassis/System.Embedded.1/Actions/Chassis.Reset",
+      "ResetType@Redfish.AllowableValues": [
+        "On",
+        "ForceOff",
+        "ForceRestart",
+        "GracefulRestart",
+        "GracefulShutdown",
+        "PowerCycle"
+      ]
+    }
+  }
+}
