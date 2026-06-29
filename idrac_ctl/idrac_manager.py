@@ -1730,6 +1730,22 @@ class IDracManager(RedfishManager):
         cmd_result = self.base_query(RedfishApi.Managers, key=IDRAC_JSON.Members)
         return self._member_ids(cmd_result.data)
 
+    def _host_system(self, system_ids) -> str:
+        """Return the host ComputerSystem id from a multi-system collection.
+
+        The host exposes a ``Bios``/``Boot`` link (where boot/bios/storage live);
+        on a split-topology box the others are baseboards (e.g. the NVIDIA HGX
+        baseboard carries GPUs but no Bios). Returns "" if undecidable.
+        """
+        for sid in system_ids:
+            try:
+                data = self.base_query(sid).data
+            except Exception:
+                continue
+            if isinstance(data, dict) and ("Bios" in data or "Boot" in data):
+                return sid
+        return ""
+
     def computer_system_id(self):
         """alias name for idrac_manage_servers to match v6.0 docs
         :return: str: computer_system_id "/redfish/v1/Systems/System.Embedded.1"
@@ -1738,22 +1754,36 @@ class IDracManager(RedfishManager):
 
     @cached_property
     def idrac_manage_servers(self) -> str:
-        """Shared method return idrac managed servers list as json
-        list i.e. /redfish/v1/Systems/System.Embedded.1
-        after first cal , result cached all follow-up call will return cached result.
-        :return:
+        """Return the managed (host) ComputerSystem path, e.g.
+        /redfish/v1/Systems/System.Embedded.1. Cached after the first call.
+
+        Resolves via the manager's ManagerForServers link. On a multi-system host
+        (e.g. a GB300 exposing System_0 + the NVIDIA HGX baseboard) that link,
+        taken from the last Managers member, can land on a non-host baseboard, so
+        when /redfish/v1/Systems has more than one member we prefer the host
+        system -- the one exposing a Bios/Boot link. Single-system hosts (Dell)
+        and hosts without a reachable Systems collection keep the original result.
         """
+        resolved = ""
         api_resp = self.base_query(self.idrac_members, key=IDRAC_JSON.Links)
         if api_resp.data is not None and IDRAC_JSON.ManagerServers in api_resp.data:
             if isinstance(api_resp.data, dict):
                 manage_servers = api_resp.data[IDRAC_JSON.ManagerServers]
                 self._manage_servers_obs = manage_servers
-                return self.value_from_json_list(
+                resolved = self.value_from_json_list(
                     manage_servers, IDRAC_JSON.Data_id
                 )
         else:
             self.logger.error("")
-        return ""
+        try:
+            system_ids = self.discover_computer_system_ids()
+        except Exception:
+            system_ids = []
+        if len(system_ids) > 1:
+            host = self._host_system(system_ids)
+            if host:
+                return host
+        return resolved
 
     @cached_property
     def idrac_id(self):
