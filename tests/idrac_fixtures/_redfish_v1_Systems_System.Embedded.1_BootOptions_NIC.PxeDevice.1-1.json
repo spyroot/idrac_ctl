@@ -1,0 +1,11 @@
+{
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/BootOptions/NIC.PxeDevice.1-1",
+    "@odata.type": "#BootOption.v1_0_4.BootOption",
+    "Id": "NIC.PxeDevice.1-1",
+    "Name": "UEFI Boot Option",
+    "DisplayName": "Embedded NIC 1 Port 1 Partition 1",
+    "Description": "Current settings of the UEFI boot option",
+    "BootOptionEnabled": true,
+    "BootOptionReference": "NIC.PxeDevice.1-1",
+    "UefiDevicePath": "PciRoot(0x0)/Pci(0x3,0x0)/MAC(001122334455,0x0)/IPv4(0.0.0.0)"
+}
