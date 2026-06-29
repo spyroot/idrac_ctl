@@ -15,6 +15,12 @@ from ..idrac_shared import ApiRequestType, Singleton
 from ..redfish_exceptions import RedfishForbidden
 from ..redfish_manager import CommandResult
 
+# Upper bound on how deep recursive_discovery will walk below a top-level
+# resource. Real Redfish trees are far shallower than this; the bound exists
+# purely to guarantee termination even if normalization/dedup ever misses a
+# cyclic back-reference.
+DEFAULT_DISCOVERY_MAX_DEPTH = 32
+
 
 class Discovery(IDracManager,
                 scm_type=ApiRequestType.Discovery,
@@ -78,20 +84,62 @@ class Discovery(IDracManager,
             for item in data:
                 yield from self.extract_odata_ids(item)
 
-    def recursive_discovery(self, resource_path):
-        """Recursive walk and discover
-        :param resource_path:
+    @staticmethod
+    def normalize_resource_path(resource_path: str) -> str:
+        """Canonicalize a Redfish resource path so URI variants map to one key.
+
+        Redfish hands back the same logical resource under several spellings:
+        a trailing slash (``.../Managers/``), a query string from an ``$expand``
+        / ``$select`` / ``$ref`` request, or duplicate slashes from a naive
+        string join (``/redfish//v1``). Keying ``visited_urls`` on the raw
+        string would treat each spelling as a new resource and re-walk it, so we
+        collapse them to a single canonical form first.
+
+        :param resource_path: a raw ``@odata.id`` / ``Uri`` value
+        :return: the path with any query string dropped, duplicate slashes
+                 collapsed, and a trailing slash removed (never reduced to "")
+        """
+        if not resource_path:
+            return resource_path
+        # Drop any query string ($expand, $select, $ref, odata.id fragments...).
+        path = resource_path.split("?", 1)[0]
+        path = path.split("#", 1)[0]
+        # Collapse duplicate slashes ("/redfish//v1/Managers" -> "/redfish/v1/Managers").
+        while "//" in path:
+            path = path.replace("//", "/")
+        # Strip trailing slash(es), but never collapse the path away entirely.
+        if len(path) > 1:
+            path = path.rstrip("/") or path
+        return path
+
+    def recursive_discovery(self,
+                            resource_path,
+                            depth: int = 0,
+                            max_depth: int = DEFAULT_DISCOVERY_MAX_DEPTH):
+        """Recursively walk and discover Redfish resources from ``resource_path``.
+
+        URI variants of the same resource (trailing slash, query string,
+        duplicate slashes) are normalized to one key before the visited check,
+        so each logical resource is fetched exactly once. Recursion stops once
+        ``depth`` exceeds ``max_depth`` so a missed back-reference can never spin
+        forever.
+
+        :param resource_path: a Redfish resource path (raw ``@odata.id``)
+        :param depth: current recursion depth; callers start at 0
+        :param max_depth: maximum depth to walk below the starting resource
         :return:
         """
+        if depth > max_depth:
+            return
+
+        resource_path = self.normalize_resource_path(resource_path)
+
         for query_filter in self.default_query_filter:
             if query_filter in resource_path:
                 self.visited_urls[resource_path] = True
                 return
 
         if resource_path in self.visited_urls or not resource_path.startswith("/redfish/v1"):
-            return
-
-        if resource_path in self.visited_urls:
             return
 
         try:
@@ -117,13 +165,13 @@ class Discovery(IDracManager,
             odata_ids = list(self.extract_odata_ids(result.data))
 
             for r in odata_ids:
-                self.recursive_discovery(r)
+                self.recursive_discovery(r, depth + 1, max_depth)
         except RedfishForbidden as e:
             self.visited_urls[resource_path] = True
             print("Forbidden: {}".format(e))
         except Exception as other_err:
             self.visited_urls[resource_path] = True
-            print("Forbidden: {}".format(other_err))
+            print("Discovery error at {}: {}".format(resource_path, other_err))
 
     def save_url_file_mapping(self):
         """Save the URL-to-file mapping to a JSON respond file
@@ -169,8 +217,10 @@ class Discovery(IDracManager,
                                  do_async=do_async,
                                  do_expanded=do_expanded)
 
-        self.visited_urls["/redfish/v1/"] = True
-        self.visited_urls["/redfish/v1/CompositionService"] = True
+        # Seed normalized keys so a child link back to the root (e.g. the
+        # bare "/redfish/v1") matches and is not re-walked.
+        self.visited_urls[self.normalize_resource_path("/redfish/v1/")] = True
+        self.visited_urls[self.normalize_resource_path("/redfish/v1/CompositionService")] = True
         odata_ids = list(self.extract_odata_ids(result.data))
         for r in odata_ids:
             self.recursive_discovery(r)
