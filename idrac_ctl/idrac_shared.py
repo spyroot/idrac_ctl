@@ -83,6 +83,10 @@ class ApiRequestType(Enum):
     EnableBootOptions = auto()
     Sensors = auto()
     MetricReports = auto()
+    MetricReportDefinitions = auto()
+    ComponentIntegrity = auto()
+    NetworkAdapters = auto()
+    NvLinkPorts = auto()
 
     # boot sources
     BootSourcePending = auto()
