@@ -1,0 +1,24 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#DellOSDeploymentService.DellOSDeploymentService",
+  "@odata.id": "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService",
+  "@odata.type": "#DellOSDeploymentService.v1_0_0.DellOSDeploymentService",
+  "Id": "DellOSDeploymentService",
+  "Name": "Dell OS Deployment Service",
+  "Actions": {
+    "#DellOSDeploymentService.ConnectNetworkISOImage": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService/Actions/DellOSDeploymentService.ConnectNetworkISOImage"
+    },
+    "#DellOSDeploymentService.DetachISOImage": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService/Actions/DellOSDeploymentService.DetachISOImage"
+    },
+    "#DellOSDeploymentService.DisconnectNetworkISOImage": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService/Actions/DellOSDeploymentService.DisconnectNetworkISOImage"
+    },
+    "#DellOSDeploymentService.GetAttachStatus": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService/Actions/DellOSDeploymentService.GetAttachStatus"
+    },
+    "#DellOSDeploymentService.GetNetworkISOImageConnectionInfo": {
+      "target": "/redfish/v1/Dell/Systems/System.Embedded.1/DellOSDeploymentService/Actions/DellOSDeploymentService.GetNetworkISOImageConnectionInfo"
+    }
+  }
+}
