@@ -59,7 +59,7 @@ class BiosQueryPending(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Bios/Settings"
+        target_api = f"{self.idrac_manage_servers}/Bios/Settings"
         if data_filter:
             do_expanded = True
 

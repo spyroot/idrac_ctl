@@ -103,7 +103,7 @@ class StorageView(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        target_api = f"/redfish/v1/Systems/System.Embedded.1/Storage/{controller}"
+        target_api = f"{self.idrac_manage_servers}/Storage/{controller}"
         cmd_rest = self.base_query(target_api,
                                    filename=filename,
                                    do_async=do_async,

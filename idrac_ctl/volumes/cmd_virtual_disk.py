@@ -91,8 +91,8 @@ class VirtualDiskQuery(
             raise InvalidArgument(f"Storage device_id {device_id} "
                                   "not found, available {storage_ids}")
 
-        r = f"https://{self.idrac_ip}/redfish/v1/Systems/" \
-            f"System.Embedded.1/Storage/{device_id}/Volumes"
+        r = f"https://{self.idrac_ip}{self.idrac_manage_servers}" \
+            f"/Storage/{device_id}/Volumes"
         #
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)
@@ -105,8 +105,8 @@ class VirtualDiskQuery(
             vd_list = [i['@odata.id'].split("/")[-1] for i in data['Members']]
 
         for vol_id in vd_list:
-            r = f"https://{self.idrac_ip}/redfish/v1/Systems" \
-                f"/System.Embedded.1/Storage/Volumes/{vol_id}"
+            r = f"https://{self.idrac_ip}{self.idrac_manage_servers}" \
+                f"/Storage/Volumes/{vol_id}"
             try:
                 response = self.api_get_call(r, headers)
                 self.default_error_handler(response)

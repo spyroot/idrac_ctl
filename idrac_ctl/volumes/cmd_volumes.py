@@ -55,7 +55,7 @@ class VolumeQuery(
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = f"/redfish/v1/Systems/System.Embedded.1/Storage/{dev_id}/Volumes"
+        target_api = f"{self.idrac_manage_servers}/Storage/{dev_id}/Volumes"
         cmd_result = self.base_query(target_api,
                                      filename=filename,
                                      do_async=do_async,

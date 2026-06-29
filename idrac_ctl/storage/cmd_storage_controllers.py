@@ -108,7 +108,7 @@ class StorageQuery(IDracManager, scm_type=ApiRequestType.StorageQuery,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        target_api = "/redfish/v1/Systems/System.Embedded.1/Storage"
+        target_api = f"{self.idrac_manage_servers}/Storage"
         if do_expanded:
             r = f"https://{self.idrac_ip}{target_api}{self.expanded()}"
         else:
