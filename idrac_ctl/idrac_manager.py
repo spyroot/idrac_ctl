@@ -1696,15 +1696,39 @@ class IDracManager(RedfishManager):
         cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
         return self.value_from_json_list(cmd_result.data, IDRAC_JSON.Data_id)
 
-    @cached_property
-    def idrac_members(self) -> str:
-        """Shared method return idrac manage members servers list as json
-        /redfish/v1/Managers/iDRAC.Embedded.1
-        after first cal , result cached all follow-up call will return cached result.
-        :return:
+    @staticmethod
+    def _member_ids(members) -> list:
+        """Extract every ``@odata.id`` from a Redfish ``Members`` list.
+
+        Tolerates a non-list / malformed payload (returns ``[]``) and skips
+        members without a string id, so a partial response never raises.
         """
-        cmd_result = self.base_query(f"{IDRAC_API.IDRAC_MANAGER}", key=IDRAC_JSON.Members)
-        return self.value_from_json_list(cmd_result.data, IDRAC_JSON.Data_id)
+        if not isinstance(members, list):
+            return []
+        return [m[IDRAC_JSON.Data_id] for m in members
+                if isinstance(m, dict) and isinstance(m.get(IDRAC_JSON.Data_id), str)]
+
+    def discover_computer_system_ids(self) -> list:
+        """Return ALL ComputerSystem ids from ``/redfish/v1/Systems``.
+
+        ``idrac_manage_servers`` resolves a single system via the manager's
+        ``ManagerForServers`` link and (through ``value_from_json_list``) returns
+        only the last member — wrong on multi-system hosts. This enumerates the
+        Systems collection so callers can pick the right one: e.g. a Supermicro
+        GB300 exposes ``/redfish/v1/Systems/System_0`` (host) and
+        ``/redfish/v1/Systems/HGX_Baseboard_0`` (NVIDIA GPU baseboard).
+        """
+        cmd_result = self.base_query(RedfishApi.Systems, key=IDRAC_JSON.Members)
+        return self._member_ids(cmd_result.data)
+
+    def discover_manager_ids(self) -> list:
+        """Return ALL Manager ids from ``/redfish/v1/Managers`` (e.g. BMC_0, HGX_BMC_0).
+
+        Companion to :meth:`discover_computer_system_ids` for boxes with more
+        than one BMC; ``idrac_members`` only yields a single (last) manager.
+        """
+        cmd_result = self.base_query(RedfishApi.Managers, key=IDRAC_JSON.Members)
+        return self._member_ids(cmd_result.data)
 
     def computer_system_id(self):
         """alias name for idrac_manage_servers to match v6.0 docs
