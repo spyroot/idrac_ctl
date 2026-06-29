@@ -13,7 +13,7 @@ from abc import abstractmethod
 from typing import Optional
 
 from ..idrac_manager import IDracManager
-from ..idrac_shared import ApiRequestType, IDRAC_API, Singleton
+from ..idrac_shared import IDRAC_API, ApiRequestType, Singleton
 from ..redfish_manager import CommandResult
 
 
