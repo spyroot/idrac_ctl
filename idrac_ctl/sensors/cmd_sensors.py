@@ -1,0 +1,95 @@
+"""Read Redfish Sensors across all Chassis (generic, vendor-neutral).
+
+    idrac_ctl sensors
+
+Walks ``/redfish/v1/Chassis`` -> each chassis ``Sensors`` collection -> each
+Sensor, returning Chassis/Name/Reading/ReadingUnits/Health. Navigation is by
+ServiceRoot links and ``@odata.id`` with no hardcoded ids, so it works on any
+host exposing the modern Redfish Sensor model (Dell, Supermicro/OpenBMC, HPE).
+
+Author Mus spyroot@gmail.com
+"""
+from abc import abstractmethod
+from typing import Optional
+
+from ..idrac_manager import IDracManager
+from ..idrac_shared import ApiRequestType, IDRAC_API, Singleton
+from ..redfish_manager import CommandResult
+
+
+class Sensors(IDracManager,
+              scm_type=ApiRequestType.Sensors,
+              name='sensors',
+              metaclass=Singleton):
+    """Read every Chassis sensor reading (temperature, power, fan, voltage…)."""
+
+    def __init__(self, *args, **kwargs):
+        super(Sensors, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    @abstractmethod
+    def register_subcommand(cls):
+        """Register the ``sensors`` subcommand (read-only, no flags needed)."""
+        cmd_parser = cls.base_parser()
+        return cmd_parser, "sensors", "command read all chassis sensor readings"
+
+    @staticmethod
+    def _members(data):
+        """Return the @odata.id strings from a Redfish collection, tolerantly."""
+        if not isinstance(data, dict):
+            return []
+        return [m["@odata.id"] for m in data.get("Members", [])
+                if isinstance(m, dict) and isinstance(m.get("@odata.id"), str)]
+
+    def execute(self,
+                filename: Optional[str] = None,
+                data_type: Optional[str] = "json",
+                verbose: Optional[bool] = False,
+                do_async: Optional[bool] = False,
+                do_expanded: Optional[bool] = False,
+                **kwargs) -> CommandResult:
+        """Walk every Chassis Sensors collection and collect readings.
+
+        Tolerant of a chassis without a Sensors link or an unreachable
+        collection (skips it). An ``$expand``'d Sensors member already carries
+        its Reading; otherwise each member is fetched individually.
+        """
+        readings = []
+        chassis = self.base_query(IDRAC_API.Chassis, do_async=do_async)
+        for chassis_uri in self._members(chassis.data):
+            try:
+                cdata = self.base_query(chassis_uri, do_async=do_async).data or {}
+            except Exception:
+                continue
+            link = cdata.get("Sensors")
+            sensors_uri = link.get("@odata.id") if isinstance(link, dict) else None
+            if not sensors_uri:
+                continue
+            try:
+                coll = self.base_query(sensors_uri, do_async=do_async,
+                                       do_expanded=do_expanded).data or {}
+            except Exception:
+                continue
+            for member in coll.get("Members", []):
+                if not isinstance(member, dict):
+                    continue
+                sd = member if "Reading" in member else None
+                if sd is None:
+                    uri = member.get("@odata.id")
+                    if not uri:
+                        continue
+                    try:
+                        sd = self.base_query(uri, do_async=do_async).data
+                    except Exception:
+                        continue
+                if isinstance(sd, dict) and "Reading" in sd:
+                    status = sd.get("Status") or {}
+                    readings.append({
+                        "Chassis": chassis_uri.rsplit("/", 1)[-1],
+                        "Name": sd.get("Name"),
+                        "Reading": sd.get("Reading"),
+                        "ReadingUnits": sd.get("ReadingUnits"),
+                        "ReadingType": sd.get("ReadingType"),
+                        "Health": status.get("Health") if isinstance(status, dict) else None,
+                    })
+        return CommandResult(readings, None, None, None)
