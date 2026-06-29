@@ -94,14 +94,29 @@ for _dir in (_FIXTURE_DIR, _IDRAC_FIXTURE_DIR):
             _FIXTURE_INDEX[_f.name.lower()] = _f
 
 
-def _url_to_fixture(path: str):
+def _build_fixture_index(*dirs):
+    """Case-insensitive {flattened-filename: path} index; later dirs win."""
+    index = {}
+    for _d in dirs:
+        if _d and _d.exists():
+            for _f in _d.glob("*.json"):
+                index[_f.name.lower()] = _f
+    return index
+
+
+def _vendor_fixture_dir(vendor):
+    """tests/<vendor>_fixtures/ — a vendor overlay on the DMTF base (NOT the Dell overlay)."""
+    return Path(os.path.dirname(os.path.abspath(__file__))) / f"{vendor}_fixtures"
+
+
+def _url_to_fixture(path: str, index=None):
     """Map a Redfish request path to its captured mockup file, case-insensitively.
 
     ``/redfish/v1/Managers`` -> ``_redfish_v1_Managers.json``. Returns ``None``
     when no fixture exists.
     """
     key = "_" + path.strip("/").replace("/", "_") + ".json"
-    return _FIXTURE_INDEX.get(key.lower())
+    return (index if index is not None else _FIXTURE_INDEX).get(key.lower())
 
 
 class MockRedfishService:
@@ -122,15 +137,16 @@ class MockRedfishService:
 
     JOB_ID = "JID_000000000001"
 
-    def __init__(self, fixture_dir: Path):
+    def __init__(self, fixture_dir: Path, index=None):
         self._dir = fixture_dir
+        self._index = index if index is not None else _FIXTURE_INDEX
         self._overlay = {}  # path -> materialized state dict
         self.requests = []
 
     def _state(self, path: str):
         if path in self._overlay:
             return self._overlay[path]
-        fixture = _url_to_fixture(path)
+        fixture = _url_to_fixture(path, self._index)
         if fixture is None:
             return None
         import json
@@ -229,6 +245,36 @@ def redfish_mock(redfish_service):
     path. Requires the ``requests-mock`` dev dependency; skips cleanly without it.
     """
     yield _make_idrac("mock-idrac", "root", "mock")
+
+
+@pytest.fixture
+def redfish_mock_factory():
+    """Factory for a VENDOR-shaped offline IDracManager.
+
+    ``mgr, svc = factory("supermicro")`` serves the DMTF base overlaid by
+    ``tests/supermicro_fixtures/`` (NOT the Dell ``idrac_fixtures/``), so the same
+    command/transport code runs against a real non-Dell tree (System_0/BMC_0)
+    instead of System.Embedded.1. Returns ``(IDracManager, MockRedfishService)``.
+    """
+    requests_mock = pytest.importorskip("requests_mock")
+    _started = []
+
+    def _factory(vendor):
+        index = _build_fixture_index(_FIXTURE_DIR, _vendor_fixture_dir(vendor))
+        service = MockRedfishService(_FIXTURE_DIR, index=index)
+        mocker = requests_mock.Mocker()
+        mocker.start()
+        mocker.get(requests_mock.ANY, text=service.get_cb)
+        mocker.patch(requests_mock.ANY, text=service.patch_cb)
+        mocker.post(requests_mock.ANY, text=service.post_cb)
+        mocker.delete(requests_mock.ANY, text=service.delete_cb)
+        service.mocker = mocker
+        _started.append(mocker)
+        return _make_idrac(f"mock-{vendor}", "root", "mock"), service
+
+    yield _factory
+    for _m in _started:
+        _m.stop()
 
 
 @pytest.fixture
