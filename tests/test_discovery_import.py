@@ -12,13 +12,21 @@ import importlib
 import sys
 
 
-def test_discovery_module_imports_without_numpy():
-    """Importing cmd_discovery fresh does not import numpy at module load time."""
+def test_discovery_module_imports_without_numpy(monkeypatch):
+    """Importing cmd_discovery fresh does not import numpy at module load time.
+
+    Uses ``monkeypatch.delitem`` so both the discovery module and ``numpy`` are
+    RESTORED on teardown. A bare ``sys.modules.pop("numpy")`` leaves numpy
+    half-removed (its ``numpy.*`` submodules stay), so a later test that imports
+    numpy reloads it — a warning on CPython, a ``RecursionError`` on some numpy
+    builds (e.g. the conda env). Restoring keeps the rest of the suite clean.
+    """
     module_name = "idrac_ctl.discovery.cmd_discovery"
 
-    # Drop any cached copies so the import really re-executes the module body.
-    sys.modules.pop(module_name, None)
-    sys.modules.pop("numpy", None)
+    # Drop cached copies so the import re-executes the module body; delitem
+    # records the originals and puts them back when the test finishes.
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
+    monkeypatch.delitem(sys.modules, "numpy", raising=False)
 
     importlib.import_module(module_name)
 
