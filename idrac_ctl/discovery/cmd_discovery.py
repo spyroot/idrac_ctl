@@ -64,20 +64,26 @@ class Discovery(IDracManager,
         return cmd_parser, "discovery", help_text
 
     def extract_odata_ids(self, data):
-        """Extract odata ids
-        :param data:
-        :return:
+        """Yield Redfish reference strings (``@odata.id`` / ``Uri``) found in ``data``.
+
+        Only string values are yielded. Inside a JsonSchemas document the
+        ``@odata.id`` key is a *property definition* (e.g.
+        ``{"$ref": ".../odata-v4.json#/definitions/id"}``), not an actual
+        reference; yielding that dict would crash the downstream walk
+        (``normalize_resource_path`` / membership checks expect a path string).
+        The ``isinstance`` guard keeps discovery robust across vendors whose
+        crawl reaches schema content (seen live on Supermicro).
+
+        :param data: a parsed Redfish document (dict/list) or any nested value.
+        :return: yields reference path strings.
         """
         if isinstance(data, dict):
             odata_id = data.get("@odata.id")
-            if odata_id:
+            if isinstance(odata_id, str):
                 yield odata_id
             uri = data.get("Uri")
-            if uri:
-                print("Found uri")
+            if isinstance(uri, str):
                 yield uri
-            # target = data.get("@target")
-            # print(target)
             for value in data.values():
                 yield from self.extract_odata_ids(value)
         elif isinstance(data, list):
