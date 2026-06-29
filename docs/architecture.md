@@ -1,52 +1,72 @@
 # Architecture
 
-`idrac_ctl` is built in layers so the generic Redfish work stays reusable and vendor specifics never
-leak into the core. The direction is a generic `redfish_ctl` with vendors as plug-ins.
+I use `idrac_ctl system` as the first sanity check: it starts at the CLI, runs a self-registering
+command module, uses `IDracManager`, and ends in the generic Redfish HTTP client. The important rule
+is that Redfish stays product-neutral; Dell behavior sits above it.
 
-```
-CLI (idrac_main.py, argparse)
-   │  dispatch by ApiRequestType + name
-   ▼
-Command modules  (cmd_*.py, <domain>/cmd_*.py)      self-register via __init_subclass__
-   │  inherit
-   ▼
-IDracManager          Dell/iDRAC OEM behavior  (idrac_manager.py, delloem/)
-   │  inherit
-   ▼
-RedfishManager        product-neutral Redfish client  (redfish_manager.py)
-   │
-   ▼
-requests  → Redfish / iDRAC over HTTPS
+```text
+CLI (`idrac_main.py`, argparse)
+  -> command modules (`cmd_*.py`, `<domain>/cmd_*.py`)
+  -> `IDracManager` for iDRAC/Dell behavior and host-system selection
+  -> `RedfishManager` for product-neutral HTTP and response parsing
+  -> requests over Redfish HTTPS
 ```
 
-## Core seams
+## Core Seams
 
-- **`RedfishManager`** — the generic client: connection (`ip`/`user`/`password`/`port`/`insecure`/
-  `x_auth`), the HTTP verbs, response/message parsing (`redfish_respond.py`), and the
-  `CommandResult(data, discovered, extra, error)` return contract. It must never import Dell code.
-- **`IDracManager(RedfishManager)`** — Dell OEM specialization: task/job polling, Dell paths
-  (`System.Embedded.1`, `iDRAC.Embedded.1`), `delloem/` actions.
-- **Commands** — each is an `IDracManager` subclass declared with `scm_type=ApiRequestType.<X>`,
-  `name=`, `metaclass=Singleton`. It implements `execute(**kwargs) -> CommandResult` and
-  `register_subcommand()` for its CLI args. Registration is automatic, so adding a capability is
-  adding a module — never editing a central switch.
+- `RedfishManager`, defined in `idrac_ctl/redfish_manager.py`, owns connection settings, HTTP verbs,
+  Redfish response parsing, and the `CommandResult(data, discovered, extra, error)` return shape. It
+  never imports vendor packages.
+- `IDracManager`, defined in `idrac_ctl/idrac_manager.py`, adds Dell/iDRAC defaults, task/job polling,
+  Dell OEM helpers, and host ComputerSystem resolution.
+- Commands, defined in `idrac_ctl/cmd_*.py` and domain packages, subclass `IDracManager` with an
+  `ApiRequestType` and `name=`. They self-register through `__init_subclass__`, so adding a command is
+  adding a module, not editing a central switch.
+
+## Vendor-Neutral Reads
+
+The clearest cross-vendor command is `sensors`, defined in `idrac_ctl/sensors/cmd_sensors.py`. It
+walks ServiceRoot -> Chassis -> Sensors by `@odata.id` links and returns sensor names, readings,
+units, types, and health. `tests/test_sensors.py` runs it through the Supermicro fixture overlay, so
+the test uses the real request path against a non-Dell tree.
+
+The discovery pieces live in two places. `idrac_ctl/discover/classifier.py` classifies a ServiceRoot
+as `dell`, `hpe`, `supermicro`, or `generic` using OEM keys, `@odata.type`, and manufacturer text.
+`idrac_ctl/discovery/cmd_discovery.py` is the CLI command that recursively walks Redfish resources,
+dumps the responses, and records allowed methods.
 
 ## Vendors
 
-Vendor specifics live under `idrac_ctl/vendors/<name>/`. The architecture rule is simple: the generic
-core does not import vendor packages. See [vendors.md](vendors.md) for capability profiles, current
-Dell support, and the HPE/Supermicro placeholders.
+`idrac_ctl/vendors/<name>/` holds capability profiles. The Dell command code still lives mostly in
+`IDracManager` and `idrac_ctl/delloem/`; moving that code into `vendors/dell/` is planned, not done.
 
-## Sync and async
+Current vendor maturity:
 
-Commands can run a request synchronously or against an asyncio loop (`api_async_*`). The async paths
-matter most for the fleet proxy, where thousands of requests run concurrently — see
-[scaling-and-benchmarks.md](scaling-and-benchmarks.md).
+- Dell iDRAC: the primary target, with query-parameter and JobService capability flags in
+  `idrac_ctl/vendors/dell/capabilities.py`.
+- Supermicro: read-only validated against a live GB300 BMC with Redfish 1.17.0, backed by
+  `tests/supermicro_fixtures/` and the vendor-aware mock factory.
+- HPE: conservative placeholder profile until tested against iLO hardware or an emulator.
 
-## Known structural debt (tracked)
+The generic core never imports vendor packages.
 
-- The repo root ships a re-export shim (`./__init__.py`) that complicates imports; it goes away with
-  the `redfish_ctl` rename.
-- `IDracManager` is large; transport/retry should move down into `RedfishManager`.
-- Power/boot/BIOS/firmware should be callable as **library methods**, not only through the CLI
-  arg-parser path, so the proxy and other callers reuse them directly.
+## Host-System Selection
+
+Some hosts expose more than one ComputerSystem. A Supermicro GB300 can expose the host as `System_0`
+and the NVIDIA HGX baseboard as `HGX_Baseboard_0`. `IDracManager.discover_computer_system_ids()`,
+`discover_manager_ids()`, and `_host_system()` prefer the member with `Bios` or `Boot` links so host
+commands route to the host system instead of a baseboard.
+
+## Sync And Async
+
+Most CLI commands call the synchronous request helpers. The async helpers (`api_async_get`,
+`api_async_post`, `api_async_patch`, and `api_async_delete`) already exist for callers that need an
+event loop. A future fleet proxy would build on those helpers; the proxy itself is not implemented.
+
+## Known Structural Debt
+
+- `IDracManager` is large; transport and retry behavior belongs lower in
+  `RedfishManager`.
+- Power, boot, and BIOS control paths need library-callable APIs, not only the CLI
+  argument path, so a future proxy and other callers can reuse them directly.
+- Firmware is read/inventory-only today. Update, rollback, and repository flows are still future work.

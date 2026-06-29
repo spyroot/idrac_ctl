@@ -1,97 +1,104 @@
-# Fleet Management & The Redfish Proxy
+# Fleet Management And The Redfish Proxy
 
-The CLI manages one server at a time. The planned fleet path is an optional Redfish proxy/controller:
-a service that holds desired and observed state for many servers and reconciles the two over Redfish.
-This page is the design target, not a runnable component in the repository today.
+> Status: DESIGN / NOT IMPLEMENTED. The CLI works without this service.
 
-When implemented, this component stays optional. The core CLI should not depend on it.
+If I have one server in front of me, I use `idrac_ctl` directly. If I need to drive a fleet, I want a
+small Redfish proxy/controller that stores desired state, reads observed state, and reconciles the
+two without giving every client a route to the BMC network.
 
 ## Why A Service
 
-Surveying the prior art — Metal3/baremetal-operator (BMC I/O isolated in Ironic), OpenStack
-Ironic+sushy (stateless API + worker conductor), DMTF Redfish Aggregation, Tinkerbell Rufio — the
-recurring lesson is: **isolate the privileged BMC-talking process** and model **desired vs observed**
-state. The design keeps that BMC-talking process in Python so it can reuse `RedfishManager` and
-`IDracManager` instead of growing a second Redfish client in a second language. A `kubectl`-native CRD
-facade can come later as a thin adapter; it is not needed to start.
+The design lesson from tools such as Ironic and baremetal-operator is to isolate the process that can
+reach BMCs. This proxy would keep that process in Python so it can reuse `RedfishManager`,
+`IDracManager`, `sensors`, `discovery`, firmware inventory reads, and the same vendor capability
+profiles documented in [vendors.md](vendors.md).
+
+Multi-vendor discovery/read already exists in the CLI. What is deferred here is vendor-aware desired
+state reconciliation: deciding what to change, ordering the writes, tracking jobs, and reporting
+drift across many servers.
 
 ## Target Shape
 
-```
+```text
 clients / kubectl / CI
-      │  REST (optionally Redfish-Aggregator-shaped)
-      ▼
- redfish-proxy (FastAPI)            ← desired + observed state (DB)
-   • server registry
-   • async reconcile loop (per server)         reuses RedfishManager / IDracManager
-   • the ONLY pod with a route to the BMC management network
-      │  Redfish/HTTPS  (insecure ok, network-isolated)
-      ▼
-  iDRAC / generic Redfish / (later) iLO / Supermicro
+  -> redfish-proxy service
+  -> desired + observed state store
+  -> async reconcile workers using the current Redfish managers
+  -> BMC management network
 ```
+
+The proxy would be the only deployed component with BMC egress. A Kubernetes CRD adapter could come
+later, but the first useful version can just be an API and a database.
 
 ## Target State Model
 
-The internal model should be CRD-shaped even in the DB, so a Kubernetes CRD adapter is natural later.
-It can borrow from BareMetalHost and the DMTF `AggregationSource` vocabulary:
+I would model the stored state close to a CRD because it keeps desired and observed fields explicit:
 
 ```yaml
-spec:                                   # desired
+spec:
   bmcAddress: redfish://10.0.0.5/redfish/v1/Systems/System.Embedded.1
-  vendor: dell                          # selects the manager subclass / capabilities
-  credentialsRef: secret-name           # k8s Secret, keys: username / password
+  vendor: dell
+  credentialsRef: secret-name
   desired:
     power: "On"
     bootOverride: "Pxe"
-    firmware: { component: BIOS, version: "2.19.1" }
-    bios: { SriovGlobalEnable: "Enabled", ProcCStates: "Disabled" }
-    targetProfile: "rt-low-latency"     # a named spec (see below)
-status:                                 # observed
+    bios: { SriovGlobalEnable: "Enabled" }
+status:
   power: "On"
-  observedBoot: "Hdd"
   health: "OK"
-  firmware: { BIOS: "2.18.0" }
-  hardware: { cpu, memGiB, nics[], storage[] }
-  lastReconciled: <ts>
-  observedGeneration: 7
+  lastReconciled: <timestamp>
   goodCredentials: true
   error: null
 ```
 
+`credentialsRef` is the name of a Kubernetes Secret created by the operator or installer; the Secret
+would hold `username` and `password` keys. The proxy would log only metadata such as whether
+credentials worked.
+
+The Dell-shaped `bmcAddress` above is only an example. A real proxy needs the same host-system
+selection now in `IDracManager`: on a GB300, route host actions to `System_0`, not the HGX baseboard.
+
 ## Reconcile Rules
 
-Standard external-system controller discipline: **level-triggered** (read current, converge to spec —
-never trust an event), **idempotent**, store the device handle in `status`, **periodic resync**
-(Redfish has no push, so poll on an interval), **back off** on transient errors, write
-`observedGeneration` after success, use finalizers for clean teardown.
+Redfish has no push stream for all state, so the controller would poll, compare observed state to the
+desired spec, apply only the missing changes, and back off on transient errors. Successful writes
+would update observed state after the BMC or job confirms the change.
 
 ## Target Profiles
 
-A "target spec" is a named, versioned profile (e.g. `rt-low-latency`) that expands to concrete
-firmware versions + BIOS attributes + SR-IOV settings. The proxy would reconcile each server toward
-its profile and report drift. Profiles are the unit users reason about; the proxy turns them into the
-right ordered Redfish operations (some need a reboot/job, so ordering and job-tracking matter).
+A target profile such as `rt-low-latency` would expand to concrete BIOS attributes, boot settings,
+and later firmware expectations. Profiles are easier for operators to reason about than one-off
+attribute lists, but the proxy still has to turn them into ordered Redfish operations.
+
+Firmware update remains future work in this repository. Current firmware support is inventory/read
+only.
 
 ## Security Design
 
-- BMC credentials in a Kubernetes **Secret** (`username`/`password`), referenced by name — never inline,
-  never logged; record only "good-credentials" metadata in status.
-- **NetworkPolicy** restricting egress to the BMC management CIDR; the proxy is the only pod with that
-  route. Self-signed BMC certs ⇒ `insecure` on that hop, compensated by network isolation.
-- Least-privilege RBAC scoped to the proxy's own resources and the referenced Secrets.
+- BMC credentials live in a Kubernetes Secret referenced by name, never inline in the spec and never
+  printed.
+- NetworkPolicy would restrict egress to the BMC management CIDR; the proxy would be the only pod
+  with that route.
+- TLS verification can stay off on the BMC hop when the network is isolated, or be enabled with a
+  trusted certificate chain.
+- RBAC would be scoped to the proxy resources and the referenced Secrets only.
 
 ## Scope
 
-- **MVP:** register server; `GET /servers/{id}` (observed); `PUT /servers/{id}/desired`
-  (power + bootOverride); list; SQLite/Postgres; one reconcile loop; optional Deployment / Service /
-  Secret / NetworkPolicy manifests. Concurrency for many servers and benchmarking come next — see
+- MVP: register a server, read observed state, set desired power and boot override, list servers, and
+  reconcile one server at a time with SQLite or Postgres.
+- Next: bounded concurrency, benchmark gates, and a simulator; see
   [scaling-and-benchmarks.md](scaling-and-benchmarks.md).
-- **Later:** firmware / BIOS / SR-IOV / target-profile desired-state; DMTF-Aggregator-shaped read API;
-  optional CRD + kopf façade; multi-replica leader election; iLO / Supermicro vendor subclasses.
+- Later: BIOS profile reconcile, firmware update flows, optional CRD facade, leader election, and
+  deeper vendor-specific desired state.
+
+Supermicro read/query behavior is already validated against a live GB300 fixture overlay. HPE is only
+a classifier/profile placeholder until tested. The proxy would treat those as different maturity
+levels.
 
 ## Testing Target
 
-The reconcile loop should be unit-tested with a mocked client (converges, idempotent, backs off,
-redacts credentials) and integration-tested against the `sushy-emulator --fake` lane and the planned
-multi-server fleet simulator. See [testing.md](testing.md) and
-[scaling-and-benchmarks.md](scaling-and-benchmarks.md).
+I would unit-test the reconcile loop with a mocked Redfish client for convergence, idempotence,
+backoff, and secret redaction. The current opt-in emulator test in `tests/test_emulator_smoke.py`
+covers a single generic Redfish server. A future fleet simulator would cover many synthetic servers,
+latency, and transient failures.
