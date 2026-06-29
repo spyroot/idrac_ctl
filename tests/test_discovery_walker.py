@@ -1,0 +1,310 @@
+"""Offline tests for the recursive Redfish discovery walker.
+
+These exercise ``Discovery.recursive_discovery`` against a small synthetic
+Redfish graph, with no live iDRAC and no network. The walker's HTTP fetch
+(``base_query``) is replaced by an in-memory graph server that counts how many
+times each logical resource is requested, so we can assert:
+
+* URI variants of one resource (trailing slash, ``$expand``/``$ref`` query
+  string, duplicate slashes) collapse to a single fetch;
+* a reference cycle (A -> B -> A) terminates and fetches each node once;
+* recursion stops once it passes the requested ``max_depth``.
+
+The walker is driven on an instance built with ``__init__`` bypassed: it only
+touches a handful of plain attributes plus ``base_query``, so a real network
+client is never constructed. The whole module runs green with no IDRAC_IP set.
+
+Author Mus spyroot@gmail.com
+"""
+import pytest
+
+from idrac_ctl.discovery.cmd_discovery import (
+    DEFAULT_DISCOVERY_MAX_DEPTH,
+    Discovery,
+)
+from idrac_ctl.redfish_exceptions import RedfishForbidden, RedfishNotFound
+from idrac_ctl.redfish_manager import CommandResult
+
+
+class _FakeGraph:
+    """In-memory Redfish service backed by a ``normalized path -> payload`` map.
+
+    Stands in for ``Discovery.base_query``: the walker normalizes a path and
+    calls this with the canonical form, so the map is keyed on canonical paths.
+    Each call is tallied in :attr:`fetch_counts` so a test can prove a logical
+    resource was fetched exactly once even when its links spell it many ways.
+    A path absent from the graph raises ``RedfishNotFound`` to mimic a 404.
+    """
+
+    def __init__(self, graph):
+        self.graph = graph
+        self.fetch_counts = {}
+
+    def base_query(self, resource_path, *args, **kwargs):
+        self.fetch_counts[resource_path] = self.fetch_counts.get(resource_path, 0) + 1
+        if resource_path not in self.graph:
+            raise RedfishNotFound(resource_path)
+        # extra="GET" -> the Allow header the walker records as allowed methods.
+        return CommandResult(self.graph[resource_path], None, "GET", None)
+
+
+def _make_discovery(tmp_path, graph, query_filter=None):
+    """Build a Discovery whose ``base_query`` serves ``graph``, no network.
+
+    ``__init__`` (which would construct a real Redfish client) is bypassed; we
+    set only the attributes ``recursive_discovery`` actually reads. JSON dumps
+    land in ``tmp_path``. Returns ``(discovery, fake_graph)``.
+    """
+    disc = Discovery.__new__(Discovery)
+    disc.visited_urls = {}
+    disc._discovered_url_file_mapping = {}
+    disc._api_allowed_methods = {}
+    disc.default_query_filter = list(query_filter or [])
+    disc.json_response_dir = str(tmp_path)
+
+    fake = _FakeGraph(graph)
+    # Instance attribute shadows the bound method, so it is called with just
+    # the resource path (no implicit self), matching base_query's real call.
+    disc.base_query = fake.base_query
+    return disc, fake
+
+
+# --------------------------------------------------------------------------- #
+# normalize_resource_path
+# --------------------------------------------------------------------------- #
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("/redfish/v1/Managers", "/redfish/v1/Managers"),
+        ("/redfish/v1/Managers/", "/redfish/v1/Managers"),
+        ("/redfish/v1/Managers///", "/redfish/v1/Managers"),
+        ("/redfish/v1/Managers?$expand=*($levels=1)", "/redfish/v1/Managers"),
+        ("/redfish/v1/Managers?$select=Name", "/redfish/v1/Managers"),
+        ("/redfish/v1/Managers/?$ref", "/redfish/v1/Managers"),
+        ("/redfish//v1//Managers", "/redfish/v1/Managers"),
+        ("/redfish/v1/Managers#/Fragment", "/redfish/v1/Managers"),
+        ("/redfish/v1/", "/redfish/v1"),
+        ("/", "/"),
+        ("", ""),
+    ],
+)
+def test_normalize_resource_path_variants(raw, expected):
+    """Every URI spelling of one resource collapses to a single canonical key."""
+    assert Discovery.normalize_resource_path(raw) == expected
+
+
+def test_normalize_collapses_variants_to_one_key():
+    """The trailing-slash / query / dup-slash spellings all map to one value."""
+    base = "/redfish/v1/Systems/1"
+    variants = [
+        base,
+        base + "/",
+        base + "?$expand=*",
+        base + "/?$ref",
+        "/redfish//v1/Systems/1",
+        base + "#anchor",
+    ]
+    canonical = {Discovery.normalize_resource_path(v) for v in variants}
+    assert canonical == {base}
+
+
+# --------------------------------------------------------------------------- #
+# Cycle + URI-variant dedup
+# --------------------------------------------------------------------------- #
+
+def test_cycle_and_variants_fetch_each_resource_once(tmp_path):
+    """A -> B -> A with variant spellings fetches A and B exactly once each.
+
+    A links to B under four spellings (plain, trailing slash, query string,
+    duplicate slash) and B links back to A under two. With normalization and
+    the visited guard, neither node is re-fetched and the walk terminates.
+    """
+    graph = {
+        "/redfish/v1/A": {
+            "@odata.id": "/redfish/v1/A",
+            "Links": [
+                {"@odata.id": "/redfish/v1/B"},
+                {"@odata.id": "/redfish/v1/B/"},
+                {"@odata.id": "/redfish/v1/B?$expand=*($levels=1)"},
+                {"@odata.id": "/redfish//v1/B"},
+            ],
+        },
+        "/redfish/v1/B": {
+            "@odata.id": "/redfish/v1/B",
+            "Back": {"@odata.id": "/redfish/v1/A"},
+            "BackSlash": {"@odata.id": "/redfish/v1/A/"},
+            "BackQuery": {"@odata.id": "/redfish/v1/A?$select=Name"},
+        },
+    }
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    disc.recursive_discovery("/redfish/v1/A")
+
+    assert fake.fetch_counts == {"/redfish/v1/A": 1, "/redfish/v1/B": 1}
+    # Both logical resources recorded, keyed on the canonical path.
+    assert set(disc._discovered_url_file_mapping) == {"/redfish/v1/A", "/redfish/v1/B"}
+
+
+def test_entering_via_a_variant_still_dedupes(tmp_path):
+    """Starting the walk on a trailing-slash/query variant still keys on canon."""
+    graph = {
+        "/redfish/v1/A": {
+            "@odata.id": "/redfish/v1/A",
+            "Next": {"@odata.id": "/redfish/v1/A?$expand=*"},  # self via variant
+        },
+    }
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    disc.recursive_discovery("/redfish/v1/A/?$ref")
+
+    assert fake.fetch_counts == {"/redfish/v1/A": 1}
+
+
+# --------------------------------------------------------------------------- #
+# Depth bound
+# --------------------------------------------------------------------------- #
+
+def _linear_chain(length):
+    """Build R0 -> R1 -> ... -> R(length-1), each linking to the next node."""
+    graph = {}
+    for i in range(length):
+        node = {"@odata.id": f"/redfish/v1/R{i}"}
+        if i + 1 < length:
+            node["Next"] = {"@odata.id": f"/redfish/v1/R{i + 1}"}
+        graph[f"/redfish/v1/R{i}"] = node
+    return graph
+
+
+def test_recursion_stops_past_max_depth(tmp_path):
+    """With max_depth=2, only R0 (d0), R1 (d1), R2 (d2) are fetched."""
+    graph = _linear_chain(6)
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    disc.recursive_discovery("/redfish/v1/R0", depth=0, max_depth=2)
+
+    assert set(fake.fetch_counts) == {
+        "/redfish/v1/R0",
+        "/redfish/v1/R1",
+        "/redfish/v1/R2",
+    }
+    assert all(count == 1 for count in fake.fetch_counts.values())
+    # Anything deeper than the bound is never requested.
+    for deeper in ("/redfish/v1/R3", "/redfish/v1/R4", "/redfish/v1/R5"):
+        assert deeper not in fake.fetch_counts
+
+
+def test_max_depth_zero_fetches_only_the_root(tmp_path):
+    """A zero bound walks the entry resource and nothing below it."""
+    graph = _linear_chain(3)
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    disc.recursive_discovery("/redfish/v1/R0", depth=0, max_depth=0)
+
+    assert set(fake.fetch_counts) == {"/redfish/v1/R0"}
+
+
+def test_default_depth_walks_a_normal_tree(tmp_path):
+    """Within the default bound the whole chain is discovered."""
+    length = 8
+    assert length <= DEFAULT_DISCOVERY_MAX_DEPTH
+    graph = _linear_chain(length)
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    disc.recursive_discovery("/redfish/v1/R0")
+
+    assert len(fake.fetch_counts) == length
+    assert all(count == 1 for count in fake.fetch_counts.values())
+
+
+# --------------------------------------------------------------------------- #
+# Filters and error handling
+# --------------------------------------------------------------------------- #
+
+def test_query_filter_skips_without_fetch(tmp_path):
+    """A path matching default_query_filter is marked visited, never fetched."""
+    graph = {
+        "/redfish/v1/A": {
+            "@odata.id": "/redfish/v1/A",
+            "Log": {"@odata.id": "/redfish/v1/Managers/iDRAC/LogServices/Sel/Entries"},
+        },
+    }
+    disc, fake = _make_discovery(
+        tmp_path, graph, query_filter=["LogServices/Sel/Entries"]
+    )
+
+    disc.recursive_discovery("/redfish/v1/A")
+
+    assert fake.fetch_counts == {"/redfish/v1/A": 1}
+    assert "/redfish/v1/Managers/iDRAC/LogServices/Sel/Entries" in disc.visited_urls
+
+
+def test_non_redfish_path_is_ignored(tmp_path):
+    """A link outside /redfish/v1 is neither fetched nor recorded."""
+    graph = {
+        "/redfish/v1/A": {
+            "@odata.id": "/redfish/v1/A",
+            "External": {"@odata.id": "/some/other/path"},
+        },
+    }
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    disc.recursive_discovery("/redfish/v1/A")
+
+    assert fake.fetch_counts == {"/redfish/v1/A": 1}
+    assert "/some/other/path" not in disc.visited_urls
+
+
+def test_forbidden_marks_visited_and_reports(tmp_path, capsys):
+    """A 403 on a child is swallowed: marked visited, sibling walk continues."""
+    graph = {
+        "/redfish/v1/A": {
+            "@odata.id": "/redfish/v1/A",
+            "Denied": {"@odata.id": "/redfish/v1/Secret"},
+            "Ok": {"@odata.id": "/redfish/v1/B"},
+        },
+        "/redfish/v1/B": {"@odata.id": "/redfish/v1/B"},
+    }
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    def base_query(resource_path, *args, **kwargs):
+        fake.fetch_counts[resource_path] = fake.fetch_counts.get(resource_path, 0) + 1
+        if resource_path == "/redfish/v1/Secret":
+            raise RedfishForbidden("403 on Secret")
+        return CommandResult(graph[resource_path], None, "GET", None)
+
+    disc.base_query = base_query
+    disc.recursive_discovery("/redfish/v1/A")
+
+    assert disc.visited_urls.get("/redfish/v1/Secret") is True
+    assert fake.fetch_counts["/redfish/v1/B"] == 1
+    out = capsys.readouterr().out
+    assert "Forbidden:" in out
+
+
+def test_generic_error_is_not_mislabeled_forbidden(tmp_path, capsys):
+    """A non-403 failure reports a generic discovery error, not "Forbidden:".
+
+    Regression for the handler that printed "Forbidden:" for every Exception.
+    """
+    graph = {
+        "/redfish/v1/A": {
+            "@odata.id": "/redfish/v1/A",
+            "Broken": {"@odata.id": "/redfish/v1/Boom"},
+        },
+    }
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    def base_query(resource_path, *args, **kwargs):
+        fake.fetch_counts[resource_path] = fake.fetch_counts.get(resource_path, 0) + 1
+        if resource_path == "/redfish/v1/Boom":
+            raise RuntimeError("connection reset")
+        return CommandResult(graph[resource_path], None, "GET", None)
+
+    disc.base_query = base_query
+    disc.recursive_discovery("/redfish/v1/A")
+
+    assert disc.visited_urls.get("/redfish/v1/Boom") is True
+    out = capsys.readouterr().out
+    assert "Discovery error at /redfish/v1/Boom" in out
+    assert "Forbidden: connection reset" not in out
