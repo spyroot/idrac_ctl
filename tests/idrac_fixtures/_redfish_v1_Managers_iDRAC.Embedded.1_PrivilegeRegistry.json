@@ -9,26 +9,24 @@
       "Entity": "Manager",
       "OperationMap": {
         "GET": [
-          "Login"
+          {
+            "Privilege": [
+              "Login"
+            ]
+          }
         ],
         "PATCH": [
-          "ConfigureManager"
+          {
+            "Privilege": [
+              "ConfigureManager"
+            ]
+          }
         ]
       }
     }
   ],
-  "PrivilegesUsed": {
-    "GET": [
-      "Login"
-    ],
-    "HEAD": [
-      "Login"
-    ],
-    "PATCH": [
-      "ConfigureManager"
-    ],
-    "POST": [
-      "ConfigureManager"
-    ]
-  }
+  "PrivilegesUsed": [
+    "Login",
+    "ConfigureManager"
+  ]
 }

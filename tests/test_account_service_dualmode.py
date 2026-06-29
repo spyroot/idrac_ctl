@@ -59,4 +59,9 @@ def test_privilege_registry_query_returns_manager_privileges(redfish_api):
     assert result.data["@odata.id"] == (
         "/redfish/v1/Managers/iDRAC.Embedded.1/PrivilegeRegistry"
     )
-    assert "Login" in result.data["PrivilegesUsed"]["GET"]
+    # PrivilegesUsed is a flat array of Redfish privilege names (DSP8011),
+    # and each Mapping's OperationMap.<method> is a list of OperationPrivilege
+    # objects ({"Privilege": [...]}), not bare strings.
+    assert "Login" in result.data["PrivilegesUsed"]
+    manager_map = result.data["Mappings"][0]["OperationMap"]
+    assert manager_map["GET"][0]["Privilege"] == ["Login"]
