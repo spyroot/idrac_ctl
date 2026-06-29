@@ -1,6 +1,9 @@
 """Dual-mode tests for job and task read commands."""
 import json
 
+import pytest
+
+from idrac_ctl.idrac_manager import IDracManager
 from idrac_ctl.idrac_shared import ApiRequestType
 from idrac_ctl.redfish_manager import CommandResult
 
@@ -64,6 +67,64 @@ def test_job_service_returns_service_capabilities(redfish_api):
     assert result.data.data["Jobs"]["@odata.id"] == (
         "/redfish/v1/Managers/iDRAC.Embedded.1/Jobs"
     )
+
+
+def test_dell_job_service_returns_delete_queue_action(redfish_api):
+    """job_service_query returns the Dell OEM JobService actions."""
+    result = redfish_api.sync_invoke(
+        ApiRequestType.JobDellServices,
+        "job_service_query",
+    )
+
+    assert isinstance(result, CommandResult)
+    assert isinstance(result.data, CommandResult)
+    assert isinstance(result.data.data, dict)
+    json.dumps(result.data.data)
+    assert result.data.data["@odata.id"] == (
+        "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellJobService"
+    )
+    assert result.data.data["Id"] == "DellJobService"
+    assert "DeleteJobQueue" in result.extra
+    assert result.extra["DeleteJobQueue"].target == (
+        "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellJobService/"
+        "Actions/DellJobService.DeleteJobQueue"
+    )
+
+
+@pytest.mark.parametrize(
+    ("do_force", "job_id"),
+    [
+        (False, "JID_CLEARALL"),
+        (True, "JID_CLEARALL_FORCE"),
+    ],
+)
+def test_job_delete_all_posts_clear_queue_payload_in_mock_mode(
+    redfish_mock, redfish_service, monkeypatch, do_force, job_id
+):
+    """job_delete_all POSTs the Dell queue-clear payload to the action target."""
+    task_state = {"TaskState": "Completed", "TaskStatus": "OK"}
+
+    def fetch_task(self, task_id):
+        assert task_id == redfish_service.JOB_ID
+        return task_state
+
+    monkeypatch.setattr(IDracManager, "fetch_task", fetch_task)
+
+    result = redfish_mock.sync_invoke(
+        ApiRequestType.JobRmDellServices,
+        "job_delete_all",
+        do_force=do_force,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert result.data["task_id"] == redfish_service.JOB_ID
+    assert result.data["task_state"] == task_state
+    assert redfish_service.last_request.method == "POST"
+    assert redfish_service.last_request.path.lower() == (
+        "/redfish/v1/managers/idrac.embedded.1/oem/dell/delljobservice/"
+        "actions/delljobservice.deletejobqueue"
+    )
+    assert redfish_service.last_request.json() == {"JobID": job_id}
 
 
 def test_tasks_list_returns_task_collection_and_actions(redfish_api):
