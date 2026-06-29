@@ -46,3 +46,10 @@ def test_supermicro_host_system_present(redfish_mock_factory):
 def test_dell_overlay_unaffected_by_vendor_factory(redfish_mock):
     """The default Dell-shaped mock still resolves System.Embedded.1 (no regression)."""
     assert redfish_mock.idrac_manage_servers == "/redfish/v1/Systems/System.Embedded.1"
+
+
+def test_supermicro_idrac_manage_servers_picks_host(redfish_mock_factory):
+    """On the 2-system GB300, idrac_manage_servers resolves the HOST (System_0),
+    not the GPU baseboard HGX_Baseboard_0 that last-member selection would pick."""
+    mgr, _ = redfish_mock_factory("supermicro")
+    assert mgr.idrac_manage_servers == "/redfish/v1/Systems/System_0"
