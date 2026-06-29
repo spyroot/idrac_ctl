@@ -19,9 +19,11 @@ ROADMAP*.md
 CODEX_TASKS.md
 CODEX_*.md
 COORDINATION.md
+FLASH_BRAIN.md
 .codex/
 .claude/
 .agent-review/
+.internal/
 
 # macOS / stray test output
 .DS_Store
