@@ -1,7 +1,7 @@
 """Dual-mode tests for BIOS pending and registry commands."""
 import json
 
-from idrac_ctl.idrac_shared import ApiRequestType
+from idrac_ctl.idrac_shared import ApiRequestType, JobState
 from idrac_ctl.redfish_manager import CommandResult
 
 
@@ -63,3 +63,28 @@ def test_bios_registry_filters_attribute_names(redfish_api):
         {"ValueName": "Enabled"},
         {"ValueName": "Disabled"},
     ]
+
+
+def test_bios_clear_pending_posts_discovered_action_in_mock_mode(
+    redfish_mock, redfish_service
+):
+    """bios-clear-pending POSTs the discovered ClearPending action."""
+    result = redfish_mock.sync_invoke(
+        ApiRequestType.BiosClearPending,
+        "clear_pending",
+    )
+
+    assert isinstance(result, CommandResult)
+    assert result.data["task_id"] == redfish_service.JOB_ID
+    assert result.data["task_state"] == JobState.Completed
+
+    post_requests = [
+        request for request in redfish_service.requests if request.method == "POST"
+    ]
+    assert len(post_requests) == 1
+    request = post_requests[0]
+    assert request.path.lower() == (
+        "/redfish/v1/Systems/System.Embedded.1/Bios/Settings/Actions/"
+        "Bios.ClearPending"
+    ).lower()
+    assert request.json() == {}

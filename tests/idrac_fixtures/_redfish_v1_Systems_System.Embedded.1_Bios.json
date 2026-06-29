@@ -9,6 +9,9 @@
     "#Bios.ChangePassword": {
       "target": "/redfish/v1/Systems/System.Embedded.1/Bios/Settings/Actions/Bios.ChangePassword"
     },
+    "#Bios.ClearPending": {
+      "target": "/redfish/v1/Systems/System.Embedded.1/Bios/Settings/Actions/Bios.ClearPending"
+    },
     "#Bios.ResetBios": {
       "target": "/redfish/v1/Systems/System.Embedded.1/Bios/Settings/Actions/Bios.ResetBios"
     }
