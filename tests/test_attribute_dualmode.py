@@ -1,6 +1,7 @@
 """Dual-mode tests for iDRAC manager attribute commands."""
 import json
 
+from idrac_ctl.attribute.cmd_attribute_clear_pending import AttributeClearPending
 from idrac_ctl.idrac_shared import ApiRequestType
 from idrac_ctl.redfish_manager import CommandResult
 
@@ -93,3 +94,32 @@ def test_attribute_update_patches_manager_attributes_in_mock_mode(
         attr_filter="OwnerInfo.1.OwnerName",
     )
     assert current.data == {"OwnerInfo.1.OwnerName": "idrac_ctl"}
+
+
+def test_attribute_clear_pending_posts_discovered_action_in_mock_mode(
+    redfish_mock, redfish_service, monkeypatch
+):
+    """attribute_clear_pending POSTs the discovered clear-pending action."""
+    task_state = {"TaskState": "Completed", "TaskStatus": "OK"}
+
+    def fetch_task(self, task_id):
+        assert task_id == redfish_service.JOB_ID
+        return task_state
+
+    monkeypatch.setattr(AttributeClearPending, "fetch_task", fetch_task)
+
+    result = redfish_mock.sync_invoke(
+        ApiRequestType.AttributeClearPending,
+        "clear_pending",
+    )
+
+    assert isinstance(result, CommandResult)
+    assert result.data["task_id"] == redfish_service.JOB_ID
+    assert result.data["task_state"] == task_state
+    request = redfish_service.last_request
+    assert request.method == "POST"
+    assert request.path.lower() == (
+        "/redfish/v1/managers/system.embedded.1/attributes/"
+        "actions/dellmanager.clearpending"
+    )
+    assert request.json() == {}
