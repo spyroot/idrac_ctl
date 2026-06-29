@@ -1,0 +1,29 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#DellJobService.DellJobService",
+  "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellJobService",
+  "@odata.type": "#DellJobService.v1_4_0.DellJobService",
+  "Id": "DellJobService",
+  "Name": "Dell Job Service",
+  "Description": "Dell OEM job queue service",
+  "ServiceEnabled": true,
+  "Jobs": {
+    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Jobs"
+  },
+  "Actions": {
+    "#DellJobService.CreateRebootJob": {
+      "target": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellJobService/Actions/DellJobService.CreateRebootJob",
+      "RebootJobType@Redfish.AllowableValues": [
+        "PowerCycle",
+        "GracefulReboot",
+        "ForcedReboot"
+      ]
+    },
+    "#DellJobService.DeleteJobQueue": {
+      "target": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellJobService/Actions/DellJobService.DeleteJobQueue",
+      "JobID@Redfish.AllowableValues": [
+        "JID_CLEARALL",
+        "JID_CLEARALL_FORCE"
+      ]
+    }
+  }
+}
