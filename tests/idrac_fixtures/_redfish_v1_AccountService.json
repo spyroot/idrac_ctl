@@ -1,0 +1,36 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#AccountService.AccountService",
+  "@odata.id": "/redfish/v1/AccountService",
+  "@odata.type": "#AccountService.v1_15_0.AccountService",
+  "Id": "AccountService",
+  "Name": "Account Service",
+  "Description": "iDRAC account service",
+  "Accounts": {
+    "@odata.id": "/redfish/v1/AccountService/Accounts"
+  },
+  "Roles": {
+    "@odata.id": "/redfish/v1/AccountService/Roles"
+  },
+  "LDAP": {
+    "@odata.id": "/redfish/v1/AccountService/LDAP"
+  },
+  "ActiveDirectory": {
+    "@odata.id": "/redfish/v1/AccountService/ActiveDirectory"
+  },
+  "LocalAccountAuth": "Enabled",
+  "SupportedAccountTypes": [
+    "Redfish",
+    "SNMP",
+    "OEM"
+  ],
+  "SupportedOEMAccountTypes": [
+    "Dell"
+  ],
+  "AccountLockoutCounterResetAfter": 30,
+  "AccountLockoutDuration": 30,
+  "AccountLockoutThreshold": 5,
+  "Status": {
+    "State": "Enabled",
+    "Health": "OK"
+  }
+}
