@@ -470,7 +470,7 @@ class RedfishManager:
             return RedfishApiRespond.AcceptedTaskGenerated
         if response.status_code == 204:
             return RedfishApiRespond.Success
-        if response.status_code >= 200 or response.status_code < 300:
+        if 200 <= response.status_code < 300:
             return RedfishApiRespond.Success
         if response.status_code == 401:
             raise RedfishUnauthorized("Unauthorized access")
