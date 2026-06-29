@@ -470,7 +470,7 @@ class RedfishManager:
             return RedfishApiRespond.AcceptedTaskGenerated
         if response.status_code == 204:
             return RedfishApiRespond.Success
-        if response.status_code >= 200 or response.status_code < 300:
+        if 200 <= response.status_code < 300:
             return RedfishApiRespond.Success
         if response.status_code == 401:
             raise RedfishUnauthorized("Unauthorized access")
@@ -567,7 +567,7 @@ class RedfishManager:
         :return: str: a job id or empty string
         """
         try:
-            if response is not None and hasattr(response, __dict__):
+            if response is not None and hasattr(response, "__dict__"):
                 response_dict = str(response.__dict__)
                 if response_dict is not None and len(response_dict) > 0:
                     job_id = re.search("JID_.+?,", response_dict)
