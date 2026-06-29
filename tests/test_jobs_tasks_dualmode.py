@@ -54,6 +54,26 @@ def test_job_get_returns_dell_oem_job(redfish_api):
     assert result.data["JobState"] == "Completed"
 
 
+def test_job_del_deletes_existing_job_resource_in_mock_mode(
+    redfish_mock, redfish_service
+):
+    """job_del sends DELETE to the Dell OEM job resource offline."""
+    result = redfish_mock.sync_invoke(
+        ApiRequestType.JobDel,
+        "job_del",
+        job_id=JOB_ID,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert result.data == {"Status": "ok"}
+    assert result.error is None
+    assert redfish_service.last_request.method == "DELETE"
+    assert redfish_service.last_request.path.lower() == (
+        f"/redfish/v1/managers/idrac.embedded.1/oem/dell/jobs/{JOB_ID.lower()}"
+    )
+    assert redfish_service.last_request.text is None
+
+
 def test_job_service_returns_service_capabilities(redfish_api):
     """job_service_query returns the Redfish JobService resource."""
     result = redfish_api.sync_invoke(ApiRequestType.JobServices, "job_service_query")
