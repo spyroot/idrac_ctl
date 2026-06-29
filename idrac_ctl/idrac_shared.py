@@ -87,6 +87,9 @@ class ApiRequestType(Enum):
     ComponentIntegrity = auto()
     NetworkAdapters = auto()
     NvLinkPorts = auto()
+    ActionList = auto()
+    EventSubmitTest = auto()
+    SystemReset = auto()
 
     # boot sources
     BootSourcePending = auto()

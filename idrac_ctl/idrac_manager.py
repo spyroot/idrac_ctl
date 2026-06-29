@@ -1532,6 +1532,135 @@ class IDracManager(RedfishManager):
             expected_status=expected_status, ignore_error_code=ignore_error_code,
         )
 
+    @staticmethod
+    def _flatten_action_targets(resource):
+        """Map every ``#Type.Action`` (top-level and Oem) to its target URL.
+
+        Unlike the short-name discovery map, this does NOT collapse two actions
+        that share a short name, so an exact full-type lookup is unambiguous.
+        """
+        out = {}
+        actions = (resource or {}).get("Actions") or {}
+        if not isinstance(actions, dict):
+            return out
+        for key, val in actions.items():
+            if key == "Oem" and isinstance(val, dict):
+                for ok, ov in val.items():
+                    if isinstance(ov, dict) and ov.get("target"):
+                        out[ok] = ov["target"]
+            elif isinstance(val, dict) and val.get("target"):
+                out[key] = val["target"]
+        return out
+
+    def invoke_action(self,
+                      resource_uri: str,
+                      action_name: str,
+                      payload: Optional[dict] = None,
+                      full_action_type: Optional[str] = None,
+                      do_async: Optional[bool] = False,
+                      expected_status: Optional[int] = 202,
+                      dry_run: Optional[bool] = False,
+                      confirm: Optional[bool] = False,
+                      confirm_irreversible: Optional[bool] = False) -> CommandResult:
+        """Resolve and POST a Redfish action, with a fail-safe destructiveness guard.
+
+        Vendor-neutral: the action target is DISCOVERED from the owning resource's
+        own ``Actions`` block (never a hardcoded URL), so the same call works on
+        Dell, Supermicro/OpenBMC, HPE, etc. The action is classified by
+        :func:`actions.action_policy.classify`; the guard is enforced HERE, not in
+        the CLI, so a destructive POST cannot fire without explicit intent even if
+        a caller wires the flags wrong:
+
+        - READ_ONLY / REVERSIBLE  -> executes.
+        - DESTRUCTIVE             -> dry-run unless ``confirm`` is True.
+        - IRREVERSIBLE            -> dry-run unless BOTH ``confirm`` and
+                                     ``confirm_irreversible`` are True.
+        - unmapped action         -> treated as DESTRUCTIVE (fail-safe).
+
+        On a dry-run NOTHING is POSTed; the resolved target + payload + level are
+        returned in ``CommandResult.data`` for inspection. The owning resource is
+        still GET-read to resolve the target (a harmless read).
+
+        :param resource_uri: the resource whose Actions block names the target,
+            e.g. ``/redfish/v1/Systems/System_0``.
+        :param action_name: short action name as keyed by discover_redfish_actions,
+            e.g. ``Reset``, ``InsertMedia``, ``SubmitTestEvent``.
+        :param payload: JSON body to POST (None -> {}).
+        :param full_action_type: exact ``#Type.Action`` to disambiguate when two
+            actions collapse to the same short name (e.g. Reset vs ResetToDefaults).
+        :param do_async: use the asyncio HTTP path.
+        :param expected_status: expected POST status (202 async job / 204 sync).
+        :param dry_run: force a dry-run regardless of classification.
+        :param confirm: authorize a DESTRUCTIVE action to actually POST.
+        :param confirm_irreversible: extra token required for IRREVERSIBLE actions.
+        :return: CommandResult; ``.data`` carries action/target/level and either
+            ``dry_run``/``blocked`` metadata or the POST result.
+        """
+        from .actions.action_policy import Destructiveness, classify
+
+        try:
+            resource = self.base_query(resource_uri, do_async=do_async).data or {}
+        except Exception as e:
+            return CommandResult(None, None, None, f"failed to read {resource_uri}: {e}")
+
+        actions = self.discover_redfish_actions(self, resource)
+        full = None
+        target = None
+        # Prefer an exact "#Type.Action" match read straight from the raw Actions
+        # block. This is collision-proof: two actions can share a short name (e.g.
+        # #Manager.ResetToDefaults vs the Oem #NvidiaManager.ResetToDefaults), and
+        # the short-name discovery map keeps only one of them.
+        if full_action_type:
+            full_targets = self._flatten_action_targets(resource)
+            if full_action_type in full_targets:
+                full = full_action_type
+                target = full_targets[full_action_type]
+        # Otherwise fall back to the discovered short-name map.
+        if target is None:
+            action = actions.get(action_name)
+            if action is not None and getattr(action, "target", None):
+                full = action.full_redfish_name or f"#{action_name}"
+                target = action.target
+        if target is None:
+            available = sorted(set(list(actions.keys())
+                                   + list(self._flatten_action_targets(resource).keys())))
+            wanted = full_action_type or action_name
+            return CommandResult(
+                {"action": wanted, "available": available}, actions, None,
+                f"action '{wanted}' not found on {resource_uri}")
+
+        level = classify(full)
+        body = payload or {}
+
+        # Fail-safe gate: decide whether this POST is actually allowed to fire.
+        blocked_reason = None
+        effective_dry = bool(dry_run)
+        if level == Destructiveness.IRREVERSIBLE and not (confirm and confirm_irreversible):
+            effective_dry = True
+            blocked_reason = "irreversible action requires --confirm and --i-understand-irreversible"
+        elif level == Destructiveness.DESTRUCTIVE and not confirm:
+            effective_dry = True
+            blocked_reason = "destructive action requires --confirm"
+
+        if effective_dry:
+            return CommandResult({
+                "dry_run": True,
+                "action": full,
+                "target": target,
+                "payload": body,
+                "level": level.value,
+                "blocked": blocked_reason,
+            }, actions, None, None)
+
+        result, _ = self.base_post(target, payload=body, do_async=do_async,
+                                   expected_status=expected_status)
+        data = result.data if isinstance(result.data, dict) else {"result": result.data}
+        data.setdefault("executed", True)
+        data.setdefault("action", full)
+        data.setdefault("target", target)
+        data.setdefault("level", level.value)
+        return CommandResult(data, actions, None, result.error)
+
     def reboot(
             self,
             do_watch: Optional[bool] = False,
