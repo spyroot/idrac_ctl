@@ -33,10 +33,9 @@ requests  → Redfish / iDRAC over HTTPS
 
 ## Vendors
 
-Vendor specifics live under [`idrac_ctl/vendors/<name>/`](../idrac_ctl/vendors/README.md). Each vendor
-package registers a `VendorCapabilities` profile (which query parameters the service honors, recurring
-jobs, lifecycle events, OEM prefix) so commands can gate vendor-only behavior. The generic core picks
-a conservative profile for unknown targets. See [vendors.md](vendors.md).
+Vendor specifics live under `idrac_ctl/vendors/<name>/`. The architecture rule is simple: the generic
+core does not import vendor packages. See [vendors.md](vendors.md) for capability profiles, current
+Dell support, and the HPE/Supermicro placeholders.
 
 ## Sync and async
 
