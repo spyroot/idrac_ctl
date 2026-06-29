@@ -308,3 +308,61 @@ def test_generic_error_is_not_mislabeled_forbidden(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "Discovery error at /redfish/v1/Boom" in out
     assert "Forbidden: connection reset" not in out
+
+
+# --------------------------------------------------------------------------- #
+# extract_odata_ids — non-string references (JsonSchemas $ref)
+# --------------------------------------------------------------------------- #
+
+
+def test_extract_odata_ids_skips_non_string_refs(tmp_path):
+    """Only string @odata.id / Uri values are yielded.
+
+    A JsonSchemas document defines the @odata.id property as a dict
+    ({"$ref": ...}); a Uri can likewise be a non-string. These must be skipped,
+    not yielded, or the downstream normalize_resource_path crashes with
+    'dict object has no attribute split'. Seen live on Supermicro GB300.
+    """
+    disc, _ = _make_discovery(tmp_path, {})
+    schema_like = {
+        "@odata.id": "/redfish/v1/JsonSchemas/AccountService",  # real string ref
+        "definitions": {
+            "AccountService": {
+                "properties": {
+                    # schema *definition* of @odata.id — a dict, must be skipped
+                    "@odata.id": {"$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/id"},
+                    "Uri": {"type": "object"},  # non-string Uri — must be skipped
+                }
+            }
+        },
+        "Members": [{"Uri": "/redfish/v1/Real/1"}],  # real string Uri
+    }
+
+    found = list(disc.extract_odata_ids(schema_like))
+
+    assert all(isinstance(x, str) for x in found)
+    assert "/redfish/v1/JsonSchemas/AccountService" in found
+    assert "/redfish/v1/Real/1" in found
+
+
+def test_recursive_discovery_survives_schema_doc_with_dict_odata_id(tmp_path):
+    """recursive_discovery completes when a fetched doc embeds a dict @odata.id.
+
+    Regression for the live GB300 crash: walking into a JsonSchemas payload
+    whose @odata.id is a {"$ref": ...} dict must not raise.
+    """
+    graph = {
+        "/redfish/v1/JsonSchemas/X": {
+            "@odata.id": "/redfish/v1/JsonSchemas/X",
+            "properties": {
+                "@odata.id": {"$ref": "http://redfish.dmtf.org/schemas/v1/odata-v4.json#/definitions/id"},
+            },
+        },
+    }
+    disc, fake = _make_discovery(tmp_path, graph)
+
+    # Must not raise AttributeError on the dict @odata.id.
+    disc.recursive_discovery("/redfish/v1/JsonSchemas/X")
+
+    assert disc.visited_urls.get("/redfish/v1/JsonSchemas/X") is True
+    assert fake.fetch_counts.get("/redfish/v1/JsonSchemas/X") == 1
