@@ -17,7 +17,7 @@ import os
 import ssl
 import sys
 import warnings
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import requests
 import urllib3
@@ -28,34 +28,33 @@ from .version import __version__
 
 try:
     from pygments.lexers.data import JsonLexer
-except ImportError as ie:
+except ImportError:
     warnings.warn("Failed import json lexer from pygments.")
 
 from pygments.formatters.terminal256 import Terminal256Formatter
 
-from .idrac_shared import RedfishAction, RedfishActionEncoder
-from .cmd_exceptions import MissingResource
-from .cmd_exceptions import InvalidJsonSpec, MissingMandatoryArguments
-from .cmd_exceptions import UncommittedPendingChanges
-from .cmd_exceptions import JsonHttpError
-
-from .custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
-
-from .cmd_exceptions import FailedDiscoverAction
-from .cmd_exceptions import InvalidArgument
-from .cmd_exceptions import UnsupportedAction
-from .idrac_manager import IDracManager
-
-from .cmd_exceptions import AuthenticationFailed
-from .cmd_exceptions import ResourceNotFound
-from .cmd_exceptions import TaskIdUnavailable
+from .cmd_exceptions import (
+    AuthenticationFailed,
+    FailedDiscoverAction,
+    InvalidArgument,
+    InvalidJsonSpec,
+    JsonHttpError,
+    MissingMandatoryArguments,
+    MissingResource,
+    ResourceNotFound,
+    TaskIdUnavailable,
+    UncommittedPendingChanges,
+    UnsupportedAction,
+)
 from .cmd_utils import save_if_needed
+from .custom_argparser.customer_argdefault import CustomArgumentDefaultsHelpFormatter
+from .idrac_manager import IDracManager
+from .idrac_shared import RedfishAction, RedfishActionEncoder
+from .telemetry.exporter import apply_exporter_env_file, exporter_argv_uses_secret
 
 try:
-    from urllib3.exceptions import InsecureRequestWarning
-
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-except ImportError as ir:
+except ImportError:
     warnings.warn("Failed import urllib3")
 
 logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s '
@@ -329,8 +328,8 @@ def create_cmd_tree(arg_parser, debug=False) -> Dict:
         metavar="main command",
         help='list of idrac_ctl commands',
         dest="subcommand",
-        description='''Each action requires choosing 
-        a main command bios, boot, etc|n          
+        description='''Each action requires choosing
+        a main command bios, boot, etc|n
         Example: idrac_ctl bios\n''',
         required=True
     )
@@ -364,7 +363,7 @@ def idrac_main_ctl():
     parser = argparse.ArgumentParser(
         prog="idrac_ctl", add_help=True,
         description='''iDrac command line tools. |n
-                                     It a standalone command line tool provide option to interact with  |n 
+                                     It a standalone command line tool provide option to interact with  |n
                                      Dell iDRAC via Redfish REST API. It supports both asynchronous and |n
                                      synchronous options to interact with iDRAC.|n
                                      Author Mus''',
@@ -457,6 +456,19 @@ def idrac_main_ctl():
     args = parser.parse_args()
     if args.debug:
         logger.setLevel(args.log)
+
+    if getattr(args, "subcommand", None) == "exporter":
+        if exporter_argv_uses_secret(sys.argv):
+            print(
+                "Please provide exporter credentials through environment "
+                "variables or --credential-file, not --idrac_password."
+            )
+            sys.exit(2)
+        try:
+            apply_exporter_env_file(args)
+        except FileNotFoundError as fne:
+            console_error_printer(f"Error:{fne}")
+            sys.exit(1)
 
     if args.idrac_ip is None or len(args.idrac_ip) == 0:
         print(

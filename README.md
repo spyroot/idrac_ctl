@@ -78,6 +78,58 @@ HPE is still a conservative placeholder profile. On multi-system hosts, the mana
 ComputerSystem instead of a baseboard, so a GB300-style `System_0` + `HGX_Baseboard_0` topology does
 not silently route host commands to the wrong member.
 
+## GB300 Telemetry Exporter
+
+`idrac_ctl exporter`, defined in `idrac_ctl/telemetry/cmd_exporter.py`, is the read-only Redfish
+telemetry exporter for Splunk-ready hardware metrics. It walks Chassis `EnvironmentMetrics`, linked
+`Sensors`, TelemetryService `MetricReports`, GPU `nvlink-ports`, `network-adapters`, and
+`component-integrity`, then emits `hw.power`, `hw.temperature`, `hw.fan_speed`, `hw.voltage`,
+`hw.energy_kwh`, `hw.gpu.power`, and GB300 fabric metrics under `hw.fabric.*`.
+
+For exporter runs, put BMC credentials in environment variables or a gitignored runtime file. Do not
+pass the password on argv.
+
+```bash
+mkdir -p .internal
+cat > .internal/idrac_exporter.env <<'EOF'
+IDRAC_IP=172.25.230.29
+IDRAC_USERNAME=admin
+IDRAC_PASSWORD=replace-with-runtime-secret
+IDRAC_PORT=443
+EOF
+
+idrac_ctl exporter \
+  --credential-file .internal/idrac_exporter.env \
+  --vendor supermicro \
+  --listen 0.0.0.0 \
+  --port 9109
+```
+
+The Prometheus endpoint is `/metrics`. Every series carries `host.name`, `node`, `server.address`,
+`bmc.ip`, and `vendor`; for GB300, the default slot math maps BMC `172.25.230.29` to
+`host.name=gb300-poc1-slot9`, `node=slot9`, and `server.address=172.25.230.49`.
+
+For a one-shot local check:
+
+```bash
+idrac_ctl exporter \
+  --credential-file .internal/idrac_exporter.env \
+  --vendor supermicro \
+  --once \
+  --output prometheus
+```
+
+SignalFx push mode uses `SPLUNK_ACCESS_TOKEN`, the ingest token read from the process environment,
+and `SPLUNK_INGEST_URL`, the ingest URL read from the process environment.
+
+```bash
+idrac_ctl exporter \
+  --credential-file .internal/idrac_exporter.env \
+  --vendor supermicro \
+  --output signalfx \
+  --push-signalfx
+```
+
 Before running a mutating operation, check the command help and use a non-production iDRAC.
 `boot-one-shot`, defined by the boot command module, sets a one-time boot device. `reboot`, defined
 by the system reset command, power-cycles or resets the host. `bios-change`, defined by the BIOS

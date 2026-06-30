@@ -1,3 +1,4 @@
+# ruff: noqa: F403, I001
 # from bios import BiosQuery
 # from hardware import HardwareInventorQuery
 from .redfish_shared import *
@@ -75,6 +76,7 @@ from .chassis.cmd_chasis_reset import *
 from .sensors.cmd_sensors import *
 from .telemetry.cmd_metric_reports import *
 from .telemetry.cmd_metric_definitions import *
+from .telemetry.cmd_exporter import *
 from .component_integrity.cmd_component_integrity import *
 from .network.cmd_network_adapters import *
 from .ports.cmd_nvlink_ports import *

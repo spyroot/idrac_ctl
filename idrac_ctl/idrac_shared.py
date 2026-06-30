@@ -7,13 +7,11 @@ Author Mus spyroot@gmail.com
 
 """
 import json
-from enum import auto, Enum
+from enum import Enum, auto
 from json import JSONEncoder
 from typing import Optional
 
-from .redfish_shared import RedfishApi
-from .redfish_shared import RedfishJson
-from .redfish_shared import RedfishJsonSpec
+from .redfish_shared import RedfishApi, RedfishJson, RedfishJsonSpec
 
 
 class ApiRequestType(Enum):
@@ -87,6 +85,7 @@ class ApiRequestType(Enum):
     ComponentIntegrity = auto()
     NetworkAdapters = auto()
     NvLinkPorts = auto()
+    Exporter = auto()
     ActionList = auto()
     EventSubmitTest = auto()
     SystemReset = auto()
