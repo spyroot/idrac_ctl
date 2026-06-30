@@ -2,7 +2,7 @@
 import json
 
 from idrac_ctl.chassis.cmd_chasis_reset import ChassisReset
-from idrac_ctl.idrac_shared import ApiRequestType, RedfishAction
+from idrac_ctl.idrac_shared import ApiRequestType, PowerState, RedfishAction
 from idrac_ctl.redfish_manager import CommandResult
 
 
@@ -20,6 +20,11 @@ def test_chassis_query_returns_idrac_chassis_collection(redfish_api):
     assert result.data.data["Members"][0]["@odata.id"] == (
         "/redfish/v1/Chassis/System.Embedded.1"
     )
+
+
+def test_power_state_property_returns_fixture_power_state(redfish_api):
+    """power_state maps the chassis PowerState value onto the enum."""
+    assert redfish_api.power_state is PowerState.On
 
 
 def test_chassis_reset_posts_forceoff_payload_in_mock_mode(
