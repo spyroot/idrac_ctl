@@ -17,6 +17,7 @@ from ..cmd_utils import save_if_needed
 from ..idrac_manager import IDracManager
 from ..idrac_shared import Singleton, ApiRequestType
 from ..redfish_manager import CommandResult
+from ..redfish_shared import RedfishApi
 
 
 class PciDeviceQuery(IDracManager,
@@ -73,31 +74,75 @@ class PciDeviceQuery(IDracManager,
         r = f"https://{self.idrac_ip}{self.idrac_manage_servers}" \
             f"?$select={pci_type}"
 
-        if not do_async:
-            response = self.api_get_call(r, headers)
-            self.default_error_handler(response)
-        else:
-            loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(
-                self.api_async_get_until_complete
-                (r, headers)
-            )
+        try:
+            if not do_async:
+                response = self.api_get_call(r, headers)
+                self.default_error_handler(response)
+            else:
+                loop = asyncio.get_event_loop()
+                response = loop.run_until_complete(
+                    self.api_async_get_until_complete(r, headers))
+            data = response.json()
+        except Exception:
+            data = {}
 
-        data = response.json()
         pci_data = []
-        if pci_type in data:
-            api_endpoints = data[pci_type]
-            with tqdm(total=len(api_endpoints)) as pbar:
-                for r in api_endpoints:
-                    r = f"https://{self.idrac_ip}{r['@odata.id']}"
-                    if not do_async:
-                        response = self.api_get_call(r, headers)
-                        self.default_error_handler(response)
-                    else:
-                        loop = asyncio.get_event_loop()
-                        response = loop.run_until_complete(self.api_async_get_until_complete(r, headers))
-                    pci_data.append(response.json())
+        # Dell returns PCIeDevices/Functions as an array of links off the System;
+        # standard Redfish exposes a single collection link (resolve its Members).
+        endpoints = data.get(pci_type) if isinstance(data, dict) else None
+        if isinstance(endpoints, dict) and endpoints.get("@odata.id"):
+            coll = self.base_query(endpoints["@odata.id"], do_async=do_async).data or {}
+            endpoints = coll.get("Members", [])
+        if isinstance(endpoints, list):
+            with tqdm(total=len(endpoints)) as pbar:
+                for ep in endpoints:
+                    uri = ep.get("@odata.id") if isinstance(ep, dict) else None
+                    if uri:
+                        try:
+                            pci_data.append(self.base_query(uri, do_async=do_async).data)
+                        except Exception:
+                            pass
                     pbar.update(1)
+
+        # Dell hangs PCIeDevices off the ComputerSystem; iLO/Supermicro hang them
+        # off Chassis. Fall back to the Chassis layout when the System select was
+        # empty, so the command is not Dell-only.
+        if not pci_data:
+            pci_data = self._pci_from_chassis(pci_type, do_async)
 
         save_if_needed(filename, pci_data)
         return CommandResult(pci_data, None, None,  None)
+
+    def _pci_from_chassis(self, pci_type, do_async):
+        """Collect PCIe devices/functions from the Chassis layout, tolerantly.
+
+        Walks /redfish/v1/Chassis -> each chassis PCIeDevices collection -> each
+        device (and, for PCIeFunctions, that device's PCIeFunctions collection).
+        Skips a chassis or leaf that is missing/unreachable rather than failing.
+        """
+        def get(uri):
+            try:
+                return self.base_query(uri, do_async=do_async).data or {}
+            except Exception:
+                return {}
+
+        def members(data):
+            return [m["@odata.id"] for m in (data.get("Members") or [])
+                    if isinstance(m, dict) and isinstance(m.get("@odata.id"), str)]
+
+        out = []
+        for chassis_uri in members(get(f"{RedfishApi.Version}/Chassis")):
+            link = get(chassis_uri).get("PCIeDevices")
+            coll_uri = link.get("@odata.id") if isinstance(link, dict) else None
+            if not coll_uri:
+                continue
+            for dev_uri in members(get(coll_uri)):
+                dev = get(dev_uri)
+                if pci_type == "PCIeFunctions":
+                    fn_link = dev.get("PCIeFunctions")
+                    fn_coll = fn_link.get("@odata.id") if isinstance(fn_link, dict) else None
+                    for fn_uri in members(get(fn_coll)) if fn_coll else []:
+                        out.append(get(fn_uri))
+                elif dev:
+                    out.append(dev)
+        return out

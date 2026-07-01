@@ -1532,6 +1532,32 @@ class IDracManager(RedfishManager):
             expected_status=expected_status, ignore_error_code=ignore_error_code,
         )
 
+    def discover_virtual_media_uri(self, do_async: Optional[bool] = False) -> str:
+        """Resolve the VirtualMedia collection URI, vendor-neutrally.
+
+        Dell hangs VirtualMedia off the ComputerSystem; iLO and Supermicro hang it
+        off a Manager. Check every Manager first, then the host System, returning
+        the first that advertises a VirtualMedia link. Falls back to the Dell
+        ``{system}/VirtualMedia`` subpath so existing Dell behavior is unchanged.
+        """
+        # System first (Dell exposes VirtualMedia there), then Managers (iLO and
+        # Supermicro expose it under a Manager). Return the first with the link.
+        roots = [self.idrac_manage_servers]
+        try:
+            roots.extend(self.discover_manager_ids() or [])
+        except Exception:
+            pass
+        for root in roots:
+            try:
+                data = self.base_query(root, do_async=do_async).data or {}
+            except Exception:
+                continue
+            link = data.get("VirtualMedia")
+            uri = link.get("@odata.id") if isinstance(link, dict) else None
+            if uri:
+                return uri
+        return f"{self.idrac_manage_servers}/VirtualMedia"
+
     @staticmethod
     def _flatten_action_targets(resource):
         """Map every ``#Type.Action`` (top-level and Oem) to its target URL.

@@ -26,6 +26,7 @@ LINK_KEYS = {
     "EthernetInterfaces", "NetworkInterfaces", "VirtualMedia", "EventService",
     "CertificateService", "ComponentIntegrity", "TelemetryService",
     "MetricReports", "MetricReportDefinitions", "Ports", "Metrics", "Memory",
+    "LogServices", "Entries", "PCIeDevices", "PCIeFunctions",
 }
 ROOT = "/redfish/v1"
 
