@@ -20,6 +20,7 @@ from ..idrac_manager import IDracManager
 from ..idrac_shared import Singleton, ApiRequestType
 from ..redfish_manager import CommandResult
 from ..redfish_shared import RedfishJson
+from ..redfish_shared import RedfishApi
 
 
 class BiosRegistry(IDracManager,
@@ -31,6 +32,37 @@ class BiosRegistry(IDracManager,
 
     def __init__(self, *args, **kwargs):
         super(BiosRegistry, self).__init__(*args, **kwargs)
+
+    def _resolve_registry_uri(self, do_async):
+        """Locate the BIOS attribute registry URI vendor-neutrally.
+
+        Dell exposes it directly at ``{system}/Bios/BiosRegistry``. The standard
+        Redfish way (iLO and others): ``Bios.AttributeRegistry`` names a registry
+        resolved under ``/redfish/v1/Registries/<name>``, whose ``Location[].Uri``
+        points at the registry JSON. Prefer the Dell subpath when it resolves,
+        otherwise follow the standard AttributeRegistry -> Registries -> Uri chain.
+        Falls back to the Dell path so existing behavior is unchanged.
+        """
+        dell_uri = f"{self.idrac_manage_servers}/Bios/BiosRegistry"
+        try:
+            if (self.base_query(dell_uri, do_async=do_async).data or {}).get("RegistryEntries"):
+                return dell_uri
+        except Exception:
+            pass
+        try:
+            bios = self.base_query(f"{self.idrac_manage_servers}/Bios",
+                                   do_async=do_async).data or {}
+            name = bios.get("AttributeRegistry")
+            if name:
+                reg = self.base_query(f"{RedfishApi.Version}/Registries/{name}",
+                                      do_async=do_async).data or {}
+                for loc in reg.get("Location", []):
+                    uri = loc.get("Uri") if isinstance(loc, dict) else None
+                    if uri:
+                        return uri
+        except Exception:
+            pass
+        return dell_uri
 
     @staticmethod
     @abstractmethod
@@ -111,15 +143,22 @@ class BiosRegistry(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        target_api = f"{self.idrac_manage_servers}/Bios/BiosRegistry"
-        cmd_result = self.base_query(target_api,
-                                     filename=None,
-                                     do_async=do_async,
-                                     do_expanded=do_expanded)
+        target_api = self._resolve_registry_uri(do_async)
+        try:
+            cmd_result = self.base_query(target_api,
+                                         filename=None,
+                                         do_async=do_async,
+                                         do_expanded=do_expanded)
+        except Exception:
+            return CommandResult([], None, None, None)
         filtered_result = []
         attribute_names = None
 
-        registry = cmd_result.data['RegistryEntries']
+        # Tolerate a resource that has no registry entries (e.g. registry not
+        # reachable on this host) instead of raising a KeyError.
+        registry = (cmd_result.data or {}).get('RegistryEntries')
+        if not isinstance(registry, dict) or RedfishJson.Attributes not in registry:
+            return CommandResult([], None, None, None)
         data = registry[RedfishJson.Attributes]
 
         if attr_list and isinstance(data, list):

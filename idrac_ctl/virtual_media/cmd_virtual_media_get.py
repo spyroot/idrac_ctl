@@ -99,12 +99,10 @@ class VirtualMediaGet(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
-        if self.version_api:
-            r = f"https://{self.idrac_ip}{self.idrac_manage_servers}" \
-                f"/VirtualMedia?$expand=*($levels=1)"
-        else:
-            r = f"https://{self.idrac_ip}/v1/Managers/iDRAC.Embedded.1/" \
-                f"VirtualMedia?$expand=*($levels=1)"
+        # Resolve the VirtualMedia collection from whichever resource exposes it
+        # (a Manager on iLO/Supermicro, the ComputerSystem on Dell) — no hardcoded id.
+        vm_uri = self.discover_virtual_media_uri()
+        r = f"https://{self.idrac_ip}{vm_uri}?$expand=*($levels=1)"
 
         response = self.api_get_call(r, headers)
         self.default_error_handler(response)

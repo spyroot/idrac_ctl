@@ -83,6 +83,8 @@ from .ports.cmd_nvlink_ports import *
 from .actions.cmd_action_list import *
 from .events.cmd_event_submit_test import *
 from .compute.cmd_system_reset import *
+from .logs.cmd_logs import *
+from .network.cmd_ethernet_interfaces import *
 from .chassis.cmd_chassis_query import *
 
 # dell oem attach

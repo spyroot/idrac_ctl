@@ -89,6 +89,8 @@ class ApiRequestType(Enum):
     ActionList = auto()
     EventSubmitTest = auto()
     SystemReset = auto()
+    Logs = auto()
+    EthernetInterfaces = auto()
 
     # boot sources
     BootSourcePending = auto()
