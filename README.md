@@ -120,12 +120,30 @@ idrac_ctl exporter \
 ```
 
 SignalFx push mode uses `SPLUNK_ACCESS_TOKEN`, the ingest token read from the process environment,
-and `SPLUNK_INGEST_URL`, the ingest URL read from the process environment.
+and `SPLUNK_INGEST_URL`, the ingest URL read from the process environment. The ingest URL must be the
+**full SignalFx datapoint endpoint** ending in `/v2/datapoint` (e.g.
+`https://ingest.us1.signalfx.com/v2/datapoint`), because the exporter POSTs it verbatim; a bare host
+such as `https://ingest.us1.observability.splunkcloud.com` is rejected, since it would accept the
+request but silently drop every datapoint. Override the default with `--signalfx-ingest-url`.
+
+Without `--once`, push mode scrapes and pushes on a loop every `--interval` seconds:
 
 ```bash
 idrac_ctl exporter \
   --credential-file .internal/idrac_exporter.env \
   --vendor supermicro \
+  --output signalfx \
+  --push-signalfx
+```
+
+With `--once`, it builds the datapoints, POSTs them **exactly once**, and returns the pushed body plus
+the ingest HTTP status:
+
+```bash
+idrac_ctl exporter \
+  --credential-file .internal/idrac_exporter.env \
+  --vendor supermicro \
+  --once \
   --output signalfx \
   --push-signalfx
 ```
