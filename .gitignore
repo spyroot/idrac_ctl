@@ -25,6 +25,9 @@ FLASH_BRAIN.md
 .agent-review/
 .internal/
 
+# Internal-only documentation (team/dev notes; external docs live in docs/)
+docs/internal/
+
 # macOS / stray test output
 .DS_Store
 result.json
