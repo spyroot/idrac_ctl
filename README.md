@@ -101,6 +101,7 @@ Use `--confirm` only when you mean to perform a guarded action such as `system-r
 - [Testing](docs/testing.md) - offline mock tests, vendor corpora, emulator tests, and live-test safety.
 - [Architecture](docs/architecture.md) - Redfish core, iDRAC layer, command registration, and known debt.
 - [Telemetry exporter](docs/telemetry-exporter.md) - BMC metrics for Prometheus and SignalFx.
+- [Wiki seed](docs/wiki/README.md) - short GitHub Wiki pages ready to publish once the Wiki is initialized.
 - [Releasing](docs/releasing.md) - local verification, package build, PyPI upload, and tagging.
 - [Fleet proxy design](docs/redfish-proxy.md) - planned service/controller shape for fleet management.
 - [Scaling and benchmarks](docs/scaling-and-benchmarks.md) - planned concurrency engine and benchmark goals.
