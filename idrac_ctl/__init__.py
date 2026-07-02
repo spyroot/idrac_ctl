@@ -88,6 +88,7 @@ from .network.cmd_ethernet_interfaces import *
 from .security.cmd_secure_boot import *
 from .firmware.cmd_firmware_update import *
 from .telemetry.cmd_telemetry_triggers import *
+from .network.cmd_network_ports import *
 from .chassis.cmd_chassis_query import *
 
 # dell oem attach
