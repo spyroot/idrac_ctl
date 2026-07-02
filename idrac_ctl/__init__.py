@@ -90,6 +90,7 @@ from .firmware.cmd_firmware_update import *
 from .telemetry.cmd_telemetry_triggers import *
 from .network.cmd_network_ports import *
 from .oem.cmd_oem_info import *
+from .manager.cmd_console_info import *
 from .chassis.cmd_chassis_query import *
 
 # dell oem attach
