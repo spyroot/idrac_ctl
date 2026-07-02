@@ -52,8 +52,14 @@ class StorageListView(IDracManager,
         :return: named tuple CommandResult
         :raise: AuthenticationFailed, UnexpectedResponse
         """
+        # Standard Redfish Storage subpath; degrade gracefully when a host does
+        # not expose it (return empty rather than raising a 404).
         target_api = f"{self.idrac_manage_servers}/Storage"
-        return self.base_query(target_api,
-                               filename=filename,
-                               do_async=do_async,
-                               do_expanded=do_expanded)
+        try:
+            return self.base_query(target_api,
+                                   filename=filename,
+                                   do_async=do_async,
+                                   do_expanded=do_expanded)
+        except Exception:
+            return CommandResult({}, None, None,
+                                 "Storage collection is not available on this host")
