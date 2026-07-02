@@ -104,7 +104,8 @@ class ConvertToRaid(
         final_data.append({"none_raid_disk_ids": none_raid_disk_ids})
         final_data.append({"raid_disk_ids": raid_disk_ids})
 
-        target_api = "/redfish/v1/Dell/Systems/System.Embedded.1/DellRaidService" \
+        system_id = self.idrac_manage_servers.rsplit("/", 1)[-1]
+        target_api = f"/redfish/v1/Dell/Systems/{system_id}/DellRaidService" \
                      "/Actions/DellRaidService.ConvertToRAID"
 
         if len(none_raid_disk_ids) > 0:

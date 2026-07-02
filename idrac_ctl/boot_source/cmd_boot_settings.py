@@ -68,19 +68,24 @@ class BootSettings(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
+        # DellBootSources is a Dell OEM resource; degrade gracefully off Dell.
         target_api = f"{self.idrac_manage_servers}/Oem/Dell/DellBootSources/Settings"
         r = f"https://{self.idrac_ip}{target_api}"
 
-        if not do_async:
-            response = self.api_get_call(r, headers)
-            self.default_error_handler(response)
-        else:
-            loop = asyncio.get_event_loop()
-            response = loop.run_until_complete(
-                self.api_async_get_until_complete(r, headers)
-            )
-
-        data = response.json()
+        try:
+            if not do_async:
+                response = self.api_get_call(r, headers)
+                self.default_error_handler(response)
+            else:
+                loop = asyncio.get_event_loop()
+                response = loop.run_until_complete(
+                    self.api_async_get_until_complete(r, headers)
+                )
+            data = response.json()
+        except Exception:
+            return CommandResult(
+                {}, None, None,
+                "DellBootSources is not available on this host (Dell-specific)")
         save_if_needed(filename, data)
 
         actions = self.discover_redfish_actions(self, data)

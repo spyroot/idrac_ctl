@@ -66,12 +66,18 @@ class BootSourcePending(IDracManager,
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
+        # DellBootSources is a Dell OEM resource; degrade gracefully off Dell.
         target_api = f"{self.idrac_manage_servers}/Oem/Dell/DellBootSources/Settings"
 
-        cmd_result = self.base_query(
-            target_api, filename=filename,
-            do_async=do_async, do_expanded=do_expanded
-        )
+        try:
+            cmd_result = self.base_query(
+                target_api, filename=filename,
+                do_async=do_async, do_expanded=do_expanded
+            )
+        except Exception:
+            return CommandResult(
+                {}, None, None,
+                "DellBootSources is not available on this host (Dell-specific)")
         if cmd_result.error is not None:
             return cmd_result
 
