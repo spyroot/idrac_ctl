@@ -27,6 +27,8 @@ LINK_KEYS = {
     "CertificateService", "ComponentIntegrity", "TelemetryService",
     "MetricReports", "MetricReportDefinitions", "Ports", "Metrics", "Memory",
     "LogServices", "Entries", "PCIeDevices", "PCIeFunctions",
+    "SecureBoot", "SecureBootDatabases", "Certificates", "Signatures",
+    "UpdateService", "FirmwareInventory", "SoftwareInventory", "Triggers",
 }
 ROOT = "/redfish/v1"
 
