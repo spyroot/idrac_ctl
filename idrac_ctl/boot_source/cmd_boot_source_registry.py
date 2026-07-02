@@ -53,7 +53,14 @@ class QueryBootSourceRegistry(
         :param data_type: json or xml
         :return: CommandResult and if filename provide will save to a file.
         """
-        return self.base_query(f"{self.idrac_manage_servers}{IDRAC_API.BootSourcesRegistryQuery}",
-                               filename=filename,
-                               do_async=do_async,
-                               do_expanded=do_expanded)
+        # BootSources/BootSourcesRegistry is a Dell OEM resource; degrade
+        # gracefully off Dell (standard boot config is via the boot-options /
+        # change-boot-order / boot-one-shot commands).
+        try:
+            return self.base_query(
+                f"{self.idrac_manage_servers}{IDRAC_API.BootSourcesRegistryQuery}",
+                filename=filename, do_async=do_async, do_expanded=do_expanded)
+        except Exception:
+            return CommandResult(
+                {}, None, None,
+                "BootSourcesRegistry is not available on this host (Dell-specific)")

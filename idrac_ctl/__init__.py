@@ -85,6 +85,9 @@ from .events.cmd_event_submit_test import *
 from .compute.cmd_system_reset import *
 from .logs.cmd_logs import *
 from .network.cmd_ethernet_interfaces import *
+from .security.cmd_secure_boot import *
+from .firmware.cmd_firmware_update import *
+from .telemetry.cmd_telemetry_triggers import *
 from .chassis.cmd_chassis_query import *
 
 # dell oem attach

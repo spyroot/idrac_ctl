@@ -68,12 +68,22 @@ class RaidServiceQuery(IDracManager,
         if data_type == "json":
             headers.update(self.json_content_type)
 
+        # DellRaidService is a Dell OEM resource; use the discovered system id
+        # (not a hardcoded System.Embedded.1) and degrade gracefully off Dell,
+        # where standard RAID is driven via the Storage/Volumes commands instead.
+        system_id = self.idrac_manage_servers.rsplit("/", 1)[-1]
         r = f"https://{self.idrac_ip}/redfish/v1/Dell/Systems/" \
-            f"System.Embedded.1/DellRaidService"
+            f"{system_id}/DellRaidService"
 
-        response = self.api_get_call(r, headers)
-        self.default_error_handler(response)
-        data = response.json()
+        try:
+            response = self.api_get_call(r, headers)
+            self.default_error_handler(response)
+            data = response.json()
+        except Exception:
+            return CommandResult(
+                {}, None, None,
+                "DellRaidService is not available on this host (Dell-specific; "
+                "use volumes / volume-init for standard RAID)")
         save_if_needed(filename, data)
         actions = data['Actions']
         action_dict = {}
