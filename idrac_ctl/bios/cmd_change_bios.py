@@ -29,6 +29,7 @@ from ..cmd_utils import from_json_spec
 from ..idrac_manager import IDracManager
 from ..idrac_shared import IDRAC_API, IDRAC_JSON, ApiRequestType, IdracApiRespond, Singleton
 from ..redfish_manager import CommandResult
+from ..redfish_shared import RedfishApi
 
 
 class BiosChangeSettings(IDracManager,
@@ -196,6 +197,51 @@ class BiosChangeSettings(IDracManager,
 
         return bios_payload
 
+    def _resolve_bios_registry_uri(self, do_async):
+        """Locate the BIOS attribute registry vendor-neutrally.
+
+        Dell exposes it at ``{system}/Bios/BiosRegistry``; standard Redfish (iLO,
+        others) names it via ``Bios.AttributeRegistry`` resolved under
+        ``/redfish/v1/Registries/<name>`` whose ``Location[].Uri`` is the registry.
+        Prefer the Dell subpath when it resolves; otherwise follow the standard chain.
+        """
+        dell_uri = f"{self.idrac_manage_servers}{IDRAC_API.BiosRegistry}"
+        try:
+            if (self.base_query(dell_uri, do_async=do_async).data or {}).get(IDRAC_JSON.RegistryEntries):
+                return dell_uri
+        except Exception:
+            pass
+        try:
+            bios = self.base_query(f"{self.idrac_manage_servers}/Bios",
+                                   do_async=do_async).data or {}
+            name = bios.get("AttributeRegistry")
+            if name:
+                reg = self.base_query(f"{RedfishApi.Version}/Registries/{name}",
+                                      do_async=do_async).data or {}
+                for loc in reg.get("Location", []):
+                    uri = loc.get("Uri") if isinstance(loc, dict) else None
+                    if uri:
+                        return uri
+        except Exception:
+            pass
+        return dell_uri
+
+    def _resolve_bios_settings_uri(self, do_async):
+        """Resolve the BIOS SettingsObject link, not a hardcoded path.
+
+        Reads ``Bios.@Redfish.Settings.SettingsObject.@odata.id`` (which iLO emits
+        lowercased), falling back to ``{system}/Bios/Settings`` for Dell.
+        """
+        try:
+            bios = self.base_query(f"{self.idrac_manage_servers}/Bios",
+                                   do_async=do_async).data or {}
+            settings = (bios.get("@Redfish.Settings") or {}).get("SettingsObject") or {}
+            if settings.get("@odata.id"):
+                return settings["@odata.id"]
+        except Exception:
+            pass
+        return f"{self.idrac_manage_servers}{IDRAC_API.BiosSettings}"
+
     def execute(self,
                 attr_name: Optional[str] = None,
                 attr_value: Optional[str] = None,
@@ -239,7 +285,7 @@ class BiosChangeSettings(IDracManager,
             if from_spec is not None and len(from_spec) > 0:
                 payload = from_json_spec(from_spec)
             else:
-                target_api = f"{self.idrac_manage_servers}{IDRAC_API.BiosRegistry}"
+                target_api = self._resolve_bios_registry_uri(do_async)
                 cmd_result = self.base_query(
                     target_api, filename=filename,
                     do_async=do_async, do_expanded=False
@@ -305,8 +351,8 @@ class BiosChangeSettings(IDracManager,
                     "Please apply changes first."
                 )
 
-        # update bios.
-        target_api = f"{self.idrac_manage_servers}{IDRAC_API.BiosSettings}"
+        # update bios (resolve the SettingsObject link, not a hardcoded path).
+        target_api = self._resolve_bios_settings_uri(do_async)
         cmd_result, api_resp = self.base_patch(
             target_api, payload=payload,
             do_async=do_async

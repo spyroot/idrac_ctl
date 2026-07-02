@@ -63,10 +63,15 @@ class BiosQueryPending(IDracManager,
         if data_filter:
             do_expanded = True
 
-        cmd_result = self.base_query(
-            target_api, filename=filename,
-            do_async=do_async, do_expanded=do_expanded
-        )
+        # Tolerate a host with no BIOS Settings object (return empty, no crash)
+        # so callers (e.g. bios-change's pending check) work cross-vendor.
+        try:
+            cmd_result = self.base_query(
+                target_api, filename=filename,
+                do_async=do_async, do_expanded=do_expanded
+            )
+        except Exception:
+            return CommandResult({}, None, None, None)
         if cmd_result.error is not None:
             return cmd_result
 
