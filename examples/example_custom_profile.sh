@@ -14,6 +14,6 @@ cat > /tmp/my_profile.spec.json <<'JSON'
 }
 JSON
 # 2) Preview what would be sent (no change):
-idrac_ctl bios-change --from_spec /tmp/my_profile.spec.json --do_show
+idrac_ctl bios-change --from_spec /tmp/my_profile.spec.json on-reset --show
 # 3) Stage the profile and reboot to apply:
 idrac_ctl bios-change --from_spec /tmp/my_profile.spec.json on-reset -r

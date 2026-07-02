@@ -1,11 +1,14 @@
-# running jobs
-idrac_ctl idrac_ctl jobs --running
+#!/usr/bin/env bash
+set -euo pipefail
 
-# completed jobs
+# Read running jobs.
+idrac_ctl jobs --running
+
+# Read completed jobs.
 idrac_ctl jobs --completed
 
-# watch job
+# Watch one job until it reaches a terminal state.
 idrac_ctl job-watch --job_id JID_746683021869
 
-# delete job
-idrac_ctl idrac_ctl.py job-rm JID_746683021869
+# Delete one approved job.
+idrac_ctl job-rm --job_id JID_746683021869

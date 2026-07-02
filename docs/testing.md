@@ -1,5 +1,7 @@
 # Testing
 
+Author: Mus <spyroot@gmail.com>
+
 Before I trust a change, I clear any live iDRAC environment and run the offline suite:
 
 ```bash
@@ -28,18 +30,25 @@ marked `@pytest.mark.live` and skip without that variable.
 For approved live hardware only:
 
 ```bash
-export IDRAC_IP=<idrac> IDRAC_USERNAME=root IDRAC_PASSWORD=<password>
+IDRAC_IP=<idrac> \
+IDRAC_USERNAME=root \
+IDRAC_PASSWORD=<password> \
 pytest -q -m live
 ```
 
+That keeps the variables scoped to one command. If you exported them earlier, unset them before
+returning to the default suite.
+
 **Vendor-aware mock lane.** `redfish_mock_factory`, defined in `tests/conftest.py`, overlays
-`tests/<vendor>_fixtures/` on the DMTF base. `redfish_mock_factory("supermicro")` serves the GB300
-shape (`System_0`, `HGX_Baseboard_0`, `BMC_0`, `HGX_BMC_0`) and lets tests prove that generic reads
-do not hardcode Dell ids.
+`tests/<vendor>_fixtures/` on the DMTF base. The repo has four corpora now: Dell
+(`tests/idrac_fixtures/`), Supermicro GB300 (`tests/supermicro_fixtures/`), HPE iLO
+(`tests/hpe_fixtures/`), and generic DMTF (`tests/generic_fixtures/`).
 
 Worked examples:
 
 - `tests/test_vendor_portability.py` checks Supermicro system and manager discovery.
+- `tests/test_hpe_vendor.py` and `tests/test_ilo_gap_batch*.py` check HPE iLO read paths.
+- `tests/test_generic_vendor.py` checks the generic DMTF fallback corpus.
 - `tests/test_discover.py` checks `classify_vendor()` for Dell, HPE, Supermicro, and generic roots.
 - `tests/test_discover_ids.py` checks multi-member system/manager discovery.
 - `tests/test_sensors.py` runs the generic `sensors` command against the Supermicro overlay.
@@ -49,7 +58,7 @@ process through `REDFISH_EMULATOR_URL`. It is skipped by default and validates g
 transport, not Dell OEM paths.
 
 ```bash
-pip install sushy-tools
+python -m pip install sushy-tools
 sushy-emulator --fake -i 127.0.0.1 -p 8000
 REDFISH_EMULATOR_URL=http://127.0.0.1:8000 pytest tests/test_emulator_smoke.py
 ```
@@ -57,9 +66,9 @@ REDFISH_EMULATOR_URL=http://127.0.0.1:8000 pytest tests/test_emulator_smoke.py
 ## Fixtures And Faithfulness
 
 The captured DMTF tree is generic. Dell-only resources belong in `tests/idrac_fixtures/`, and
-non-Dell overlays belong in `tests/<vendor>_fixtures/`. Supermicro coverage is query-only and
-fixture-derived from a read-only GB300 observation; the Supermicro capability profile keeps query
-parameters and job scheduling conservative until verified. HPE is placeholder-only.
+non-Dell overlays belong in `tests/<vendor>_fixtures/`. Supermicro coverage is fixture-derived from a
+read-only GB300 observation. HPE coverage comes from the HPE iLO emulator corpus plus the optional
+`examples/hpe_ilo_canary.sh` live-emulator flow.
 
 ## Mac/Linux Parity
 
@@ -67,13 +76,10 @@ parameters and job scheduling conservative until verified. HPE is placeholder-on
 case-sensitive and macOS is not, so this catches fixture-path mistakes that can hide on a laptop.
 Sensitive local files are excluded from the image.
 
-## Coverage Goal
+## Coverage
 
-The target is 80% coverage across the 75 command modules. The project does not gate on coverage yet.
-When it does, the right approach is a ratchet: raise `--cov-fail-under` as dual-mode tests land so the
-floor never moves backward.
-
-Coverage output needs `pytest-cov` in the active environment:
+Coverage is not a default gate yet. When you need a local report, install `pytest-cov` in the active
+conda environment and keep the live variables unset:
 
 ```bash
 python -m pip install pytest-cov

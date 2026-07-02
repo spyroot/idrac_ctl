@@ -1,69 +1,104 @@
-# Installing and Releasing
+# Installing And Releasing
 
-## Install (users)
+Author: Mus <spyroot@gmail.com>
 
-`idrac_ctl` is published to PyPI, so end users install it with pip:
+`idrac_ctl` is published as the PyPI package named `idrac_ctl`, defined in `setup.py`. The console
+entry point installed by that package is also `idrac_ctl`.
+
+## User Install
 
 ```bash
-pip install idrac_ctl
+python -m pip install idrac_ctl
+idrac_ctl --version
 idrac_ctl --help
 ```
 
-That pulls the package named `idrac_ctl` (defined in `setup.py`) and installs the
-`idrac_ctl` console command (the `console_scripts` entry point in `setup.py`).
-
-To try a checkout without publishing, install it from source:
+For a checkout:
 
 ```bash
 git clone https://github.com/spyroot/idrac_ctl
 cd idrac_ctl
-pip install .
+python -m pip install .
+idrac_ctl --version
 ```
 
-## Release (maintainers)
+## Release Checklist
 
-Releasing is: bump the version, build the distributions, and upload them to PyPI
-with `twine`. The helper scripts in the repo root wrap this.
+I use this order so a broken package does not reach PyPI:
 
-1. **Bump the version.** Edit `version=` in `setup.py` (single source of truth,
-   e.g. `1.1.0`). Follow semver: patch for fixes, minor for new commands, major
-   for breaking changes.
+1. Verify the tree.
+2. Build source and wheel distributions.
+3. Inspect/install the built artifact locally.
+4. Upload with `twine`.
+5. Tag the release.
 
-2. **Build the distributions** — source tarball + wheel:
+## Verify
 
-   ```bash
-   python setup.py sdist bdist_wheel
-   ```
-
-   `build_dist.sh` does this and also runs `check-manifest` (verifies the sdist
-   includes everything tracked in git).
-
-3. **Upload to PyPI** with twine (needs a PyPI API token in `~/.pypirc` or
-   `TWINE_USERNAME`/`TWINE_PASSWORD`):
-
-   ```bash
-   twine upload dist/*
-   ```
-
-   `build_dist.sh` performs steps 2–3; `build_push.sh` is the dev shortcut
-   (`rm dist/* && python setup.py sdist bdist_wheel && twine upload dist/*`).
-
-4. **Tag the release** so the git history matches PyPI:
-
-   ```bash
-   git tag v$(python setup.py --version) && git push --tags
-   ```
-
-### Verify before uploading
-
-Build and install into a throwaway env first (this is what `local_install.sh`
-does) so a broken package never reaches PyPI:
+Run the offline tests with live BMC variables unset:
 
 ```bash
-conda create -n rel-test python=3.10 && conda activate rel-test
-python setup.py sdist bdist_wheel && pip install dist/idrac_ctl-*.whl
+env -u IDRAC_IP -u IDRAC_USERNAME -u IDRAC_PASSWORD pytest -q
+ruff check <changed files>
+```
+
+Check the version in `setup.py`, the single packaging source of truth:
+
+```bash
+python setup.py --version
+```
+
+## Build
+
+```bash
+python setup.py sdist bdist_wheel
+python -m twine check dist/*
+```
+
+`twine check`, run by you before upload, verifies the built package metadata and README rendering.
+
+## Local Install Check
+
+Use a throwaway environment:
+
+```bash
+conda create -n idrac-ctl-release-test python=3.10
+conda activate idrac-ctl-release-test
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install dist/idrac_ctl-*.whl
+idrac_ctl --version
 idrac_ctl --help
 ```
 
-`twine upload` is irreversible per version — a version number can't be reused on
-PyPI. Verify locally, then upload.
+The current `local_install.sh` helper creates a `test1` conda environment, builds `sdist` and wheel,
+then runs `python setup.py install`. It does not install the wheel with `pip`, so I treat it as a
+developer shortcut, not the full release gate above.
+
+## Upload
+
+`TWINE_USERNAME` and `TWINE_PASSWORD`, set by the maintainer shell or `~/.pypirc`, provide PyPI
+credentials for `twine upload`.
+
+```bash
+python -m twine upload dist/*
+```
+
+PyPI versions are immutable. Once uploaded, the same version number cannot be reused.
+
+## Tag
+
+```bash
+git tag "v$(python setup.py --version)"
+git push origin --tags
+```
+
+## Helper Scripts
+
+- `build_dist.sh`, defined in the repo root, builds `sdist`, installs `check-manifest`, builds wheel
+  plus `sdist` again, then uploads `dist/*` with `twine`. It installs `check-manifest` but does not
+  run it.
+- `build_push.sh`, defined in the repo root, removes `dist/*`, builds `sdist` and wheel, then uploads
+  `dist/*` with `twine`.
+- `local_install.sh`, defined in the repo root, creates `test1`, builds distributions, and runs
+  `python setup.py install`.
+
+Because those scripts can upload, read them before running them.

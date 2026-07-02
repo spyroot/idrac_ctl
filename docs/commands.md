@@ -1,10 +1,12 @@
 # Command Reference
 
+Author: Mus <spyroot@gmail.com>
+
 When I connect to a new BMC, I run `idrac_ctl system` first. It proves the endpoint, credentials, and
 basic Redfish path before I ask for deeper inventory or stage any change.
 
-The command names below are the registered CLI subcommands from the current tree. Run
-`idrac_ctl <command> --help` for the exact flags on your installed version.
+The table below follows the 92 command names imported by `idrac_ctl/__init__.py`. Run
+`idrac_ctl <command> --help` for flags on your installed version.
 
 ## Connection Basics
 
@@ -19,22 +21,9 @@ export IDRAC_PORT=443
 
 TLS verification is off by default because lab BMCs commonly use self-signed certificates.
 `--verify-ssl`, defined by the root parser in `idrac_main.py`, opts into certificate verification
-when you have a trusted chain. `--insecure` is the explicit force-skip form of the default.
+when you have a trusted chain.
 
-Useful global options:
-
-| Option | Purpose |
-|---|---|
-| `--idrac_ip`, `--idrac_username`, `--idrac_password`, `--idrac_port` | Connection values; each falls back to the matching `IDRAC_*` environment variable. |
-| `--verify-ssl` | Verify the BMC TLS certificate instead of skipping verification. |
-| `--insecure` | Explicitly skip TLS verification, matching the default. |
-| `--use_http` | Use HTTP instead of HTTPS. |
-| `--nocolor` | Emit plain JSON for tools such as `jq`. |
-| `-f`, `--filename` | Save command output where the command supports it. |
-| `-d`, `--data_only` | Print only the result data where supported. |
-| `--no_extra`, `--no_action`, `--json_only`, `--no-stdout` | Control how JSON sections are printed. |
-
-## Read-Only Starting Points
+## First Reads
 
 ```bash
 idrac_ctl system
@@ -43,184 +32,171 @@ idrac_ctl chassis
 idrac_ctl sensors
 idrac_ctl firmware_inventory
 idrac_ctl bios --filter ProcCStates,SysMemSize
+idrac_ctl logs
 idrac_ctl accounts --usernames
 idrac_ctl storage-list
 idrac_ctl get_vm
 ```
 
-`system` returns the host ComputerSystem. `manager` returns the BMC manager. `chassis` returns
-chassis services. `sensors`, defined in `idrac_ctl/sensors/cmd_sensors.py`, walks Chassis -> Sensors
-and returns readings with units. `firmware_inventory` reads installed firmware inventory; it does not
-update firmware. `bios --filter` reads named BIOS attributes. `accounts --usernames` lists local
-account names. `storage-list` and `get_vm` read storage and virtual-media state.
+`system` returns the host ComputerSystem. `manager` returns the BMC manager. `sensors`, defined in
+`idrac_ctl/sensors/cmd_sensors.py`, follows Chassis sensor links and returns readings with units.
+`logs`, defined in `idrac_ctl/logs/cmd_logs.py`, follows system and manager LogService entries.
 
-`discovery`, defined in `idrac_ctl/discovery/cmd_discovery.py`, recursively walks Redfish resources
-and records response files plus allowed methods. The pure vendor classifier in
-`idrac_ctl/discover/classifier.py` maps ServiceRoot data to `dell`, `hpe`, `supermicro`, or
-`generic`.
+## Registered Commands
 
-On multi-system hosts such as a GB300, `IDracManager` resolves the host ComputerSystem by preferring
-the member with `Bios` or `Boot` links, so commands target `System_0` instead of an HGX baseboard.
-Supermicro is read/query validated from a live GB300 fixture overlay. HPE remains a conservative
-placeholder profile.
+Safety labels:
 
-## Subcommands
+- **Read**: expected to read state only.
+- **Guarded**: can write, but has a dry-run or confirmation model.
+- **Write**: changes BMC or host state; use only on approved targets.
 
-| Command | Purpose |
-|---|---|
-| `account` | Read one account resource. |
-| `account-svc` | Read AccountService. |
-| `accounts` | Read the account collection; `--usernames` prints only usernames. |
-| `attr` | Read manager attributes. |
-| `attr-clear-pending` | Clear pending manager attribute values. |
-| `attr-update` | Stage manager attribute changes. |
-| `bios` | Read BIOS attributes; common flags include `--filter`, `--from_file`, `--attr_only`, and `--deep`. |
-| `bios-change` | Stage BIOS configuration changes from `--from_spec`; apply mode is `on-reset`, `auto-boot`, or `maintenance`. |
-| `bios-clear-pending` | Clear pending BIOS values. |
-| `bios-pending` | Read pending BIOS values. |
-| `bios-registry` | Read BIOS registry metadata, choices, and writable attributes. |
-| `boot` | Read boot source data. |
-| `boot-one-shot` | Set a one-time boot target and optionally reboot or power on. |
-| `boot-options` | Read boot option members. |
-| `boot-options-clear` | Clear pending boot option values. |
-| `boot-pending` | Read pending boot source values. |
-| `boot-settings` | Read current and pending boot settings. |
-| `boot-source` | Read a boot source, optionally with `--dev <device>`. |
-| `boot-source-enable` | Enable or disable a boot option member. |
-| `boot-source-registry` | Read boot source registry data. |
-| `boot-source-update` | Stage boot source settings. |
-| `boot-sources` | List boot source members. |
-| `change-boot-order` | Change boot order and boot options. |
-| `chassis` | Read chassis services. |
-| `chassis-reset` | Change chassis power state. |
-| `compute-query` | Read ComputerSystem settings. |
-| `current_boot` | Read current boot source details. |
-| `dell-lc-svc` | Read Dell Lifecycle Controller service data. |
-| `discovery` | Recursively walk and dump Redfish resources, including exposed actions and allowed methods. |
-| `eject_vm` | Eject virtual media. |
-| `firmware` | Read firmware view data. |
-| `firmware_inventory` | Read firmware inventory. |
-| `get_vm` | Read virtual media. |
-| `insert_vm` | Insert virtual media from a URI. |
-| `job` | Read one Dell job. |
-| `job-apply` | Apply pending jobs. |
-| `job-rm` | Delete one job. |
-| `job-rm-all` | Delete all jobs. |
-| `job-watch` | Watch a job until it reaches a terminal state. |
-| `jobs` | Read the job collection. |
-| `jobs-dell-service` | Read Dell JobService. |
-| `jobs-service` | Read standard Redfish JobService. |
-| `manager` | Read manager data. |
-| `manager-reboot` | Reboot the iDRAC manager. |
-| `oem-actions` | Read supported Dell OEM OS deployment actions. |
-| `oem-attach` | Attach a network ISO through the Dell OEM OS deployment action. |
-| `oem-attach-status` | Read Dell OEM attach status. |
-| `oem-boot-netios` | Boot from a network ISO through a Dell OEM action. |
-| `oem-detach` | Detach Dell OEM network ISO media. |
-| `oem-disconnect` | Disconnect Dell OEM network ISO media. |
-| `oem-net-ios-status` | Read Dell OEM network ISO status. |
-| `oem-net-iso-task` | Read Dell OEM OS deployment task data. |
-| `pci` | Read PCI device or function data. |
-| `privilege-registry` | Read the privilege registry. |
-| `query` | Read an arbitrary Redfish resource path. |
-| `raid` | Read RAID service data. |
-| `reboot` | Reset the host ComputerSystem. |
-| `sensors` | Read Chassis Sensor collections across vendors. |
-| `service-api-rs-status` | Read remote service API status. |
-| `service-api-status` | Read service API status. |
-| `storage-controllers` | Read storage controller information. |
-| `storage-convert-noraid` | Convert a RAID disk under a controller to non-RAID. |
-| `storage-convert-raid` | Convert a non-RAID disk under a controller to RAID. |
-| `storage-drives` | Read storage drive members. |
-| `storage-get` | Read one storage controller with optional `--filter Drives,Volumes`. |
-| `storage-list` | List storage devices. |
-| `system` | Read ComputerSystem data. |
-| `system-export` | Export system configuration. |
-| `system-import` | Import system configuration. |
-| `task-get` | Read one Redfish Task. |
-| `task-watch` | Watch task progress. |
-| `tasks` | Read the task collection. |
-| `volume-get` | Read one volume from a storage device. |
-| `volume-init` | Initialize a volume. |
-| `volumes` | Read virtual disk data. |
+| Command | What I use it for | Safety |
+|---|---|---|
+| `account` | Read one account resource. | Read |
+| `account-svc` | Read AccountService. | Read |
+| `accounts` | Read the account collection; `--usernames` prints only usernames. | Read |
+| `actions` | List Redfish actions exposed by the box and their risk levels. | Read |
+| `attr` | Read manager attributes. | Read |
+| `attr-clear-pending` | Clear pending manager attribute values. | Write |
+| `attr-update` | Stage manager attribute changes. | Write |
+| `bios` | Read BIOS attributes. | Read |
+| `bios-change` | Stage BIOS attributes from a spec or attribute pair. | Write |
+| `bios-clear-pending` | Clear pending BIOS values. | Write |
+| `bios-pending` | Read pending BIOS values. | Read |
+| `bios-registry` | Read BIOS registry metadata, choices, and writable attributes. | Read |
+| `boot` | Read boot source data. | Read |
+| `boot-one-shot` | Set a one-time boot target and optionally reboot or power on. | Write |
+| `boot-options` | Read boot option members. | Read |
+| `boot-options-clear` | Clear pending boot option values. | Write |
+| `boot-pending` | Read pending boot source values. | Read |
+| `boot-settings` | Read current and pending boot settings. | Read |
+| `boot-source` | Read a boot source, optionally with `--dev <device>`. | Read |
+| `boot-source-enable` | Enable or disable a boot option member. | Write |
+| `boot-source-registry` | Read boot source registry data. | Read |
+| `boot-source-update` | Stage boot source settings. | Write |
+| `boot-sources` | List boot source members. | Read |
+| `change-boot-order` | Change boot order and boot options. | Write |
+| `chassis` | Read chassis services. | Read |
+| `chassis-reset` | Change chassis power state. | Write |
+| `component-integrity` | Read ComponentIntegrity/SPDM attestation resources. | Read |
+| `compute-query` | Read ComputerSystem settings. | Read |
+| `console-info` | Report serial, graphical, and shell console links per manager. | Read |
+| `current_boot` | Read current boot source details. | Read |
+| `dell-lc-svc` | Read Dell Lifecycle Controller service data. | Read |
+| `discovery` | Recursively walk Redfish resources and record allowed methods. | Read |
+| `eject_vm` | Eject virtual media. | Write |
+| `ethernet-interfaces` | Read host and manager EthernetInterfaces. | Read |
+| `event-submit-test` | Submit a Redfish test event; `--dry_run` previews the payload. | Guarded |
+| `exporter` | Expose BMC telemetry as Prometheus text or SignalFx datapoints. | Read |
+| `firmware` | Read firmware view data. | Read |
+| `firmware-update` | Run UpdateService SimpleUpdate; `--dry_run` previews, `--confirm` writes. | Guarded |
+| `firmware_inventory` | Read firmware inventory. | Read |
+| `get_vm` | Read virtual media. | Read |
+| `insert_vm` | Insert virtual media from a URI. | Write |
+| `job` | Read one Dell job. | Read |
+| `job-apply` | Apply pending jobs. | Write |
+| `job-rm` | Delete one job. | Write |
+| `job-rm-all` | Delete all jobs. | Write |
+| `job-watch` | Watch a job until it reaches a terminal state. | Read |
+| `jobs` | Read the job collection. | Read |
+| `jobs-dell-service` | Read Dell JobService. | Read |
+| `jobs-service` | Read standard Redfish JobService. | Read |
+| `logs` | Read system and manager log entries. | Read |
+| `manager` | Read manager data. | Read |
+| `manager-reboot` | Reboot the iDRAC manager. | Write |
+| `metric-definitions` | Read TelemetryService metric definitions. | Read |
+| `metric-reports` | Read TelemetryService metric reports; `--report` filters by id substring. | Read |
+| `network-adapters` | Read chassis NetworkAdapters such as NICs and DPUs. | Read |
+| `network-ports` | Read NetworkAdapter port link state and speed. | Read |
+| `nvlink-ports` | Read GPU NVLink port resources where the BMC exposes them. | Read |
+| `oem-actions` | Read supported Dell OEM OS deployment actions. | Read |
+| `oem-attach` | Attach a network ISO through a Dell OEM action. | Write |
+| `oem-attach-status` | Read Dell OEM attach status. | Read |
+| `oem-boot-netios` | Boot from a network ISO through a Dell OEM action. | Write |
+| `oem-detach` | Detach Dell OEM network ISO media. | Write |
+| `oem-disconnect` | Disconnect Dell OEM network ISO media. | Write |
+| `oem-info` | Inventory vendor OEM extension blocks. | Read |
+| `oem-net-ios-status` | Read Dell OEM network ISO status. | Read |
+| `oem-net-iso-task` | Read Dell OEM OS deployment task data. | Read |
+| `pci` | Read PCI device or function data. | Read |
+| `privilege-registry` | Read the privilege registry. | Read |
+| `query` | Read an arbitrary Redfish resource path. | Read |
+| `raid` | Read RAID service data. | Read |
+| `reboot` | Reset the host ComputerSystem through the older direct reset path. | Write |
+| `secure-boot` | Read SecureBoot state and key databases. | Read |
+| `sensors` | Read Chassis Sensor collections across vendors. | Read |
+| `service-api-rs-status` | Read remote service API status. | Read |
+| `service-api-status` | Read service API status. | Read |
+| `storage-controllers` | Read storage controller information. | Read |
+| `storage-convert-noraid` | Convert RAID disks under a controller to non-RAID. | Write |
+| `storage-convert-raid` | Convert non-RAID disks under a controller to RAID. | Write |
+| `storage-drives` | Read storage drive members. | Read |
+| `storage-get` | Read one storage controller with optional `--filter Drives,Volumes`. | Read |
+| `storage-list` | List storage devices. | Read |
+| `system` | Read ComputerSystem data. | Read |
+| `system-export` | Export system configuration. | Read |
+| `system-import` | Import system configuration; may reboot depending on options. | Write |
+| `system-reset` | Preview or perform a guarded ComputerSystem reset; requires `--confirm` to execute. | Guarded |
+| `task-get` | Read one Redfish Task. | Read |
+| `task-watch` | Watch task progress. | Read |
+| `tasks` | Read the task collection. | Read |
+| `telemetry-triggers` | Read TelemetryService triggers and thresholds. | Read |
+| `volume-get` | Read one volume from a storage device. | Read |
+| `volume-init` | Initialize a volume. | Write |
+| `volumes` | Read virtual disk data. | Read |
 
-## Common Read Workflows
-
-### BIOS Checks
-
-```bash
-idrac_ctl bios --filter ProcCStates,SysMemSize
-idrac_ctl bios --from_file bios_query.json
-```
-
-`bios_query.json`, created by you before the command runs, is a JSON array:
-
-```json
-[
-  "ProcCStates",
-  "SysMemSize"
-]
-```
-
-### BIOS Registry
+## Vendor-Neutral Telemetry Reads
 
 ```bash
-idrac_ctl bios-registry --attr_list
-idrac_ctl bios-registry --attr_name PowerCycleRequest
-idrac_ctl bios-registry --noreadonly -f bios-writable.json
-```
-
-### Storage
-
-```bash
-idrac_ctl storage-list
-idrac_ctl storage-get --controller RAID.Integrated.1-1
-idrac_ctl storage-get --controller RAID.Integrated.1-1 --filter Drives,Volumes
-```
-
-### Firmware, Sensors, And Jobs
-
-```bash
-idrac_ctl firmware_inventory
 idrac_ctl sensors
-idrac_ctl jobs
-idrac_ctl job --job_id JID_123456789012
+idrac_ctl metric-definitions
+idrac_ctl metric-reports
+idrac_ctl telemetry-triggers
+idrac_ctl network-adapters
+idrac_ctl network-ports
+idrac_ctl ethernet-interfaces
+idrac_ctl component-integrity
+idrac_ctl secure-boot
+idrac_ctl logs
+idrac_ctl oem-info
 ```
 
-Firmware commands here are read-only inventory views. `sensors` is a useful cross-vendor smoke read.
-`jobs` and `job` show pending or completed Redfish work.
+These commands are the best starting point on non-Dell BMCs. They follow Redfish links and are
+covered by the Dell, Supermicro, HPE, or generic fixture corpora listed in [Vendors](vendors.md).
 
-## Mutating Workflows
+## Mutating Workflow Pattern
 
-These commands change real server state. Use a non-production BMC, read `--help`, and capture current
-state before changing anything.
+Before I run a write, I use the same four phases:
+
+1. Read the current state.
+2. Preview the change when the command supports `--show` or `--dry_run`.
+3. Execute only with an explicit intent flag such as `--confirm`, `--commit`, or `-r`.
+4. Verify with a read-only command or a job/task watch.
 
 ### BIOS Change From A Spec
 
 ```bash
-idrac_ctl bios-change --from_spec ./bios.spec.json on-reset --show
-idrac_ctl bios-change --from_spec ./bios.spec.json on-reset --commit
+idrac_ctl bios --filter ProcCStates,SysProfile,WorkloadProfile
+idrac_ctl bios-change --from_spec specs/realtime.opt.spec.json on-reset --show
+idrac_ctl bios-change --from_spec specs/realtime.opt.spec.json on-reset --commit
+idrac_ctl jobs
 ```
 
-Many BIOS changes remain pending until an apply job and host reset. Add `--reboot` only when you are
-ready for the host reset:
+Many BIOS changes remain pending until an apply job and host reset. Add `-r` only when you are ready
+for the host reset:
 
 ```bash
-idrac_ctl bios-change --from_spec ./bios.spec.json on-reset --commit --reboot
+idrac_ctl bios-change --from_spec specs/realtime.opt.spec.json on-reset -r
 ```
 
-Example spec:
+### Secure Boot
 
-```json
-{
-  "Attributes": {
-    "MemFrequency": "MaxPerf",
-    "MemTest": "Disabled",
-    "OsWatchdogTimer": "Disabled",
-    "ProcCStates": "Disabled",
-    "SriovGlobalEnable": "Enabled"
-  }
-}
+```bash
+idrac_ctl secure-boot
+idrac_ctl bios-registry --attr_name SecureBoot
+idrac_ctl bios-change --attr_name SecureBoot --attr_value Enabled on-reset --show
+idrac_ctl bios-change --attr_name SecureBoot --attr_value Enabled on-reset -r
+idrac_ctl secure-boot
 ```
 
 ### Virtual Media ISO Boot
@@ -229,49 +205,42 @@ Example spec:
 idrac_ctl get_vm
 idrac_ctl eject_vm --device_id 1
 idrac_ctl insert_vm --uri_path http://10.0.0.10/ubuntu.iso --device_id 1
-idrac_ctl boot-one-shot --device Cd --reboot
-```
-
-For a UEFI target, first inspect boot sources and pass the exact target value:
-
-```bash
-idrac_ctl boot-source
-idrac_ctl boot-one-shot --device UefiTarget --uefi_target '<uefi-device-path>' --reboot
+idrac_ctl get_vm
+idrac_ctl boot-one-shot --device Cd -r
+idrac_ctl current_boot
 ```
 
 ### Power Reset
 
 ```bash
-idrac_ctl reboot --reset_type GracefulRestart
-idrac_ctl reboot --reset_type PowerCycle --wait
+idrac_ctl system
+idrac_ctl system-reset --reset_type GracefulRestart --dry_run
+idrac_ctl system-reset --reset_type GracefulRestart --confirm
+idrac_ctl system
 ```
 
-Allowed reset values include `On`, `ForceOff`, `ForceRestart`, `GracefulRestart`,
-`GracefulShutdown`, `PushPowerButton`, `Nmi`, and `PowerCycle`.
+`system-reset` previews by default and performs the reset only when `--confirm` is present. The older
+`reboot` command is still present for direct reset calls and supports `--wait`, but it does not have
+the same dry-run guard.
 
-### System Export And Import
+### Firmware Update
 
 ```bash
-idrac_ctl system-export --filename system.json
-idrac_ctl system-export --filename system.json --async
-idrac_ctl system-import --config system.json
+idrac_ctl firmware_inventory
+idrac_ctl firmware-update --image_uri https://example.invalid/firmware.exe --dry_run
+idrac_ctl firmware-update --image_uri https://example.invalid/firmware.exe --confirm
+idrac_ctl tasks
 ```
 
-`system-import` can reboot the host depending on the import options and iDRAC behavior; check
-`idrac_ctl system-import --help` before using it.
+`firmware-update`, defined in `idrac_ctl/firmware/cmd_firmware_update.py`, is destructive when
+confirmed. Use only approved images and approved non-production targets until you have your own
+firmware rollout process.
 
-### Dell OEM Network ISO
+### HPE iLO Canary
+
+`examples/hpe_ilo_canary.sh`, the live-emulator script under `examples/`, starts the HPE iLO emulator
+and runs read-only vendor-neutral commands plus a dry-run `system-reset` preview:
 
 ```bash
-idrac_ctl oem-attach --ip_addr 10.0.0.10 --share_name sambashare \
-  --remote_image ubuntu.iso \
-  --remote_username "$CIFS_USERNAME" \
-  --remote_password "$CIFS_PASSWORD"
-idrac_ctl oem-attach-status
-idrac_ctl oem-net-ios-status
-idrac_ctl oem-detach
+bash examples/hpe_ilo_canary.sh
 ```
-
-`oem-attach` tells iDRAC to mount an ISO from a network share. `oem-attach-status` and
-`oem-net-ios-status` read Dell's OS deployment state. `oem-detach` tears down the mount. These Dell
-OEM commands assume the remote share is reachable from the iDRAC management network.

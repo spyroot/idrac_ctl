@@ -1,5 +1,7 @@
 # Architecture
 
+Author: Mus <spyroot@gmail.com>
+
 I use `idrac_ctl system` as the first sanity check: it starts at the CLI, runs a self-registering
 command module, uses `IDracManager`, and ends in the generic Redfish HTTP client. The important rule
 is that Redfish stays product-neutral; Dell behavior sits above it.
@@ -12,7 +14,7 @@ CLI (`idrac_main.py`, argparse)
   -> requests over Redfish HTTPS
 ```
 
-## Core Seams
+## Main Pieces
 
 - `RedfishManager`, defined in `idrac_ctl/redfish_manager.py`, owns connection settings, HTTP verbs,
   Redfish response parsing, and the `CommandResult(data, discovered, extra, error)` return shape. It
@@ -40,13 +42,15 @@ dumps the responses, and records allowed methods.
 `idrac_ctl/vendors/<name>/` holds capability profiles. The Dell command code still lives mostly in
 `IDracManager` and `idrac_ctl/delloem/`; moving that code into `vendors/dell/` is planned, not done.
 
-Current vendor maturity:
+Current vendor maturity is summarized in [Vendors](vendors.md). Short version:
 
 - Dell iDRAC: the primary target, with query-parameter and JobService capability flags in
   `idrac_ctl/vendors/dell/capabilities.py`.
-- Supermicro: read-only validated against a live GB300 BMC with Redfish 1.17.0, backed by
+- Supermicro: read/query validated against a live GB300 BMC with Redfish 1.17.0, backed by
   `tests/supermicro_fixtures/` and the vendor-aware mock factory.
-- HPE: conservative placeholder profile until tested against iLO hardware or an emulator.
+- HPE iLO: read/query validated against `tests/hpe_fixtures/` and the opt-in emulator canary in
+  `examples/hpe_ilo_canary.sh`.
+- Generic Redfish: conservative DMTF-style fallback backed by `tests/generic_fixtures/`.
 
 The generic core never imports vendor packages.
 
@@ -69,4 +73,5 @@ event loop. A future fleet proxy would build on those helpers; the proxy itself 
   `RedfishManager`.
 - Power, boot, and BIOS control paths need library-callable APIs, not only the CLI
   argument path, so a future proxy and other callers can reuse them directly.
-- Firmware is read/inventory-only today. Update, rollback, and repository flows are still future work.
+- `firmware-update` exists as a guarded SimpleUpdate path. It requires a dry-run/confirm safety model;
+  rollback and repository-management flows are still future work.

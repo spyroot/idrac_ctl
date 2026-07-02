@@ -1,19 +1,18 @@
 # idrac_ctl
 
-`idrac_ctl` is my command-line tool for talking to Dell iDRAC over Redfish. It gives you JSON-first
-read commands for inventory, BIOS, firmware inventory, storage, sensors, virtual media, jobs, and
-manager state, plus control commands for boot, power, BIOS changes, virtual media, and Dell jobs.
-Firmware update and flash commands are not implemented yet.
+`idrac_ctl` is my command-line tool for talking to Dell iDRAC and other Redfish BMCs. I use it for
+JSON-first inventory, BIOS, boot, storage, virtual media, sensors, logs, firmware, and job workflows
+without opening the BMC web UI.
 
-If you have one server in front of you, start here. The deeper architecture, test, vendor, and command
-reference material lives in [`docs/`](docs/).
+Author: Mus <spyroot@gmail.com>
 
 ## Install
 
-From PyPI:
+Use Python 3.10 or newer.
 
 ```bash
-pip install idrac_ctl
+python -m pip install idrac_ctl
+idrac_ctl --version
 ```
 
 For local development, use the checked-in conda environment:
@@ -25,10 +24,9 @@ conda env create -f environment.yml
 conda activate idrac_ctl
 ```
 
-## Connect To iDRAC
+## Connect
 
-Set credentials once so you do not have to pass them on every command. The CLI reads these
-environment variables in `idrac_main.py`:
+The CLI reads these environment variables in `idrac_main.py`, so I set them once per shell:
 
 ```bash
 export IDRAC_IP=10.0.0.42
@@ -37,25 +35,25 @@ export IDRAC_PASSWORD='your-password'
 export IDRAC_PORT=443
 ```
 
-The tool skips TLS verification by default because BMCs usually ship self-signed certificates. Use
-`--verify-ssl` only when the BMC has a certificate chain you trust; `--insecure` is just the explicit
-form of the default.
+BMCs usually ship self-signed certificates. TLS verification is off by default; use `--verify-ssl`
+only when the BMC has a certificate chain you trust.
 
-## First Read-Only Command
+## First Safe Read
 
-Start with a safe read:
+Start with the host ComputerSystem:
 
 ```bash
 idrac_ctl system
 ```
 
-Output is JSON by default. If you want plain JSON for piping:
+A healthy response includes `data.Id`, `data.Name`, and usually `data.PowerState`. If you have `jq`
+installed, this is a compact smoke check:
 
 ```bash
-idrac_ctl --nocolor system | jq '.data.PowerState'
+idrac_ctl --nocolor system | jq '.data | {Id, Name, PowerState}'
 ```
 
-## A Few Useful Reads
+## Common Reads
 
 ```bash
 idrac_ctl manager
@@ -65,87 +63,44 @@ idrac_ctl firmware_inventory
 idrac_ctl bios --filter ProcCStates,SysMemSize
 idrac_ctl storage-list
 idrac_ctl get_vm
+idrac_ctl logs
 ```
 
-`sensors`, defined in `idrac_ctl/sensors/cmd_sensors.py`, walks Chassis -> Sensors and returns
+`sensors`, defined in `idrac_ctl/sensors/cmd_sensors.py`, follows Chassis sensor links and returns
 temperature, power, fan, and voltage readings with units. `discovery`, defined in
-`idrac_ctl/discovery/cmd_discovery.py`, is the heavier crawl: it recursively walks Redfish resources
-and records local response files plus what each resource exposes.
+`idrac_ctl/discovery/cmd_discovery.py`, is the heavier crawl that records what a BMC exposes.
 
-The current vendor work is honest about its boundaries. Dell is the main control target. Supermicro
-read-only discovery/query behavior is validated against a GB300 BMC and covered by fixture overlays.
-HPE is still a conservative placeholder profile. On multi-system hosts, the manager resolves the host
-ComputerSystem instead of a baseboard, so a GB300-style `System_0` + `HGX_Baseboard_0` topology does
-not silently route host commands to the wrong member.
+## Vendor Reach
 
-## GB300 Telemetry Exporter
+Dell iDRAC is the main control target. Supermicro GB300, HPE iLO, and generic DMTF Redfish trees are
+covered by offline fixture corpora, with HPE also covered by the opt-in emulator canary in
+`examples/hpe_ilo_canary.sh`. The current support matrix is in [Vendors](docs/vendors.md).
 
-`idrac_ctl exporter`, defined in `idrac_ctl/telemetry/cmd_exporter.py`, is the read-only Redfish
-telemetry exporter for Splunk-ready hardware metrics. It walks Chassis `EnvironmentMetrics`, linked
-`Sensors`, TelemetryService `MetricReports`, GPU `nvlink-ports`, `network-adapters`, and
-`component-integrity`, then emits `hw.power`, `hw.temperature`, `hw.fan_speed`, `hw.voltage`,
-`hw.energy_kwh`, `hw.gpu.power`, and GB300 fabric metrics under `hw.fabric.*`.
+## Mutating Commands
 
-For exporter runs, put BMC credentials in environment variables or a gitignored runtime file. Do not
-pass the password on argv.
+Some commands change real hardware: power, BIOS, boot order, storage conversion, virtual media,
+firmware update, and manager reset. I always read current state first, preview when the command has
+`--show` or `--dry_run`, then verify after the job or task completes.
 
 ```bash
-mkdir -p .internal
-cat > .internal/idrac_exporter.env <<'EOF'
-IDRAC_IP=172.25.230.29
-IDRAC_USERNAME=admin
-IDRAC_PASSWORD=replace-with-runtime-secret
-IDRAC_PORT=443
-EOF
-
-idrac_ctl exporter \
-  --credential-file .internal/idrac_exporter.env \
-  --vendor supermicro \
-  --listen 0.0.0.0 \
-  --port 9109
+idrac_ctl system-reset --reset_type GracefulRestart --dry_run
+idrac_ctl bios-change --from_spec specs/realtime.opt.spec.json on-reset --show
+idrac_ctl firmware-update --image_uri https://example.invalid/firmware.exe --dry_run
 ```
 
-The Prometheus endpoint is `/metrics`. Every series carries `host.name`, `node`, `server.address`,
-`bmc.ip`, and `vendor`; for GB300, the default slot math maps BMC `172.25.230.29` to
-`host.name=gb300-poc1-slot9`, `node=slot9`, and `server.address=172.25.230.49`.
-
-For a one-shot local check:
-
-```bash
-idrac_ctl exporter \
-  --credential-file .internal/idrac_exporter.env \
-  --vendor supermicro \
-  --once \
-  --output prometheus
-```
-
-SignalFx push mode uses `SPLUNK_ACCESS_TOKEN`, the ingest token read from the process environment,
-and `SPLUNK_INGEST_URL`, the ingest URL read from the process environment.
-
-```bash
-idrac_ctl exporter \
-  --credential-file .internal/idrac_exporter.env \
-  --vendor supermicro \
-  --output signalfx \
-  --push-signalfx
-```
-
-Before running a mutating operation, check the command help and use a non-production iDRAC.
-`boot-one-shot`, defined by the boot command module, sets a one-time boot device. `reboot`, defined
-by the system reset command, power-cycles or resets the host. `bios-change`, defined by the BIOS
-change command, stages BIOS attributes for an apply job.
-
-```bash
-idrac_ctl boot-one-shot --help
-idrac_ctl reboot --help
-idrac_ctl bios-change --help
-```
+Use `--confirm` only when you mean to perform a guarded action such as `system-reset` or
+`firmware-update`.
 
 ## More Docs
 
-- [Command reference](docs/commands.md) - all current subcommands and common workflows.
-- [Testing](docs/testing.md) - offline mock tests, dual-mode tests, emulator tests, and live-test safety.
+- [Command reference](docs/commands.md) - registered subcommands and safe workflow patterns.
+- [Examples](examples/README.md) - one-line index of every script under `examples/`.
+- [BIOS profiles](docs/bios-profiles.md) - low-latency, Dell System Profile, custom, Intel, and AMD
+  profile examples.
+- [Vendors](docs/vendors.md) - Dell, Supermicro, HPE, and generic Redfish support.
+- [Testing](docs/testing.md) - offline mock tests, vendor corpora, emulator tests, and live-test safety.
 - [Architecture](docs/architecture.md) - Redfish core, iDRAC layer, command registration, and known debt.
-- [Vendors](docs/vendors.md) - vendor capability profiles and how new vendors fit.
+- [Telemetry exporter](docs/telemetry-exporter.md) - BMC metrics for Prometheus and SignalFx.
+- [Releasing](docs/releasing.md) - local verification, package build, PyPI upload, and tagging.
 - [Fleet proxy design](docs/redfish-proxy.md) - planned service/controller shape for fleet management.
 - [Scaling and benchmarks](docs/scaling-and-benchmarks.md) - planned concurrency engine and benchmark goals.
