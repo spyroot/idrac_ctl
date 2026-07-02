@@ -115,14 +115,16 @@ class ActionList(IDracManager,
         rows = []
         for uri in self._resource_uris(do_async):
             data = self._get(uri, do_async)
-            actions = self.discover_redfish_actions(self, data)
-            for short, action in actions.items():
-                full = getattr(action, "full_redfish_name", None) or f"#{short}"
+            # collision-proof: enumerate every #Type.Action from the raw Actions
+            # block, so two actions sharing a short name (e.g. ComputerSystem.Reset
+            # vs an Oem Contoso.Reset) are both listed, not collapsed.
+            for full, target in self._flatten_action_targets(data).items():
+                short = full.split(".")[-1] if "." in full else full.lstrip("#")
                 rows.append({
                     "Resource": uri,
                     "Action": short,
                     "FullType": full,
-                    "Target": getattr(action, "target", None),
+                    "Target": target,
                     "Level": classify(full).value,
                 })
         return CommandResult(rows, None, None, None)
